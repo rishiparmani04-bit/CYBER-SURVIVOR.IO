@@ -2241,6 +2241,7 @@ class Game {
     this.renderWeaponsGridUI();
     this.updateWeaponInspectPreview();
     this.updateHeroPreview();
+    this.updateLobbyLoadoutSlots();
     this.initChallengeTimer();
 
     // Game Loop
@@ -2688,26 +2689,54 @@ class Game {
       });
     });
 
-    // DEADSHOT.io Stage Hero Switcher (+ buttons on the sides)
-    const heroKeys = ['commando', 'ninja', 'juggernaut', 'psionic'];
-    document.getElementById('btn-prev-hero')?.addEventListener('click', () => {
-      const idx = heroKeys.indexOf(this.selectedHero);
-      const prevIdx = (idx - 1 + heroKeys.length) % heroKeys.length;
-      this.selectedHero = heroKeys[prevIdx];
-      this.saveData.selectedHero = this.selectedHero;
-      SaveManager.save(this.saveData);
+    // Main Lobby Loadout / Equipment Slots (+ buttons flanking character)
+    const handleLoadoutSlotClick = (slotNumber) => {
       this.audio.playDeflect();
-      this.updateHeroPreview();
-    });
+      // 1. Immediately trigger navigation to WEAPONS tab
+      this.switchTab('tab-weapons');
+      const navWeap = document.getElementById('nav-weapons');
+      if (navWeap) navWeap.click();
 
-    document.getElementById('btn-next-hero')?.addEventListener('click', () => {
-      const idx = heroKeys.indexOf(this.selectedHero);
-      const nextIdx = (idx + 1) % heroKeys.length;
-      this.selectedHero = heroKeys[nextIdx];
-      this.saveData.selectedHero = this.selectedHero;
-      SaveManager.save(this.saveData);
-      this.audio.playDeflect();
-      this.updateHeroPreview();
+      // 2. Add visual UI indicator/banner stating: 'Select a weapon to equip in this slot'
+      const banner = document.getElementById('weapon-equip-hint-banner');
+      if (banner) {
+        banner.classList.remove('hidden');
+        const text = banner.querySelector('.we-hint-text');
+        if (text) {
+          text.textContent = `Select a weapon to equip in Slot [${slotNumber}]`;
+        }
+      }
+
+      this.showNotification(`Select a weapon to equip in Slot [${slotNumber}]`, 'LOADOUT ARMORY', 'cyan');
+    };
+
+    const slotPrim = document.getElementById('slot-weapon-primary') || document.getElementById('btn-prev-hero');
+    const slotSec = document.getElementById('slot-weapon-secondary') || document.getElementById('btn-next-hero');
+
+    if (slotPrim) {
+      slotPrim.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleLoadoutSlotClick(1);
+      });
+    }
+
+    if (slotSec) {
+      slotSec.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleLoadoutSlotClick(2);
+      });
+    }
+
+    // Also support any element with .equipment-slot
+    document.querySelectorAll('.equipment-slot').forEach((slotEl) => {
+      slotEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const slotNum = parseInt(slotEl.dataset.slot || '1', 10);
+        handleLoadoutSlotClick(slotNum);
+      });
     });
 
     // Enter shop cta
@@ -3377,7 +3406,77 @@ class Game {
     });
   }
 
+  updateLobbyLoadoutSlots() {
+    const primId = this.saveData.primaryWeapon || 'ak47';
+    const secId = this.saveData.secondaryWeapon || 'ump';
+    const primDef = WEAPON_DEFS[primId];
+    const secDef = WEAPON_DEFS[secId];
+
+    // Primary Slot (Left)
+    const slot1 = document.getElementById('slot-weapon-primary') || document.getElementById('btn-prev-hero');
+    if (slot1) {
+      if (primDef) {
+        const skinId = this.saveData.equippedSkins?.[primId];
+        const skinDef = (skinId && WEAPON_SKINS[primId]) ? WEAPON_SKINS[primId][skinId] : null;
+        const tierName = skinDef?.tier || primDef.category || 'ASSAULT';
+        const tierColor = skinDef?.tierColor || '#00f0ff';
+        slot1.classList.add('has-weapon');
+        slot1.innerHTML = `
+          <div class="slot-type-label">PRIMARY [1]</div>
+          <div class="slot-icon-box">
+            <span class="slot-weap-icon">${primDef.icon}</span>
+          </div>
+          <div class="slot-weap-name" title="${primDef.name}">${primDef.name}</div>
+          <div class="slot-tier-badge" style="color: ${tierColor}; border-color: ${tierColor};">${tierName}</div>
+        `;
+        slot1.setAttribute('title', `Primary Weapon: ${primDef.name} (${tierName}) - Click to Change Weapon`);
+      } else {
+        slot1.classList.remove('has-weapon');
+        slot1.innerHTML = `
+          <div class="slot-type-label">PRIMARY [1]</div>
+          <div class="slot-icon-box">
+            <span class="pod-symbol">+</span>
+          </div>
+          <div class="slot-action-text">EQUIP</div>
+        `;
+        slot1.setAttribute('title', 'Primary Weapon Slot - Click to Equip');
+      }
+    }
+
+    // Secondary Slot (Right)
+    const slot2 = document.getElementById('slot-weapon-secondary') || document.getElementById('btn-next-hero');
+    if (slot2) {
+      if (secDef) {
+        const skinId = this.saveData.equippedSkins?.[secId];
+        const skinDef = (skinId && WEAPON_SKINS[secId]) ? WEAPON_SKINS[secId][skinId] : null;
+        const tierName = skinDef?.tier || secDef.category || 'SECONDARY';
+        const tierColor = skinDef?.tierColor || '#00ff88';
+        slot2.classList.add('has-weapon');
+        slot2.innerHTML = `
+          <div class="slot-type-label">SECONDARY [2]</div>
+          <div class="slot-icon-box">
+            <span class="slot-weap-icon">${secDef.icon}</span>
+          </div>
+          <div class="slot-weap-name" title="${secDef.name}">${secDef.name}</div>
+          <div class="slot-tier-badge" style="color: ${tierColor}; border-color: ${tierColor};">${tierName}</div>
+        `;
+        slot2.setAttribute('title', `Secondary Weapon: ${secDef.name} (${tierName}) - Click to Change Weapon`);
+      } else {
+        slot2.classList.remove('has-weapon');
+        slot2.innerHTML = `
+          <div class="slot-type-label">SECONDARY [2]</div>
+          <div class="slot-icon-box">
+            <span class="pod-symbol">+</span>
+          </div>
+          <div class="slot-action-text">EQUIP</div>
+        `;
+        slot2.setAttribute('title', 'Secondary Weapon Slot - Click to Equip');
+      }
+    }
+  }
+
   updateHeroPreview() {
+    this.updateLobbyLoadoutSlots();
     const def = HERO_DEFS[this.selectedHero] || HERO_DEFS['commando'];
 
     const pName = this.saveData.playerName || 'badhash';
@@ -3833,6 +3932,7 @@ class Game {
     this.renderWeaponsGridUI();
     this.updateWeaponInspectPreview();
     this.updateWeaponHUD();
+    this.updateLobbyLoadoutSlots();
   }
 
   updateWeaponInspectPreview() {
@@ -4078,6 +4178,7 @@ class Game {
     this.audio.playCoin();
     this.renderWeaponSkinsUI(weaponId);
     this.renderWeaponInspectCanvas();
+    this.updateLobbyLoadoutSlots();
     const skin = WEAPON_SKINS[weaponId]?.[skinId];
     this.showNotification(`Equipped skin: ${skin?.name || skinId}`, 'SKIN EQUIPPED', 'green');
   }

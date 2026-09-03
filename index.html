@@ -368,7 +368,7 @@
         <button class="nav-tab" data-tab="tab-cybernetics">SHOP</button>
         <button class="nav-tab" data-tab="tab-store" id="nav-tab-store" style="color: #00f0ff; font-weight: 800;">💎 BANK</button>
         <button class="nav-tab" data-tab="tab-heroes">HEROES</button>
-        <button class="nav-tab" data-tab="tab-weapons">WEAPONS</button>
+        <button class="nav-tab" data-tab="tab-weapons" id="nav-weapons">WEAPONS</button>
         <button class="nav-tab" data-tab="tab-records">LEADERBOARD</button>
       </div>
     </nav>
@@ -425,8 +425,12 @@
           
           <!-- Hero Spotlight Stage -->
           <div class="hero-stage-viewport">
-            <div class="stage-pod pod-left" id="btn-prev-hero" title="Previous Hero Class">
-              <span class="pod-symbol">+</span>
+            <div class="stage-pod pod-left equipment-slot" id="slot-weapon-primary" data-slot="1" title="Primary Weapon Slot - Click to Equip Weapon">
+              <div class="slot-type-label">PRIMARY [1]</div>
+              <div class="slot-icon-box">
+                <span class="pod-symbol">+</span>
+              </div>
+              <div class="slot-action-text">EQUIP</div>
             </div>
 
             <div class="stage-soldier-display">
@@ -435,8 +439,12 @@
               <canvas id="hero-stage-canvas" width="320" height="340"></canvas>
             </div>
 
-            <div class="stage-pod pod-right" id="btn-next-hero" title="Next Hero Class">
-              <span class="pod-symbol">+</span>
+            <div class="stage-pod pod-right equipment-slot" id="slot-weapon-secondary" data-slot="2" title="Secondary Weapon Slot - Click to Equip Weapon">
+              <div class="slot-type-label">SECONDARY [2]</div>
+              <div class="slot-icon-box">
+                <span class="pod-symbol">+</span>
+              </div>
+              <div class="slot-action-text">EQUIP</div>
             </div>
           </div>
 
@@ -714,6 +722,10 @@
             <div class="weapons-panel-header">
               <div class="wph-title">ARSENAL LOADOUT & WEAPONS</div>
               <div class="wph-sub">Equip Primary [1] and Secondary [2] Weapons to Deploy & Switch in Combat</div>
+              <div id="weapon-equip-hint-banner" class="weapon-equip-hint-banner">
+                <span class="we-hint-icon">⚡</span>
+                <span class="we-hint-text">Select a weapon to equip in this slot</span>
+              </div>
             </div>
             <div class="weapon-grid" id="weapons-select-grid">
               <!-- Dynamically populated via renderWeaponsGridUI with 10 weapons -->
