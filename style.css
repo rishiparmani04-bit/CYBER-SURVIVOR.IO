@@ -4681,12 +4681,32 @@ body.hide-touch-controls .touch-controls-layer {
 }
 
 .store-banner-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   font-family: var(--font-title);
   font-size: 0.72rem;
   font-weight: 800;
   color: #ffaa00;
   letter-spacing: 1px;
   margin-bottom: 0.5rem;
+}
+
+.bundle-badge-timer {
+  background: rgba(0, 240, 255, 0.15);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
 }
 
 .store-banner-content {
@@ -4734,6 +4754,24 @@ body.hide-touch-controls .touch-controls-layer {
   background: rgba(255, 170, 0, 0.12);
 }
 
+.bundle-pill.special-cyan {
+  border-color: #00f0ff;
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.12);
+}
+
+.bundle-pill.special-purple {
+  border-color: #b336ff;
+  color: #b336ff;
+  background: rgba(179, 54, 255, 0.12);
+}
+
+.bundle-pill.special-red {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
 .store-bundle-action {
   display: flex;
   flex-direction: column;
@@ -4768,6 +4806,23 @@ body.hide-touch-controls .touch-controls-layer {
 .store-buy-hero-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 24px rgba(255, 170, 0, 0.7);
+}
+
+.store-buy-hero-btn.claimed {
+  background: rgba(0, 255, 136, 0.15) !important;
+  border: 1.5px solid #00ff88 !important;
+  color: #00ff88 !important;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.25) !important;
+  cursor: default !important;
+  transform: none !important;
+}
+
+.store-buy-hero-btn.claimed .buy-price {
+  color: #00ff88 !important;
+}
+
+.store-buy-hero-btn.claimed .buy-label {
+  color: #86efac !important;
 }
 
 .buy-label {

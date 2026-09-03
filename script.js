@@ -24,6 +24,112 @@ const RARITY_COLORS = {
   legendary: '#ffaa00'
 };
 
+// ============================================================================
+// AUTOMATED WEEKLY ROTATING SHOP BUNDLES DATA POOL
+// ============================================================================
+const WEEKLY_BUNDLES = [
+  {
+    id: 'bundle_cyber_ops',
+    title: 'CYBER OPS ELITE BUNDLE',
+    tag: '🔥 SPECIAL OPERATIVE BUNDLE • LIMITED TIME (50% OFF)',
+    desc: 'Instant delivery of <strong>1,200 💎 Diamonds</strong>, <strong>25,000 🪙 Cyber Coins</strong>, and the Legendary <strong>AK-47 "Dragonfire"</strong> Skin!',
+    gems: 1200,
+    coins: 25000,
+    weaponId: 'ak47',
+    skinId: 'ak47_dragonfire',
+    skinName: 'AK-47 Dragonfire',
+    perks: [
+      { text: '💎 1,200 Diamonds', class: '' },
+      { text: '🪙 25,000 Coins', class: '' },
+      { text: '🔥 AK-47 Dragonfire Skin', class: 'special-gold' }
+    ],
+    originalCost: 30000,
+    discountedCost: 15000,
+    costType: 'coins',
+    themeColor: '#ffaa00'
+  },
+  {
+    id: 'bundle_neon_striker',
+    title: 'NEON STRIKER BUNDLE',
+    tag: '⚡ NEON OVERDRIVE • LIMITED TIME (50% OFF)',
+    desc: 'Instant delivery of <strong>1,500 💎 Diamonds</strong>, <strong>35,000 🪙 Cyber Coins</strong>, and the Epic <strong>UMP "Synthwave Neon"</strong> Skin!',
+    gems: 1500,
+    coins: 35000,
+    weaponId: 'ump',
+    skinId: 'ump_synthwave',
+    skinName: 'UMP Synthwave Neon',
+    perks: [
+      { text: '💎 1,500 Diamonds', class: '' },
+      { text: '🪙 35,000 Coins', class: '' },
+      { text: '⚡ UMP Synthwave Neon Skin', class: 'special-cyan' }
+    ],
+    originalCost: 36000,
+    discountedCost: 18000,
+    costType: 'coins',
+    themeColor: '#00f0ff'
+  },
+  {
+    id: 'bundle_quantum_phantom',
+    title: 'QUANTUM PHANTOM BUNDLE',
+    tag: '🌌 VOID PROTOCOL • LIMITED TIME (50% OFF)',
+    desc: 'Instant delivery of <strong>2,000 💎 Diamonds</strong>, <strong>45,000 🪙 Cyber Coins</strong>, and the Legendary <strong>AWM "Hyper Beast"</strong> Sniper Skin!',
+    gems: 2000,
+    coins: 45000,
+    weaponId: 'awm',
+    skinId: 'awm_hyperbeast',
+    skinName: 'AWM Hyper Beast',
+    perks: [
+      { text: '💎 2,000 Diamonds', class: '' },
+      { text: '🪙 45,000 Coins', class: '' },
+      { text: '🌌 AWM Hyper Beast Skin', class: 'special-purple' }
+    ],
+    originalCost: 44000,
+    discountedCost: 22000,
+    costType: 'coins',
+    themeColor: '#b336ff'
+  },
+  {
+    id: 'bundle_mecha_overlord',
+    title: 'MECHA OVERLORD BUNDLE',
+    tag: '🤖 TITAN PROTOCOL • LIMITED TIME (50% OFF)',
+    desc: 'Instant delivery of <strong>2,500 💎 Diamonds</strong>, <strong>60,000 🪙 Cyber Coins</strong>, and the Legendary <strong>MP-40 "Bloodhound"</strong> Skin!',
+    gems: 2500,
+    coins: 60000,
+    weaponId: 'mp40',
+    skinId: 'mp40_bloodhound',
+    skinName: 'MP-40 Bloodhound',
+    perks: [
+      { text: '💎 2,500 Diamonds', class: '' },
+      { text: '🪙 60,000 Coins', class: '' },
+      { text: '🤖 MP-40 Bloodhound Skin', class: 'special-red' }
+    ],
+    originalCost: 50000,
+    discountedCost: 25000,
+    costType: 'coins',
+    themeColor: '#ff2a2a'
+  },
+  {
+    id: 'bundle_doom_annihilator',
+    title: 'DOOM ANNIHILATOR BUNDLE',
+    tag: '💥 HELLFIRE ARSENAL • LIMITED TIME (50% OFF)',
+    desc: 'Instant delivery of <strong>1,800 💎 Diamonds</strong>, <strong>40,000 🪙 Cyber Coins</strong>, and the Legendary <strong>Double Barrel "Doom Bringer"</strong> Shotgun Skin!',
+    gems: 1800,
+    coins: 40000,
+    weaponId: 'double_barrel',
+    skinId: 'double_barrel_doom',
+    skinName: 'Double Barrel Doom Bringer',
+    perks: [
+      { text: '💎 1,800 Diamonds', class: '' },
+      { text: '🪙 40,000 Coins', class: '' },
+      { text: '💥 Doom Bringer Skin', class: 'special-gold' }
+    ],
+    originalCost: 40000,
+    discountedCost: 20000,
+    costType: 'coins',
+    themeColor: '#f59e0b'
+  }
+];
+
 const HERO_DEFS = {
   commando: {
     id: 'commando',
@@ -2130,6 +2236,7 @@ class Game {
     this.renderAchievementsUI();
     this.renderMissionsUI();
     this.updateAdQuotaUI();
+    this.renderWeeklyBundleUI();
     this.renderHeroesGridUI();
     this.renderWeaponsGridUI();
     this.updateWeaponInspectPreview();
@@ -2214,6 +2321,8 @@ class Game {
         const m = Math.floor((diffSecs % 3600) / 60);
         el.textContent = `${diffDaysTotal}d ${h}h ${m}m`;
       }
+
+      this.updateWeeklyBundleCountdown();
     };
     updateTimer();
     if (this.challengeTimerInterval) clearInterval(this.challengeTimerInterval);
@@ -2440,6 +2549,10 @@ class Game {
     document.querySelectorAll('.btn-buy-pack').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (btn.disabled || btn.classList.contains('claimed')) {
+          this.showNotification('This bundle has already been claimed for this week!', 'ALREADY CLAIMED', 'amber');
+          return;
+        }
         const pack = {
           id: btn.dataset.packId,
           name: btn.dataset.name,
@@ -2447,7 +2560,10 @@ class Game {
           cost: parseInt(btn.dataset.cost || '0', 10),
           gems: parseInt(btn.dataset.gems || '0', 10),
           coins: parseInt(btn.dataset.coins || '0', 10),
-          skin: btn.dataset.skin || null
+          skin: btn.dataset.skin || null,
+          weaponId: btn.dataset.weaponId || 'ak47',
+          skinName: btn.dataset.skinName || '',
+          weekKey: btn.dataset.weekKey || null
         };
         this.openBankPurchaseModal(pack);
       });
@@ -3996,6 +4112,117 @@ class Game {
   }
 
   // ==========================================================================
+  // AUTOMATED WEEKLY ROTATING SHOP BUNDLE SYSTEM
+  // ==========================================================================
+  getWeeklyBundleInfo() {
+    const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    // Offset from Unix epoch (Thursday Jan 1 1970) to first Monday (Jan 5 1970 00:00:00 UTC)
+    const EPOCH_OFFSET_TO_MONDAY = 4 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const weekNumber = Math.floor((now - EPOCH_OFFSET_TO_MONDAY) / ONE_WEEK_MS);
+    const bundleIndex = ((weekNumber % WEEKLY_BUNDLES.length) + WEEKLY_BUNDLES.length) % WEEKLY_BUNDLES.length;
+    const activeBundle = WEEKLY_BUNDLES[bundleIndex];
+    const nextMondayUTC = (weekNumber + 1) * ONE_WEEK_MS + EPOCH_OFFSET_TO_MONDAY;
+    const msUntilReset = Math.max(0, nextMondayUTC - now);
+    const weekKey = `week_${weekNumber}_${activeBundle.id}`;
+
+    const isClaimed = !!(this.saveData.weeklyBundlesClaimed && this.saveData.weeklyBundlesClaimed[weekKey]);
+
+    return {
+      weekNumber,
+      bundleIndex,
+      activeBundle,
+      nextMondayUTC,
+      msUntilReset,
+      weekKey,
+      isClaimed
+    };
+  }
+
+  formatBundleCountdown(ms) {
+    const d = Math.floor(ms / (24 * 60 * 60 * 1000));
+    const h = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    const m = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+    const s = Math.floor((ms % (60 * 1000)) / 1000);
+    if (d > 0) {
+      return `${d}d ${h}h ${m}m`;
+    }
+    return `${h}h ${m}m ${s}s`;
+  }
+
+  renderWeeklyBundleUI() {
+    const info = this.getWeeklyBundleInfo();
+    const b = info.activeBundle;
+
+    const tagEl = document.getElementById('store-bundle-tag');
+    const timerEl = document.getElementById('store-bundle-timer');
+    const titleEl = document.getElementById('store-bundle-title');
+    const descEl = document.getElementById('store-bundle-desc');
+    const perksEl = document.getElementById('store-bundle-perks');
+    const origPriceEl = document.getElementById('store-bundle-original-price');
+    const buyBtn = document.getElementById('btn-buy-weekly-bundle');
+    const priceEl = document.getElementById('store-bundle-price');
+    const labelEl = document.getElementById('store-bundle-label');
+    const banner = document.getElementById('store-weekly-bundle-banner');
+
+    if (tagEl) tagEl.textContent = b.tag;
+    if (timerEl) timerEl.textContent = `⏳ Resets in: ${this.formatBundleCountdown(info.msUntilReset)}`;
+    if (titleEl) titleEl.textContent = b.title;
+    if (descEl) descEl.innerHTML = b.desc;
+
+    if (banner && b.themeColor) {
+      banner.style.borderColor = b.themeColor;
+      banner.style.boxShadow = `0 0 25px ${b.themeColor}33`;
+    }
+
+    if (perksEl) {
+      perksEl.innerHTML = b.perks.map(p => `<span class="bundle-pill ${p.class}">${p.text}</span>`).join('');
+    }
+
+    if (origPriceEl) {
+      origPriceEl.textContent = `🪙 ${b.originalCost.toLocaleString()}`;
+    }
+
+    if (buyBtn) {
+      buyBtn.dataset.packId = b.id;
+      buyBtn.dataset.name = b.title;
+      buyBtn.dataset.costType = b.costType;
+      buyBtn.dataset.cost = b.discountedCost;
+      buyBtn.dataset.gems = b.gems;
+      buyBtn.dataset.coins = b.coins;
+      buyBtn.dataset.skin = b.skinId;
+      buyBtn.dataset.weaponId = b.weaponId;
+      buyBtn.dataset.skinName = b.skinName;
+      buyBtn.dataset.weekKey = info.weekKey;
+
+      if (info.isClaimed) {
+        buyBtn.disabled = true;
+        buyBtn.classList.add('claimed');
+        if (priceEl) priceEl.textContent = '✅ CLAIMED';
+        if (labelEl) labelEl.textContent = 'OWNED THIS WEEK';
+        if (origPriceEl) origPriceEl.style.display = 'none';
+      } else {
+        buyBtn.disabled = false;
+        buyBtn.classList.remove('claimed');
+        if (priceEl) priceEl.textContent = `🪙 ${b.discountedCost.toLocaleString()}`;
+        if (labelEl) labelEl.textContent = '⚡ INSTANT UNLOCK';
+        if (origPriceEl) origPriceEl.style.display = 'block';
+      }
+    }
+  }
+
+  updateWeeklyBundleCountdown() {
+    const info = this.getWeeklyBundleInfo();
+    const timerEl = document.getElementById('store-bundle-timer');
+    if (timerEl) {
+      timerEl.textContent = `⏳ Resets in: ${this.formatBundleCountdown(info.msUntilReset)}`;
+    }
+    if (this.currentRenderedWeek !== info.weekNumber) {
+      this.currentRenderedWeek = info.weekNumber;
+      this.renderWeeklyBundleUI();
+    }
+  }
+
   // ==========================================================================
   // IN-GAME CURRENCY BANK & PACK PURCHASES (100% IN-GAME CURRENCY)
   // ==========================================================================
@@ -4018,7 +4245,10 @@ class Game {
     let descText = '';
     if (pack.gems > 0) descText += `+${pack.gems.toLocaleString()} Diamonds `;
     if (pack.coins > 0) descText += `+${pack.coins.toLocaleString()} Coins `;
-    if (pack.skin) descText += `+ AK-47 Dragonfire Skin `;
+    if (pack.skin) {
+      const skinLabel = pack.skinName ? pack.skinName : 'Exclusive Weapon Skin';
+      descText += `+ ${skinLabel} `;
+    }
     if (descEl) descEl.textContent = descText;
 
     const isCoinCost = (pack.costType === 'coins');
@@ -4064,7 +4294,19 @@ class Game {
         this.saveData.ownedSkins.push(pack.skin);
       }
       if (!this.saveData.equippedSkins) this.saveData.equippedSkins = {};
-      this.saveData.equippedSkins.ak47 = pack.skin;
+      const targetWeapon = pack.weaponId || 'ak47';
+      this.saveData.equippedSkins[targetWeapon] = pack.skin;
+    }
+
+    // Mark weekly bundle claimed if applicable
+    if (pack.weekKey) {
+      if (!this.saveData.weeklyBundlesClaimed) this.saveData.weeklyBundlesClaimed = {};
+      this.saveData.weeklyBundlesClaimed[pack.weekKey] = {
+        claimedAt: Date.now(),
+        bundleId: pack.id,
+        weekKey: pack.weekKey
+      };
+      this.renderWeeklyBundleUI();
     }
 
     SaveManager.save(this.saveData);
@@ -4077,7 +4319,10 @@ class Game {
     let rewardText = '';
     if (pack.gems > 0) rewardText += `+${pack.gems.toLocaleString()} 💎 `;
     if (pack.coins > 0) rewardText += `+${pack.coins.toLocaleString()} 🪙 `;
-    if (pack.skin) rewardText += `+ Dragonfire Skin!`;
+    if (pack.skin) {
+      const skinLabel = pack.skinName ? pack.skinName : 'Exclusive Skin';
+      rewardText += `+ ${skinLabel}!`;
+    }
 
     this.showNotification(`Unlocked ${pack.name}! (${rewardText})`, 'PURCHASE COMPLETED', 'green');
     this.pendingBankPack = null;
