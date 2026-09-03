@@ -206,7 +206,7 @@ body.playing .hud-btn {
   animation: fadeIn 0.25s ease-out forwards;
 }
 
-.modal-backdrop.hidden,
+.modal-backdrop.hidden, 
 .hidden {
   display: none !important;
 }
