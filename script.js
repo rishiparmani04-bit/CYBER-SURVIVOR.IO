@@ -322,6 +322,8 @@ const HERO_DEFS = {
   }
 };
 
+const HERO_ROSTER = HERO_DEFS;
+
 const WEAPON_DEFS = {
   ak47: {
     id: 'ak47',
@@ -2105,8 +2107,8 @@ class ParticleSystem {
 // ============================================================================
 class Game {
   constructor() {
-    this.canvas = document.getElementById('game-canvas');
-    this.ctx = this.canvas.getContext('2d');
+    this.canvas = document.getElementById('game-canvas') || document.getElementById('gameCanvas') || document.querySelector('canvas');
+    this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
     this.saveData = SaveManager.load();
     this.audio = new AudioEngine();
     this.particles = new ParticleSystem();
@@ -2332,11 +2334,19 @@ class Game {
 
   resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.canvas.width = window.innerWidth * dpr;
-    this.canvas.height = window.innerHeight * dpr;
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.camera.width = window.innerWidth;
-    this.camera.height = window.innerHeight;
+    const w = window.innerWidth || document.documentElement.clientWidth || 1280;
+    const h = window.innerHeight || document.documentElement.clientHeight || 720;
+    if (this.canvas) {
+      this.canvas.width = w * dpr;
+      this.canvas.height = h * dpr;
+      this.canvas.style.width = `${w}px`;
+      this.canvas.style.height = `${h}px`;
+      if (this.ctx) {
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+    }
+    this.camera.width = w;
+    this.camera.height = h;
   }
 
   initEvents() {
@@ -5213,13 +5223,22 @@ class Game {
     this.player.reviveProgress = 0;
     this.updateWeaponHUD();
 
+    // Center camera on player immediately
+    this.resizeCanvas();
+    this.camera.x = this.player.x - this.camera.width / 2;
+    this.camera.y = this.player.y - this.camera.height / 2;
+
     document.getElementById('hud-downed-banner')?.classList.add('hidden');
     document.getElementById('hud-revive-prompt')?.classList.add('hidden');
     document.getElementById('touch-btn-revive')?.classList.add('hidden');
 
-    // Initialize Co-Op Duo in Private Match
+    // Initialize Co-Op Duo in Private Match (non-blocking fallback)
     if (this.isPrivateMatch) {
-      this.initCoopMatch();
+      try {
+        this.initCoopMatch();
+      } catch (coopErr) {
+        console.warn('initCoopMatch safe fallback:', coopErr);
+      }
     } else {
       this.teammate = null;
       document.getElementById('hud-squad-panel')?.classList.add('hidden');
@@ -5231,6 +5250,9 @@ class Game {
     this.state = 'PLAYING';
     document.body.classList.add('playing');
     this.addScreenShake(0.3);
+
+    // Immediate fallback render call to guarantee immediate visible arena and player
+    this.renderFallbackFrame();
   }
 
   pauseGame() {
@@ -6248,13 +6270,17 @@ class Game {
       return;
     }
 
-    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
+    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1) || 0.016;
     this.lastTime = timestamp;
 
-    if (this.state === 'PLAYING') {
-      this.update(dt);
+    try {
+      if (this.state === 'PLAYING') {
+        this.update(dt);
+      }
+      this.render();
+    } catch (loopErr) {
+      console.warn('GameLoop frame non-fatal error:', loopErr);
     }
-    this.render();
 
     requestAnimationFrame((t) => this.gameLoop(t));
   }
@@ -6925,22 +6951,24 @@ class Game {
     const roomTag = document.getElementById('hud-squad-room');
     if (roomTag) roomTag.textContent = this.roomCode || 'CYBER-7842';
 
-    const partnerHeroId = (this.selectedHero === 'valkyrie' ? 'ninja' : 'valkyrie');
-    const partnerHero = HERO_ROSTER[partnerHeroId] || HERO_ROSTER.valkyrie;
-    const partnerWeap = (this.player.currentWeapon?.id === 'ak47' ? WEAPON_DEFS.ump : WEAPON_DEFS.ak47);
+    const partnerHeroId = (this.selectedHero === 'ninja' ? 'commando' : 'ninja');
+    const partnerHero = HERO_DEFS[partnerHeroId] || HERO_DEFS.commando;
+    const partnerWeap = (this.player?.currentWeapon?.id === 'ak47' ? WEAPON_DEFS.ump : WEAPON_DEFS.ak47);
+    const px = (this.player ? this.player.x : WORLD_WIDTH / 2);
+    const py = (this.player ? this.player.y : WORLD_HEIGHT / 2);
 
     this.teammate = {
       id: 'teammate_p2',
       name: (this.isHost ? 'P2 Ghost_Viper' : 'P1 Host_Prime'),
       heroId: partnerHeroId,
       hero: partnerHero,
-      color: partnerHero.color || '#00ff88',
-      x: this.player.x + 80,
-      y: this.player.y + 60,
+      color: partnerHero?.color || '#00ff88',
+      x: px + 80,
+      y: py + 60,
       vx: 0,
       vy: 0,
       angle: 0,
-      speed: partnerHero.speed || 270,
+      speed: partnerHero?.speed || 270,
       hp: 120,
       maxHp: 120,
       shield: 50,
@@ -6964,21 +6992,23 @@ class Game {
     }
 
     try {
-      this.networkId = 'net_' + Math.random().toString(36).substring(2, 9);
-      this.netChannel = new BroadcastChannel('cyber_coop_' + (this.roomCode || 'DEFAULT'));
-      this.netChannel.onmessage = (ev) => this.handleNetworkMessage(ev.data);
+      if (typeof BroadcastChannel !== 'undefined') {
+        this.networkId = 'net_' + Math.random().toString(36).substring(2, 9);
+        this.netChannel = new BroadcastChannel('cyber_coop_' + (this.roomCode || 'DEFAULT'));
+        this.netChannel.onmessage = (ev) => this.handleNetworkMessage(ev.data);
 
-      this.netChannel.postMessage({
-        type: 'PEER_HELLO',
-        senderId: this.networkId,
-        name: this.saveData.playerName || (this.isHost ? 'P1 Host' : 'P2 Operative'),
-        heroId: this.selectedHero,
-        weaponId: this.player.currentWeapon?.id,
-        x: this.player.x,
-        y: this.player.y
-      });
+        this.netChannel.postMessage({
+          type: 'PEER_HELLO',
+          senderId: this.networkId,
+          name: this.saveData.playerName || (this.isHost ? 'P1 Host' : 'P2 Operative'),
+          heroId: this.selectedHero,
+          weaponId: this.player?.currentWeapon?.id,
+          x: px,
+          y: py
+        });
+      }
     } catch (err) {
-      console.warn('BroadcastChannel not supported:', err);
+      console.warn('BroadcastChannel error, continuing with local AI co-op partner:', err);
     }
 
     this.updateSquadHUD();
@@ -7408,7 +7438,7 @@ class Game {
   }
 
   drawTeammate() {
-    if (!this.teammate) return;
+    if (!this.teammate || !this.player || !this.ctx) return;
     const tm = this.teammate;
     const ctx = this.ctx;
     const cam = this.camera;
@@ -7677,7 +7707,45 @@ class Game {
   // ==========================================================================
   // HIGH-DEFINITION GRAPHICS & CANVAS RENDERING
   // ==========================================================================
+  renderFallbackFrame() {
+    if (!this.ctx || !this.canvas) return;
+    const w = this.camera.width || window.innerWidth || 1280;
+    const h = this.camera.height || window.innerHeight || 720;
+
+    // Fallback render call: clear canvas with deep cyber dark background
+    this.ctx.fillStyle = '#0a0d14';
+    this.ctx.fillRect(0, 0, w, h);
+
+    if (this.player) {
+      this.camera.x = this.player.x - w / 2;
+      this.camera.y = this.player.y - h / 2;
+    }
+
+    try {
+      this.drawArena();
+    } catch (e) {
+      console.warn('drawArena fallback notice:', e);
+    }
+
+    if (this.player) {
+      try {
+        this.drawPlayer();
+      } catch (e) {
+        console.warn('drawPlayer fallback notice:', e);
+      }
+    }
+
+    if (this.isPrivateMatch && this.teammate) {
+      try {
+        this.drawTeammate();
+      } catch (e) {
+        console.warn('drawTeammate fallback notice:', e);
+      }
+    }
+  }
+
   render() {
+    if (!this.ctx || !this.canvas) return;
     this.ctx.clearRect(0, 0, this.camera.width, this.camera.height);
 
     if (this.state === 'MENU') {
@@ -7686,40 +7754,88 @@ class Game {
       return;
     }
 
+    // Always clear canvas with solid high-tech dark background
+    this.ctx.fillStyle = '#0a0d14';
+    this.ctx.fillRect(0, 0, this.camera.width, this.camera.height);
+
     // 1. Draw High-Tech Floor, Scorch Marks & Hazard Borders
-    this.drawArena();
+    try {
+      this.drawArena();
+    } catch (err) {
+      console.warn('drawArena render error:', err);
+    }
 
     // 2. Draw Ground Hazards & AoE Fields
-    this.drawHazards();
+    try {
+      this.drawHazards();
+    } catch (err) {
+      console.warn('drawHazards render error:', err);
+    }
 
     // 3. Draw 3D Faceted Pickups & Nanites
-    this.drawPickups();
+    try {
+      this.drawPickups();
+    } catch (err) {
+      console.warn('drawPickups render error:', err);
+    }
 
     // 4. Draw Glowing Plasma Projectiles & Beams
-    this.drawProjectiles();
+    try {
+      this.drawProjectiles();
+    } catch (err) {
+      console.warn('drawProjectiles render error:', err);
+    }
 
     // 5. Draw Procedural Cyborg Enemies, Mechs & Bosses
-    this.drawEnemies();
+    try {
+      this.drawEnemies();
+    } catch (err) {
+      console.warn('drawEnemies render error:', err);
+    }
 
     // 6. Draw High-Def Soldier Operative ("MAN & GUN"), Flashlight & Drones
-    this.drawPlayer();
+    try {
+      this.drawPlayer();
+    } catch (err) {
+      console.warn('drawPlayer render error:', err);
+    }
 
     // 6b. Draw Co-Op Squad Teammate (Private Match)
     if (this.isPrivateMatch && this.teammate) {
-      this.drawTeammate();
+      try {
+        this.drawTeammate();
+      } catch (err) {
+        console.warn('drawTeammate render error:', err);
+      }
     }
 
     // 7. Draw Next-Gen Particles, Shell Casings & Combat Text
-    this.particles.draw(this.ctx, this.camera);
+    try {
+      this.particles.draw(this.ctx, this.camera);
+    } catch (err) {
+      console.warn('particles render error:', err);
+    }
 
     // 8. Draw Atmospheric Vignette & Dynamic Lighting
-    this.drawAtmosphereAndLighting();
+    try {
+      this.drawAtmosphereAndLighting();
+    } catch (err) {
+      console.warn('drawAtmosphere render error:', err);
+    }
 
     // 9. Draw Off-screen Threat Compass
-    this.drawThreatIndicators();
+    try {
+      this.drawThreatIndicators();
+    } catch (err) {
+      console.warn('drawThreatIndicators render error:', err);
+    }
 
     // 10. Draw Custom Sci-Fi Aim Crosshair (when in-game)
-    this.drawCrosshair();
+    try {
+      this.drawCrosshair();
+    } catch (err) {
+      console.warn('drawCrosshair render error:', err);
+    }
   }
 
   drawArena() {
