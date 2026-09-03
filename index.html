@@ -131,32 +131,15 @@
         </div>
       </div>
 
-      <!-- Co-Op Squad Teammate Panel (Private / Multiplayer Matches) -->
+      <!-- Co-Op Squad Panel (4-Player Real-Time Co-Op) -->
       <div id="hud-squad-panel" class="squad-panel hidden">
         <div class="squad-header">
           <span class="squad-icon">👥</span>
-          <span class="squad-title">CO-OP DUO</span>
-          <span class="squad-room-tag" id="hud-squad-room">CYBER-7842</span>
+          <span class="squad-title">CO-OP SQUAD (4P)</span>
+          <span class="squad-room-tag" id="hud-squad-room">CYBER-42X</span>
         </div>
-        <div class="teammate-card" id="hud-teammate-card">
-          <div class="teammate-avatar-wrap">
-            <span class="teammate-avatar-icon" id="hud-teammate-icon">🥷</span>
-            <span class="teammate-status-dot online" id="hud-teammate-dot"></span>
-          </div>
-          <div class="teammate-info">
-            <div class="teammate-name-row">
-              <span class="teammate-name" id="hud-teammate-name">P2 OPERATIVE</span>
-              <span class="teammate-status-badge healthy" id="hud-teammate-status">HEALTHY</span>
-            </div>
-            <div class="teammate-bars">
-              <div class="tm-bar-track tm-hp-track" title="Teammate HP">
-                <div class="tm-bar-fill tm-hp-fill" id="hud-tm-hp-fill" style="width: 100%;"></div>
-              </div>
-              <div class="tm-bar-track tm-shield-track" title="Teammate Shield">
-                <div class="tm-bar-fill tm-shield-fill" id="hud-tm-shield-fill" style="width: 100%;"></div>
-              </div>
-            </div>
-          </div>
+        <div id="hud-squad-members-list" class="squad-members-list">
+          <!-- Dynamically populated squad member cards for P1, P2, P3, P4 -->
         </div>
       </div>
     </div>
@@ -456,8 +439,8 @@
 
             <!-- Mode Selector Pills directly below PLAY -->
             <div class="deadshot-mode-pills">
-              <button class="mode-pill" id="btn-mode-private" data-mode="private">Private</button>
-              <button class="mode-pill" id="btn-mode-join" data-mode="join">Join</button>
+              <button class="mode-pill active" id="btn-mode-campaign" data-mode="campaign">Solo</button>
+              <button class="mode-pill neon-pill" id="btn-mode-coop-squad" data-mode="coop">👥 CO-OP SQUAD (4P)</button>
               <button class="mode-pill" id="btn-mode-bossrush" data-mode="bossrush">Boss Gauntlet</button>
             </div>
           </div>
@@ -1398,6 +1381,148 @@
     </div>
   </div>
 
+  <!-- Modal: 4-Player Real-Time Squad Room Management -->
+  <div id="squad-lobby-modal" class="modal-backdrop hidden">
+    <div class="squad-lobby-card">
+      <div class="squad-modal-header">
+        <div class="squad-header-badge">
+          <span class="squad-modal-icon">👥</span>
+          <div class="squad-modal-titles">
+            <h2 class="squad-modal-title">4-PLAYER SQUAD CO-OP</h2>
+            <span class="squad-modal-sub">REAL-TIME PEERJS PROTOCOL &bull; DIRECT P2P SYNC</span>
+          </div>
+        </div>
+        <button id="btn-close-squad-modal" class="alert-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <!-- Mode Selector Tabs: CREATE SQUAD vs JOIN SQUAD -->
+      <div class="squad-tabs-bar">
+        <button class="squad-tab-btn active" id="tab-btn-create-squad">
+          <span>🛡️ OPTION A: CREATE SQUAD</span>
+        </button>
+        <button class="squad-tab-btn" id="tab-btn-join-squad">
+          <span>🔗 OPTION B: JOIN SQUAD</span>
+        </button>
+      </div>
+
+      <!-- TAB A: CREATE SQUAD VIEW -->
+      <div id="view-create-squad" class="squad-tab-view active">
+        <!-- Room Code Banner -->
+        <div class="squad-code-banner">
+          <div class="code-banner-meta">
+            <span class="code-banner-label">ROOM CODE (SHARE WITH SQUAD)</span>
+            <span class="code-banner-sub">Peers can connect from any network, college Wi-Fi or mobile hotspot</span>
+          </div>
+          <div class="code-banner-action-wrap">
+            <span class="squad-room-code-val" id="squad-generated-code">CYBER-42X</span>
+            <button class="btn-copy-code" id="btn-copy-squad-code">📋 COPY CODE</button>
+          </div>
+        </div>
+
+        <!-- 4-Player Roster Slots -->
+        <div class="squad-roster-grid">
+          <!-- Slot 1: Host (P1) -->
+          <div class="squad-slot-card host-slot" id="slot-card-1">
+            <div class="slot-badge p1-badge">P1 [HOST]</div>
+            <div class="slot-avatar" id="slot-1-avatar">🚀</div>
+            <div class="slot-name" id="slot-1-name">OPERATIVE (YOU)</div>
+            <div class="slot-hero" id="slot-1-hero">COMMANDO</div>
+            <div class="slot-status ready">
+              <span class="status-dot"></span> HOST READY
+            </div>
+          </div>
+
+          <!-- Slot 2: P2 -->
+          <div class="squad-slot-card empty-slot" id="slot-card-2">
+            <div class="slot-badge p2-badge">P2</div>
+            <div class="slot-avatar" id="slot-2-avatar">
+              <div class="radar-scan-anim"></div>
+              <span>👤</span>
+            </div>
+            <div class="slot-name" id="slot-2-name">EMPTY SLOT</div>
+            <div class="slot-hero" id="slot-2-hero">Waiting for player...</div>
+            <div class="slot-status waiting" id="slot-2-status">
+              <span class="status-dot pulsing"></span> WAITING FOR SQUAD
+            </div>
+          </div>
+
+          <!-- Slot 3: P3 -->
+          <div class="squad-slot-card empty-slot" id="slot-card-3">
+            <div class="slot-badge p3-badge">P3</div>
+            <div class="slot-avatar" id="slot-3-avatar">
+              <div class="radar-scan-anim"></div>
+              <span>👤</span>
+            </div>
+            <div class="slot-name" id="slot-3-name">EMPTY SLOT</div>
+            <div class="slot-hero" id="slot-3-hero">Waiting for player...</div>
+            <div class="slot-status waiting" id="slot-3-status">
+              <span class="status-dot pulsing"></span> WAITING FOR SQUAD
+            </div>
+          </div>
+
+          <!-- Slot 4: P4 -->
+          <div class="squad-slot-card empty-slot" id="slot-card-4">
+            <div class="slot-badge p4-badge">P4</div>
+            <div class="slot-avatar" id="slot-4-avatar">
+              <div class="radar-scan-anim"></div>
+              <span>👤</span>
+            </div>
+            <div class="slot-name" id="slot-4-name">EMPTY SLOT</div>
+            <div class="slot-hero" id="slot-4-hero">Waiting for player...</div>
+            <div class="slot-status waiting" id="slot-4-status">
+              <span class="status-dot pulsing"></span> WAITING FOR SQUAD
+            </div>
+          </div>
+        </div>
+
+        <!-- Host Action Footer -->
+        <div class="squad-modal-footer">
+          <div class="squad-member-count" id="squad-member-count-text">
+            <span>TEAMMATES: </span><strong id="squad-count-val">1 / 4 READY</strong>
+          </div>
+          <button id="btn-start-squad-match" class="btn-primary btn-squad-launch disabled" disabled>
+            <span>⏳ WAITING FOR AT LEAST 1 TEAMMATE...</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB B: JOIN SQUAD VIEW -->
+      <div id="view-join-squad" class="squad-tab-view">
+        <div class="join-squad-container">
+          <div class="join-input-block">
+            <label class="squad-input-label" for="input-join-squad-code">ENTER 5-CHARACTER ROOM CODE</label>
+            <div class="join-code-row">
+              <input type="text" id="input-join-squad-code" class="squad-code-input" placeholder="e.g. CYBER-42X" maxlength="12" autocomplete="off" spellcheck="false">
+              <button id="btn-connect-squad" class="btn-primary btn-connect-squad">CONNECT</button>
+            </div>
+            <div class="join-input-hint">Direct P2P connection via Google STUN servers. No port forwarding required.</div>
+          </div>
+
+          <!-- Live Connection Status & Waiting Panel -->
+          <div class="squad-join-status-box" id="squad-join-status-box">
+            <div class="join-status-icon" id="join-status-icon">📡</div>
+            <div class="join-status-content">
+              <div class="join-status-title" id="join-status-title">READY TO CONNECT</div>
+              <div class="join-status-desc" id="join-status-desc">Enter the room code given by the squad host and click Connect.</div>
+            </div>
+          </div>
+
+          <!-- Client Squad Preview (Shown once connected) -->
+          <div class="client-squad-preview hidden" id="client-squad-preview">
+            <div class="preview-title">CONNECTED SQUAD ROSTER:</div>
+            <div class="preview-slots-row" id="client-preview-slots-row">
+              <!-- Injected dynamically -->
+            </div>
+            <div class="client-waiting-prompt">
+              <div class="spinner-radar"></div>
+              <span>LINK ESTABLISHED &bull; WAITING FOR HOST TO START MATCH...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Create Private Match / Lobby -->
   <div id="private-room-modal" class="modal-backdrop hidden">
     <div class="google-auth-card private-room-card">
@@ -1649,6 +1774,7 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="ads.js?v=1.0"></script>
   <script src="auth.js?v=1.0"></script>
   <script src="script.js?v=5.1"></script>

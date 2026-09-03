@@ -324,6 +324,13 @@ const HERO_DEFS = {
 
 const HERO_ROSTER = HERO_DEFS;
 
+const SQUAD_SLOT_DEFS = [
+  { slot: 1, title: 'P1 [HOST]', color: '#00f0ff', badgeClass: 'p1-badge' },
+  { slot: 2, title: 'P2', color: '#00ff88', badgeClass: 'p2-badge' },
+  { slot: 3, title: 'P3', color: '#d946ef', badgeClass: 'p3-badge' },
+  { slot: 4, title: 'P4', color: '#f59e0b', badgeClass: 'p4-badge' }
+];
+
 const WEAPON_DEFS = {
   ak47: {
     id: 'ak47',
@@ -2156,12 +2163,19 @@ class Game {
     this.rerollsLeft = 1;
     this.offeredPerks = [];
 
-    // Co-Op & Private Match State
+    // 4-Player Real-Time Co-Op & PeerJS Match State
     this.isPrivateMatch = false;
     this.isHost = false;
     this.roomCode = null;
-    this.teammate = null;
+    this.mySlot = 1;
+    this.peer = null;
+    this.hostConn = null;
+    this.squadPeers = new Map(); // peerId -> client peer object
+    this.squadMembers = []; // all connected human players in match
+    this.roomCodePrefix = 'cyber_survivor_squad_';
+    this.teammate = null; // AI bot completely disabled
     this.netChannel = null;
+    this.localNetChannel = null;
     this.networkId = null;
     this.networkSyncTimer = 0;
     this.isTouchReviving = false;
@@ -2855,98 +2869,88 @@ class Game {
       this.initChallengeTimer();
     });
 
-    // Lobby Mode Pills (Private, Join, Boss Gauntlet)
+    // Lobby Mode Selector Pills (Solo, CO-OP Squad 4P, Boss Gauntlet)
     const selectModePill = (mode, el) => {
-      document.querySelectorAll('.mode-pill').forEach((p) => p.classList.remove('selected'));
-      el?.classList.add('selected');
+      document.querySelectorAll('.mode-pill').forEach((p) => p.classList.remove('selected', 'active'));
+      el?.classList.add('selected', 'active');
       this.gameMode = mode;
       this.audio.playDeflect();
     };
 
-    document.getElementById('btn-mode-private')?.addEventListener('click', (e) => {
+    document.getElementById('btn-mode-campaign')?.addEventListener('click', (e) => {
       selectModePill('campaign', e.currentTarget);
-      const randomCode = `CYBER-${Math.floor(1000 + Math.random() * 9000)}`;
-      const codeEl = document.getElementById('private-lobby-code');
-      if (codeEl) codeEl.textContent = randomCode;
-      document.getElementById('private-room-modal')?.classList.remove('hidden');
+      this.isPrivateMatch = false;
+      this.showNotification('Solo Survival mode active. Click PLAY to start.', 'SOLO MISSION', 'green');
     });
 
-    document.getElementById('btn-close-private-modal')?.addEventListener('click', () => {
-      document.getElementById('private-room-modal')?.classList.add('hidden');
+    document.getElementById('btn-mode-coop-squad')?.addEventListener('click', (e) => {
+      selectModePill('coop', e.currentTarget);
+      this.openSquadLobbyModal('create');
     });
 
-    document.getElementById('private-room-modal')?.addEventListener('click', (e) => {
-      if (e.target.id === 'private-room-modal') {
-        document.getElementById('private-room-modal')?.classList.add('hidden');
+    document.getElementById('btn-mode-private')?.addEventListener('click', (e) => {
+      selectModePill('coop', e.currentTarget);
+      this.openSquadLobbyModal('create');
+    });
+
+    document.getElementById('btn-mode-join')?.addEventListener('click', (e) => {
+      selectModePill('coop', e.currentTarget);
+      this.openSquadLobbyModal('join');
+    });
+
+    // 4-Player Squad Modal Tab & Button Listeners
+    document.getElementById('btn-close-squad-modal')?.addEventListener('click', () => {
+      this.closeSquadLobbyModal();
+    });
+
+    document.getElementById('squad-lobby-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'squad-lobby-modal') {
+        this.closeSquadLobbyModal();
       }
     });
 
-    document.getElementById('btn-copy-room-code')?.addEventListener('click', () => {
-      const code = document.getElementById('private-lobby-code')?.textContent || 'CYBER-7842';
+    document.getElementById('tab-btn-create-squad')?.addEventListener('click', () => {
+      this.switchSquadLobbyTab('create');
+    });
+
+    document.getElementById('tab-btn-join-squad')?.addEventListener('click', () => {
+      this.switchSquadLobbyTab('join');
+    });
+
+    document.getElementById('btn-copy-squad-code')?.addEventListener('click', () => {
+      const code = document.getElementById('squad-generated-code')?.textContent || this.roomCode || 'CYBER-42X';
       navigator.clipboard?.writeText(code).then(() => {
-        this.showNotification(`Lobby code ${code} copied to clipboard!`, 'CODE COPIED', 'green');
+        this.showNotification(`Room code ${code} copied! Share it with teammates.`, 'ROOM CODE COPIED', 'green');
       }).catch(() => {
-        this.showNotification(`Lobby code: ${code}`, 'ROOM CODE', 'green');
+        this.showNotification(`Room code: ${code}`, 'ROOM CODE', 'green');
       });
       this.audio.playCoin();
     });
 
-    document.getElementById('btn-launch-private-match')?.addEventListener('click', () => {
-      const code = document.getElementById('private-lobby-code')?.textContent || 'CYBER-7842';
-      document.getElementById('private-room-modal')?.classList.add('hidden');
-      this.isPrivateMatch = true;
-      this.isHost = true;
-      this.roomCode = code;
-      this.showNotification(`Private Match Created: ${code} - Squad Co-Op Active!`, 'MATCH INITIALIZED', 'green');
-      this.startRun();
+    document.getElementById('btn-start-squad-match')?.addEventListener('click', () => {
+      this.launchSquadMatch();
     });
 
-    document.getElementById('btn-mode-join')?.addEventListener('click', (e) => {
-      selectModePill('campaign', e.currentTarget);
-      const input = document.getElementById('input-join-room-code');
-      if (input) input.value = '';
-      document.getElementById('join-room-modal')?.classList.remove('hidden');
-    });
-
-    document.getElementById('btn-close-join-modal')?.addEventListener('click', () => {
-      document.getElementById('join-room-modal')?.classList.add('hidden');
-    });
-
-    document.getElementById('join-room-modal')?.addEventListener('click', (e) => {
-      if (e.target.id === 'join-room-modal') {
-        document.getElementById('join-room-modal')?.classList.add('hidden');
-      }
-    });
-
-    document.getElementById('btn-join-code-action')?.addEventListener('click', () => {
-      const code = document.getElementById('input-join-room-code')?.value.trim().toUpperCase();
+    document.getElementById('btn-connect-squad')?.addEventListener('click', () => {
+      const input = document.getElementById('input-join-squad-code');
+      const code = input ? input.value.trim() : '';
       if (!code) {
-        this.showNotification('Please enter a valid room code.', 'ROOM CODE REQUIRED', 'red');
-        this.audio.playHit();
+        this.showNotification('Please enter a 5-character room code!', 'CODE REQUIRED', 'red');
+        this.audio.playHit(false);
         return;
       }
-      document.getElementById('join-room-modal')?.classList.add('hidden');
-      this.isPrivateMatch = true;
-      this.isHost = false;
-      this.roomCode = code;
-      this.showNotification(`Connecting to room ${code}... Connected!`, 'LOBBY CONNECTED', 'green');
-      this.startRun();
+      this.joinSquadRoom(code);
     });
 
-    document.querySelectorAll('.public-server-item').forEach((item) => {
-      item.addEventListener('click', () => {
-        const sName = item.dataset.server || 'Public Server';
-        document.getElementById('join-room-modal')?.classList.add('hidden');
-        this.isPrivateMatch = true;
-        this.isHost = false;
-        this.roomCode = 'PUB-' + sName.replace(/[^A-Za-z0-9]/g, '').slice(0, 8).toUpperCase();
-        this.showNotification(`Connected to ${sName}! Deploying...`, 'SERVER CONNECTED', 'green');
-        this.startRun();
-      });
+    document.getElementById('input-join-squad-code')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('btn-connect-squad')?.click();
+      }
     });
 
     document.getElementById('btn-mode-bossrush')?.addEventListener('click', (e) => {
       selectModePill('bossrush', e.currentTarget);
+      this.isPrivateMatch = false;
       this.showNotification('Boss Gauntlet mode active! Click PLAY to deploy.', 'BOSS GAUNTLET READY', 'green');
     });
 
@@ -3009,7 +3013,14 @@ class Game {
       this.switchTab('tab-weapons');
     });
 
-    document.getElementById('btn-start-game')?.addEventListener('click', () => this.startRun());
+    document.getElementById('btn-start-game')?.addEventListener('click', () => {
+      if (this.gameMode === 'coop') {
+        this.openSquadLobbyModal('create');
+      } else {
+        this.isPrivateMatch = false;
+        this.startRun();
+      }
+    });
     document.getElementById('btn-pause')?.addEventListener('click', () => this.pauseGame());
     document.getElementById('btn-resume-game')?.addEventListener('click', () => this.resumeGame());
     document.getElementById('btn-restart-game')?.addEventListener('click', () => {
@@ -5232,15 +5243,16 @@ class Game {
     document.getElementById('hud-revive-prompt')?.classList.add('hidden');
     document.getElementById('touch-btn-revive')?.classList.add('hidden');
 
-    // Initialize Co-Op Duo in Private Match (non-blocking fallback)
+    // Initialize 4-Player Co-Op Squad (AI Companion Bot Completely Disabled)
     if (this.isPrivateMatch) {
-      try {
-        this.initCoopMatch();
-      } catch (coopErr) {
-        console.warn('initCoopMatch safe fallback:', coopErr);
-      }
+      this.teammate = null; // AI companion bot completely turned off
+      document.getElementById('hud-squad-panel')?.classList.remove('hidden');
+      const roomTag = document.getElementById('hud-squad-room');
+      if (roomTag) roomTag.textContent = this.roomCode || 'CYBER-42X';
+      this.updateMultiplayerSquadHUD();
     } else {
       this.teammate = null;
+      this.squadMembers = [];
       document.getElementById('hud-squad-panel')?.classList.add('hidden');
     }
 
@@ -5284,13 +5296,11 @@ class Game {
     document.getElementById('levelup-modal').classList.add('hidden');
     document.getElementById('menu-screen').classList.add('active');
 
-    // Clean up Co-Op Private Match network & panels
-    if (this.netChannel) {
-      try { this.netChannel.close(); } catch (e) {}
-      this.netChannel = null;
-    }
+    // Clean up 4-Player Co-Op Squad network & panels
+    this.cleanupSquadNetwork();
     this.isPrivateMatch = false;
     this.teammate = null;
+    this.squadMembers = [];
     document.getElementById('hud-squad-panel')?.classList.add('hidden');
     document.getElementById('hud-downed-banner')?.classList.add('hidden');
     document.getElementById('hud-revive-prompt')?.classList.add('hidden');
@@ -6891,10 +6901,10 @@ class Game {
     this.particles.update(dt);
     this.updateHUD();
 
-    // 11. Co-Op Teammate & Network Synchronization (Private Match)
+    // 11. 4-Player Co-Op Squad Network Synchronization & Revive Tethers
     if (this.isPrivateMatch) {
-      if (this.teammate) this.updateTeammate(dt);
-      if (this.netChannel) this.syncNetworkState(dt);
+      this.syncSquadNetworkState(dt);
+      this.handleSquadReviveTethers(dt);
     }
   }
 
@@ -6930,7 +6940,8 @@ class Game {
 
     if (this.player.hp <= 0) {
       this.player.hp = 0;
-      if (this.isPrivateMatch && this.teammate && !this.teammate.isDowned) {
+      const anyTeammateAlive = this.isPrivateMatch && this.squadMembers.some(m => !m.isDowned);
+      if (anyTeammateAlive) {
         this.enterPlayerDownedState();
       } else {
         this.gameOver();
@@ -6938,459 +6949,802 @@ class Game {
     }
   }
 
-  addScreenShake(amount) {
-    this.camera.shakeTrauma = Math.min(1.0, this.camera.shakeTrauma + amount);
+  // ==========================================================================
+  // 4-PLAYER REAL-TIME SQUAD CO-OP SYSTEM (PEERJS & GOOGLE STUN)
+  // ==========================================================================
+
+  generateSquadRoomCode() {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let code = '';
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `CYBER-${code}`;
   }
 
-  // ==========================================================================
-  // CO-OP MULTIPLAYER & REVIVE SYSTEM (PRIVATE MATCH)
-  // ==========================================================================
-  initCoopMatch() {
-    const squadPanel = document.getElementById('hud-squad-panel');
-    if (squadPanel) squadPanel.classList.remove('hidden');
-    const roomTag = document.getElementById('hud-squad-room');
-    if (roomTag) roomTag.textContent = this.roomCode || 'CYBER-7842';
+  openSquadLobbyModal(initialTab = 'create') {
+    const modal = document.getElementById('squad-lobby-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
 
-    const partnerHeroId = (this.selectedHero === 'ninja' ? 'commando' : 'ninja');
-    const partnerHero = HERO_DEFS[partnerHeroId] || HERO_DEFS.commando;
-    const partnerWeap = (this.player?.currentWeapon?.id === 'ak47' ? WEAPON_DEFS.ump : WEAPON_DEFS.ak47);
-    const px = (this.player ? this.player.x : WORLD_WIDTH / 2);
-    const py = (this.player ? this.player.y : WORLD_HEIGHT / 2);
+    this.switchSquadLobbyTab(initialTab);
 
-    this.teammate = {
-      id: 'teammate_p2',
-      name: (this.isHost ? 'P2 Ghost_Viper' : 'P1 Host_Prime'),
-      heroId: partnerHeroId,
-      hero: partnerHero,
-      color: partnerHero?.color || '#00ff88',
-      x: px + 80,
-      y: py + 60,
-      vx: 0,
-      vy: 0,
-      angle: 0,
-      speed: partnerHero?.speed || 270,
-      hp: 120,
-      maxHp: 120,
-      shield: 50,
-      maxShield: 50,
-      shieldRegenRate: 15,
-      isDowned: false,
-      downedTimer: 0,
-      maxDownedTime: 30,
-      reviveProgress: 0,
-      currentWeapon: partnerWeap,
-      fireTimer: 0,
-      muzzleFlash: 0,
-      recoil: 0,
-      walkTimer: 0,
-      isHuman: false
-    };
-
-    if (this.netChannel) {
-      try { this.netChannel.close(); } catch (err) {}
-      this.netChannel = null;
+    if (initialTab === 'create') {
+      if (!this.roomCode || !this.isHost) {
+        this.roomCode = this.generateSquadRoomCode();
+      }
+      const codeDisplay = document.getElementById('squad-generated-code');
+      if (codeDisplay) codeDisplay.textContent = this.roomCode;
+      this.initSquadHost(this.roomCode);
     }
+  }
+
+  closeSquadLobbyModal() {
+    const modal = document.getElementById('squad-lobby-modal');
+    if (modal) modal.classList.add('hidden');
+    // If we're not actually in a match, clean up network resources
+    if (this.state !== 'PLAYING') {
+      this.cleanupSquadNetwork();
+      this.isPrivateMatch = false;
+    }
+  }
+
+  switchSquadLobbyTab(tabName) {
+    const btnCreate = document.getElementById('tab-btn-create-squad');
+    const btnJoin = document.getElementById('tab-btn-join-squad');
+    const viewCreate = document.getElementById('view-create-squad');
+    const viewJoin = document.getElementById('view-join-squad');
+
+    if (tabName === 'create') {
+      btnCreate?.classList.add('active');
+      btnJoin?.classList.remove('active');
+      viewCreate?.classList.add('active');
+      viewJoin?.classList.remove('active');
+
+      if (!this.roomCode || !this.isHost) {
+        this.roomCode = this.generateSquadRoomCode();
+        const codeDisplay = document.getElementById('squad-generated-code');
+        if (codeDisplay) codeDisplay.textContent = this.roomCode;
+        this.initSquadHost(this.roomCode);
+      }
+    } else {
+      btnJoin?.classList.add('active');
+      btnCreate?.classList.remove('active');
+      viewJoin?.classList.add('active');
+      viewCreate?.classList.remove('active');
+      const input = document.getElementById('input-join-squad-code');
+      if (input) input.focus();
+    }
+  }
+
+  cleanupSquadNetwork() {
+    if (this.peer) {
+      try {
+        this.peer.destroy();
+      } catch (err) {}
+      this.peer = null;
+    }
+    if (this.hostConn) {
+      try {
+        this.hostConn.close();
+      } catch (err) {}
+      this.hostConn = null;
+    }
+    if (this.squadPeers) {
+      this.squadPeers.forEach((p) => {
+        try { if (p.conn) p.conn.close(); } catch (e) {}
+      });
+      this.squadPeers.clear();
+    }
+    if (this.localNetChannel) {
+      try { this.localNetChannel.close(); } catch (e) {}
+      this.localNetChannel = null;
+    }
+    this.squadMembers = [];
+    this.teammate = null;
+  }
+
+  initSquadHost(roomCode) {
+    this.cleanupSquadNetwork();
+    this.isPrivateMatch = true;
+    this.isHost = true;
+    this.mySlot = 1;
+    this.roomCode = roomCode;
+    this.squadPeers = new Map();
+    this.squadMembers = [];
+
+    const cleanCode = roomCode.replace(/[^A-Z0-9]/g, '');
+    const peerId = this.roomCodePrefix + cleanCode;
 
     try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        this.networkId = 'net_' + Math.random().toString(36).substring(2, 9);
-        this.netChannel = new BroadcastChannel('cyber_coop_' + (this.roomCode || 'DEFAULT'));
-        this.netChannel.onmessage = (ev) => this.handleNetworkMessage(ev.data);
+      if (typeof Peer !== 'undefined') {
+        this.peer = new Peer(peerId, {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+          }
+        });
 
-        this.netChannel.postMessage({
-          type: 'PEER_HELLO',
-          senderId: this.networkId,
-          name: this.saveData.playerName || (this.isHost ? 'P1 Host' : 'P2 Operative'),
-          heroId: this.selectedHero,
-          weaponId: this.player?.currentWeapon?.id,
-          x: px,
-          y: py
+        this.peer.on('open', (id) => {
+          console.log('[Squad Host] Registered PeerJS ID:', id);
+          this.updateSquadLobbyUI();
+        });
+
+        this.peer.on('connection', (conn) => {
+          this.handleHostIncomingConnection(conn);
+        });
+
+        this.peer.on('error', (err) => {
+          console.warn('[Squad Host] Peer error:', err);
+          if (err.type === 'unavailable-id') {
+            this.roomCode = this.generateSquadRoomCode();
+            const codeEl = document.getElementById('squad-generated-code');
+            if (codeEl) codeEl.textContent = this.roomCode;
+            this.initSquadHost(this.roomCode);
+          }
         });
       }
     } catch (err) {
-      console.warn('BroadcastChannel error, continuing with local AI co-op partner:', err);
+      console.warn('[Squad Host] PeerJS exception:', err);
     }
 
-    this.updateSquadHUD();
+    // Local BroadcastChannel fallback for multi-window same-machine testing
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        this.localNetChannel = new BroadcastChannel('squad_local_' + cleanCode);
+        this.localNetChannel.onmessage = (ev) => this.handleHostNetworkPacket(ev.data, null);
+      }
+    } catch (e) {}
+
+    this.updateSquadLobbyUI();
   }
 
-  handleNetworkMessage(data) {
-    if (!data || data.senderId === this.networkId || !this.teammate) return;
+  joinSquadRoom(roomCode) {
+    this.cleanupSquadNetwork();
+    this.isPrivateMatch = true;
+    this.isHost = false;
+    this.mySlot = 0;
+    this.roomCode = roomCode.toUpperCase().trim();
+    this.squadMembers = [];
 
-    if (data.type === 'PEER_HELLO') {
-      this.teammate.isHuman = true;
-      if (data.name) this.teammate.name = data.name;
-      if (data.heroId && HERO_ROSTER[data.heroId]) {
-        this.teammate.heroId = data.heroId;
-        this.teammate.hero = HERO_ROSTER[data.heroId];
-        this.teammate.color = this.teammate.hero.color;
+    const cleanCode = this.roomCode.replace(/[^A-Z0-9]/g, '');
+    const hostPeerId = this.roomCodePrefix + cleanCode;
+    const clientPeerId = this.roomCodePrefix + cleanCode + '_p_' + Math.random().toString(36).substring(2, 7);
+
+    this.updateJoinStatus('📡 INITIALIZING...', `Connecting to Google STUN servers for squad ${this.roomCode}...`, false);
+
+    try {
+      if (typeof Peer !== 'undefined') {
+        this.peer = new Peer(clientPeerId, {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+          }
+        });
+
+        this.peer.on('open', () => {
+          this.updateJoinStatus('🔗 CONNECTING...', `Contacting Squad Host at ${this.roomCode}...`, false);
+          const conn = this.peer.connect(hostPeerId, { reliable: true });
+          this.setupClientConnection(conn);
+        });
+
+        this.peer.on('error', (err) => {
+          console.warn('[Squad Client] Peer error:', err);
+          this.updateJoinStatus('⚠️ CONNECTION ERROR', `Failed to locate host: ${err.message || err.type}. Verify room code and ensure host is waiting in lobby.`, true);
+        });
       }
-      if (data.weaponId && WEAPON_DEFS[data.weaponId]) {
-        this.teammate.currentWeapon = WEAPON_DEFS[data.weaponId];
+    } catch (err) {
+      console.warn('[Squad Client] PeerJS exception:', err);
+    }
+
+    // Local fallback
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        this.localNetChannel = new BroadcastChannel('squad_local_' + cleanCode);
+        this.localNetChannel.onmessage = (ev) => this.handleClientNetworkPacket(ev.data);
+        this.localNetChannel.postMessage({
+          type: 'JOIN_REQ',
+          clientId: clientPeerId,
+          name: this.saveData.playerName || 'Operative',
+          heroId: this.selectedHero || 'commando',
+          weaponId: this.saveData.primaryWeapon || 'ak47'
+        });
       }
-      this.netChannel?.postMessage({
-        type: 'PEER_WELCOME',
-        senderId: this.networkId,
-        name: this.saveData.playerName || (this.isHost ? 'P1 Host' : 'P2 Operative'),
-        heroId: this.selectedHero,
-        weaponId: this.player.currentWeapon?.id,
-        x: this.player.x,
-        y: this.player.y
+    } catch (e) {}
+  }
+
+  handleHostIncomingConnection(conn) {
+    conn.on('open', () => {
+      console.log('[Squad Host] New peer connected:', conn.peer);
+    });
+
+    conn.on('data', (data) => {
+      this.handleHostNetworkPacket(data, conn);
+    });
+
+    conn.on('close', () => {
+      this.removeSquadPeer(conn.peer);
+    });
+
+    conn.on('error', (err) => {
+      console.warn('[Squad Host] Conn error with peer:', conn.peer, err);
+      this.removeSquadPeer(conn.peer);
+    });
+  }
+
+  setupClientConnection(conn) {
+    this.hostConn = conn;
+
+    conn.on('open', () => {
+      this.updateJoinStatus('🤝 LINKING...', 'Connected to host! Sending operative credentials...', false);
+      conn.send({
+        type: 'JOIN_REQ',
+        name: this.saveData.playerName || 'Operative',
+        heroId: this.selectedHero || 'commando',
+        weaponId: this.saveData.primaryWeapon || 'ak47'
       });
-      this.showNotification(`${this.teammate.name} joined the private match!`, 'TEAMMATE CONNECTED', 'green');
-      this.updateSquadHUD();
-    } else if (data.type === 'PEER_WELCOME') {
-      this.teammate.isHuman = true;
-      if (data.name) this.teammate.name = data.name;
-      if (data.heroId && HERO_ROSTER[data.heroId]) {
-        this.teammate.heroId = data.heroId;
-        this.teammate.hero = HERO_ROSTER[data.heroId];
-        this.teammate.color = this.teammate.hero.color;
+    });
+
+    conn.on('data', (data) => {
+      this.handleClientNetworkPacket(data);
+    });
+
+    conn.on('close', () => {
+      this.updateJoinStatus('🔌 DISCONNECTED', 'Host closed connection or session ended.', true);
+      document.getElementById('client-squad-preview')?.classList.add('hidden');
+    });
+
+    conn.on('error', (err) => {
+      console.warn('[Squad Client] Conn error:', err);
+      this.updateJoinStatus('⚠️ LINK ERROR', 'Failed to maintain data link with host.', true);
+    });
+  }
+
+  removeSquadPeer(peerId) {
+    if (this.squadPeers.has(peerId)) {
+      const removed = this.squadPeers.get(peerId);
+      this.squadPeers.delete(peerId);
+      this.showNotification(`${removed.name} left the squad.`, 'TEAMMATE DISCONNECTED', 'red');
+      this.broadcastSquadRoster();
+      this.updateSquadLobbyUI();
+      if (this.state === 'PLAYING') {
+        this.squadMembers = this.squadMembers.filter(m => m.peerId !== peerId);
+        this.updateMultiplayerSquadHUD();
       }
-      if (data.weaponId && WEAPON_DEFS[data.weaponId]) {
-        this.teammate.currentWeapon = WEAPON_DEFS[data.weaponId];
-      }
-      this.showNotification(`Linked with ${this.teammate.name}!`, 'CO-OP SQUAD SYNCED', 'green');
-      this.updateSquadHUD();
-    } else if (data.type === 'SYNC') {
-      this.teammate.isHuman = true;
-      this.teammate.x = data.x;
-      this.teammate.y = data.y;
-      this.teammate.angle = data.angle;
-      this.teammate.hp = data.hp;
-      this.teammate.maxHp = data.maxHp;
-      this.teammate.shield = data.shield;
-      this.teammate.maxShield = data.maxShield;
-      this.teammate.isDowned = data.isDowned;
-      this.teammate.downedTimer = data.downedTimer;
-      if (data.weaponId && WEAPON_DEFS[data.weaponId]) {
-        this.teammate.currentWeapon = WEAPON_DEFS[data.weaponId];
-      }
-      if (data.revivingTeammate && this.player.isDowned) {
-        this.player.reviveProgress += 0.035;
-        this.particles.addSpark(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, '#00ff88');
-        const bannerSub = document.querySelector('.downed-banner-sub');
-        if (bannerSub) {
-          bannerSub.innerHTML = `Teammate is reviving you! <strong>${Math.round(this.player.reviveProgress * 100)}%</strong>`;
-        }
-        if (this.player.reviveProgress >= 1.0) {
-          this.reviveLocalPlayer();
-        }
-      }
-      this.updateSquadHUD();
-    } else if (data.type === 'FIRE') {
-      this.fireTeammateBullet(data.x, data.y, data.angle, data.weaponId);
-    } else if (data.type === 'REVIVED_YOU') {
-      this.reviveLocalPlayer();
     }
   }
 
-  syncNetworkState(dt) {
+  handleHostNetworkPacket(data, conn) {
+    if (!data) return;
+
+    if (data.type === 'JOIN_REQ') {
+      const peerId = (conn ? conn.peer : data.clientId) || ('peer_' + Math.random().toString(36).substring(2, 7));
+
+      // Check if room is full (Host + 3 teammates = 4 max)
+      if (this.squadPeers.size >= 3) {
+        if (conn) conn.send({ type: 'JOIN_REJECT', reason: 'Squad is full (4/4 players).' });
+        return;
+      }
+
+      // Determine lowest available slot (2, 3, 4)
+      const takenSlots = new Set([1]);
+      this.squadPeers.forEach(p => takenSlots.add(p.slot));
+      let assignedSlot = 2;
+      for (let s = 2; s <= 4; s++) {
+        if (!takenSlots.has(s)) {
+          assignedSlot = s;
+          break;
+        }
+      }
+
+      const peerHero = HERO_DEFS[data.heroId] || HERO_DEFS.commando;
+      const peerWeap = WEAPON_DEFS[data.weaponId] || WEAPON_DEFS.ak47;
+      const slotDef = SQUAD_SLOT_DEFS[assignedSlot - 1];
+
+      const newPeer = {
+        peerId: peerId,
+        conn: conn,
+        slot: assignedSlot,
+        name: data.name || `Operative_P${assignedSlot}`,
+        heroId: data.heroId || 'commando',
+        hero: peerHero,
+        color: slotDef.color,
+        weaponId: data.weaponId || 'ak47',
+        currentWeapon: peerWeap,
+        x: WORLD_WIDTH / 2 + (assignedSlot === 2 ? 80 : assignedSlot === 3 ? -80 : 0),
+        y: WORLD_HEIGHT / 2 + (assignedSlot === 4 ? 80 : -60),
+        angle: 0,
+        hp: peerHero.hp + 50,
+        maxHp: peerHero.hp + 50,
+        shield: peerHero.shield + 20,
+        maxShield: peerHero.shield + 20,
+        isDowned: false,
+        downedTimer: 0,
+        reviveProgress: 0,
+        isShooting: false,
+        walkTimer: 0,
+        isHuman: true
+      };
+
+      this.squadPeers.set(peerId, newPeer);
+
+      // Send ACK back to the new player
+      const ackPacket = {
+        type: 'JOIN_ACK',
+        assignedSlot: assignedSlot,
+        roomCode: this.roomCode,
+        squadRoster: this.getSquadRosterSnapshot()
+      };
+      if (conn) conn.send(ackPacket);
+      if (this.localNetChannel) this.localNetChannel.postMessage(ackPacket);
+
+      // Broadcast updated squad roster to all peers
+      this.broadcastSquadRoster();
+      this.showNotification(`${newPeer.name} connected to squad (P${assignedSlot})!`, 'OPERATIVE JOINED', 'green');
+      this.audio.playLevelUp();
+      this.updateSquadLobbyUI();
+    } else if (data.type === 'CLIENT_INPUT') {
+      const peer = this.squadPeers.get(data.peerId);
+      if (peer) {
+        peer.x = data.x;
+        peer.y = data.y;
+        peer.angle = data.angle;
+        peer.hp = data.hp;
+        peer.maxHp = data.maxHp;
+        peer.shield = data.shield;
+        peer.maxShield = data.maxShield;
+        peer.isDowned = data.isDowned;
+        peer.downedTimer = data.downedTimer;
+        peer.isShooting = data.shooting;
+        if (data.weaponId && WEAPON_DEFS[data.weaponId]) {
+          peer.currentWeapon = WEAPON_DEFS[data.weaponId];
+        }
+        if (data.shooting) {
+          this.fireSquadPeerBullet(peer, data.angle);
+        }
+      }
+    } else if (data.type === 'REVIVE_SYNC') {
+      const targetPeer = this.squadPeers.get(data.targetPeerId);
+      if (targetPeer) {
+        targetPeer.reviveProgress = data.progress;
+        if (targetPeer.reviveProgress >= 1.0) {
+          targetPeer.isDowned = false;
+          targetPeer.hp = Math.round(targetPeer.maxHp * 0.5);
+          targetPeer.shield = Math.round(targetPeer.maxShield * 0.5);
+          targetPeer.downedTimer = 0;
+          targetPeer.reviveProgress = 0;
+          this.broadcastToSquad({ type: 'REVIVE_SUCCESS', peerId: data.targetPeerId });
+        }
+      }
+    }
+  }
+
+  handleClientNetworkPacket(data) {
+    if (!data) return;
+
+    if (data.type === 'JOIN_ACK') {
+      this.mySlot = data.assignedSlot;
+      this.roomCode = data.roomCode;
+      this.updateJoinStatus('✅ LINK ESTABLISHED', `Connected as P${this.mySlot}! Waiting for Host to start match...`, false);
+      this.renderClientSquadPreview(data.squadRoster);
+      this.showNotification(`Joined Squad as P${this.mySlot}!`, 'SQUAD SYNCED', 'green');
+      this.audio.playLevelUp();
+    } else if (data.type === 'JOIN_REJECT') {
+      this.updateJoinStatus('🚫 REJECTED', data.reason || 'Could not join room.', true);
+    } else if (data.type === 'SQUAD_UPDATE') {
+      this.renderClientSquadPreview(data.squadRoster);
+    } else if (data.type === 'MATCH_START') {
+      this.buildSquadMembersListFromRoster(data.squadRoster);
+      document.getElementById('squad-lobby-modal')?.classList.add('hidden');
+      this.showNotification('Host launched the squad match! Deploying...', 'MATCH COMMENCED', 'green');
+      this.startRun();
+    } else if (data.type === 'HOST_SYNC') {
+      this.applyHostSync(data);
+    } else if (data.type === 'REVIVE_SUCCESS') {
+      if (data.peerId === this.peer?.id || this.mySlot === data.slot) {
+        this.reviveLocalPlayer();
+      }
+    }
+  }
+
+  getSquadRosterSnapshot() {
+    const hostHero = HERO_DEFS[this.selectedHero] || HERO_DEFS.commando;
+    const roster = [
+      {
+        slot: 1,
+        isHost: true,
+        name: this.saveData.playerName || 'Operative (Host)',
+        heroId: this.selectedHero || 'commando',
+        heroName: hostHero.name,
+        heroIcon: hostHero.icon || '🚀',
+        color: SQUAD_SLOT_DEFS[0].color,
+        weaponId: this.player?.currentWeapon?.id || this.saveData.primaryWeapon || 'ak47'
+      }
+    ];
+
+    this.squadPeers.forEach((p) => {
+      roster.push({
+        slot: p.slot,
+        isHost: false,
+        peerId: p.peerId,
+        name: p.name,
+        heroId: p.heroId,
+        heroName: p.hero?.name || 'Operative',
+        heroIcon: p.hero?.icon || '👤',
+        color: p.color,
+        weaponId: p.weaponId
+      });
+    });
+
+    return roster;
+  }
+
+  broadcastToSquad(packet) {
+    if (this.squadPeers) {
+      this.squadPeers.forEach((p) => {
+        try {
+          if (p.conn && p.conn.open) p.conn.send(packet);
+        } catch (e) {}
+      });
+    }
+    if (this.localNetChannel) {
+      try { this.localNetChannel.postMessage(packet); } catch (e) {}
+    }
+  }
+
+  broadcastSquadRoster() {
+    const roster = this.getSquadRosterSnapshot();
+    this.broadcastToSquad({
+      type: 'SQUAD_UPDATE',
+      squadRoster: roster
+    });
+  }
+
+  updateSquadLobbyUI() {
+    const countVal = document.getElementById('squad-count-val');
+    const totalCount = this.squadPeers.size + 1; // Host + peers
+    if (countVal) countVal.textContent = `${totalCount} / 4 READY`;
+
+    // Host slot 1
+    const hostHero = HERO_DEFS[this.selectedHero] || HERO_DEFS.commando;
+    const s1Name = document.getElementById('slot-1-name');
+    const s1Hero = document.getElementById('slot-1-hero');
+    const s1Avatar = document.getElementById('slot-1-avatar');
+    if (s1Name) s1Name.textContent = (this.saveData.playerName || 'OPERATIVE') + ' (YOU)';
+    if (s1Hero) s1Hero.textContent = hostHero.name;
+    if (s1Avatar) s1Avatar.textContent = hostHero.icon || '🚀';
+
+    // Slots 2, 3, 4
+    const peerList = Array.from(this.squadPeers.values());
+    for (let slot = 2; slot <= 4; slot++) {
+      const card = document.getElementById(`slot-card-${slot}`);
+      const nameEl = document.getElementById(`slot-${slot}-name`);
+      const heroEl = document.getElementById(`slot-${slot}-hero`);
+      const avatarEl = document.getElementById(`slot-${slot}-avatar`);
+      const statusEl = document.getElementById(`slot-${slot}-status`);
+
+      const peer = peerList.find(p => p.slot === slot);
+      if (peer) {
+        if (card) {
+          card.className = `squad-slot-card connected-slot p${slot}-slot`;
+        }
+        if (nameEl) nameEl.textContent = peer.name;
+        if (heroEl) heroEl.textContent = peer.hero?.name || 'Operative';
+        if (avatarEl) avatarEl.innerHTML = `<span>${peer.hero?.icon || '👤'}</span>`;
+        if (statusEl) {
+          statusEl.className = 'slot-status ready';
+          statusEl.innerHTML = '<span class="status-dot"></span> CONNECTED (READY)';
+        }
+      } else {
+        if (card) {
+          card.className = 'squad-slot-card empty-slot';
+        }
+        if (nameEl) nameEl.textContent = 'EMPTY SLOT';
+        if (heroEl) heroEl.textContent = 'Waiting for player...';
+        if (avatarEl) {
+          avatarEl.innerHTML = '<div class="radar-scan-anim"></div><span>👤</span>';
+        }
+        if (statusEl) {
+          statusEl.className = 'slot-status waiting';
+          statusEl.innerHTML = '<span class="status-dot pulsing"></span> WAITING FOR SQUAD';
+        }
+      }
+    }
+
+    // Host Launch Button: Unlocks when at least 1 teammate connects (2-4 real players)
+    const launchBtn = document.getElementById('btn-start-squad-match');
+    if (launchBtn) {
+      if (this.squadPeers.size >= 1) {
+        launchBtn.disabled = false;
+        launchBtn.classList.remove('disabled');
+        launchBtn.innerHTML = `<span>🚀 START SQUAD MATCH (${totalCount}/4 READY)</span>`;
+      } else {
+        launchBtn.disabled = true;
+        launchBtn.classList.add('disabled');
+        launchBtn.innerHTML = '<span>⏳ WAITING FOR AT LEAST 1 TEAMMATE...</span>';
+      }
+    }
+  }
+
+  updateJoinStatus(title, desc, isError) {
+    const titleEl = document.getElementById('join-status-title');
+    const descEl = document.getElementById('join-status-desc');
+    const iconEl = document.getElementById('join-status-icon');
+    if (titleEl) titleEl.textContent = title;
+    if (descEl) descEl.textContent = desc;
+    if (iconEl) iconEl.textContent = isError ? '⚠️' : '📡';
+  }
+
+  renderClientSquadPreview(roster) {
+    const previewBox = document.getElementById('client-squad-preview');
+    const slotsRow = document.getElementById('client-preview-slots-row');
+    if (!previewBox || !slotsRow || !roster) return;
+
+    previewBox.classList.remove('hidden');
+    slotsRow.innerHTML = '';
+
+    roster.forEach((p) => {
+      const isMe = (p.slot === this.mySlot);
+      const slotDef = SQUAD_SLOT_DEFS[p.slot - 1] || SQUAD_SLOT_DEFS[0];
+      const pill = document.createElement('div');
+      pill.className = `preview-player-pill p${p.slot}`;
+      pill.style.cssText = `display: flex; align-items: center; gap: 6px; background: rgba(15,23,42,0.85); border: 1px solid ${slotDef.color}; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;`;
+      pill.innerHTML = `
+        <span>${p.heroIcon || '👤'}</span>
+        <strong style="color: ${slotDef.color};">[${slotDef.title}] ${p.name}${isMe ? ' (YOU)' : ''}</strong>
+        <span style="font-size: 0.7rem; color: #94a3b8;">${p.heroName || ''}</span>
+      `;
+      slotsRow.appendChild(pill);
+    });
+  }
+
+  buildSquadMembersList() {
+    this.squadMembers = [];
+    this.teammate = null; // No AI bot
+
+    this.squadPeers.forEach((p) => {
+      this.squadMembers.push({
+        slot: p.slot,
+        isHost: false,
+        isLocal: false,
+        peerId: p.peerId,
+        name: p.name,
+        hero: p.hero,
+        heroId: p.heroId,
+        color: p.color,
+        weapon: p.currentWeapon,
+        x: p.x,
+        y: p.y,
+        angle: p.angle,
+        hp: p.hp,
+        maxHp: p.maxHp,
+        shield: p.shield,
+        maxShield: p.maxShield,
+        isDowned: p.isDowned,
+        downedTimer: p.downedTimer,
+        reviveProgress: p.reviveProgress,
+        walkTimer: 0,
+        isHuman: true
+      });
+    });
+  }
+
+  buildSquadMembersListFromRoster(roster) {
+    this.squadMembers = [];
+    this.teammate = null; // No AI bot
+
+    roster.forEach((p) => {
+      if (p.slot !== this.mySlot) {
+        const hero = HERO_DEFS[p.heroId] || HERO_DEFS.commando;
+        const weap = WEAPON_DEFS[p.weaponId] || WEAPON_DEFS.ak47;
+        const slotDef = SQUAD_SLOT_DEFS[p.slot - 1] || SQUAD_SLOT_DEFS[0];
+        this.squadMembers.push({
+          slot: p.slot,
+          isHost: p.isHost,
+          isLocal: false,
+          peerId: p.peerId,
+          name: p.name,
+          hero: hero,
+          heroId: p.heroId,
+          color: slotDef.color,
+          weapon: weap,
+          x: WORLD_WIDTH / 2 + (p.slot === 2 ? 80 : p.slot === 3 ? -80 : 0),
+          y: WORLD_HEIGHT / 2 + (p.slot === 4 ? 80 : -60),
+          angle: 0,
+          hp: hero.hp + 50,
+          maxHp: hero.hp + 50,
+          shield: hero.shield + 20,
+          maxShield: hero.shield + 20,
+          isDowned: false,
+          downedTimer: 0,
+          reviveProgress: 0,
+          walkTimer: 0,
+          isHuman: true
+        });
+      }
+    });
+  }
+
+  launchSquadMatch() {
+    if (this.squadPeers.size < 1) {
+      this.showNotification('Wait for at least 1 teammate to join!', 'SQUAD REQUIRED', 'red');
+      this.audio.playHit(false);
+      return;
+    }
+
+    const roster = this.getSquadRosterSnapshot();
+    const startPacket = {
+      type: 'MATCH_START',
+      roomCode: this.roomCode,
+      squadRoster: roster
+    };
+
+    this.broadcastToSquad(startPacket);
+    this.buildSquadMembersList();
+
+    document.getElementById('squad-lobby-modal')?.classList.add('hidden');
+    this.showNotification(`Squad Match Launched with ${this.squadMembers.length + 1} Operatives!`, 'MATCH COMMENCED', 'green');
+    this.startRun();
+  }
+
+  // 30-60 Hz Client Input & Authoritative Host Broadcast Loop
+  syncSquadNetworkState(dt) {
     this.networkSyncTimer = (this.networkSyncTimer || 0) + dt;
-    if (this.networkSyncTimer >= 0.04) {
-      this.networkSyncTimer = 0;
-      this.netChannel.postMessage({
-        type: 'SYNC',
-        senderId: this.networkId,
+    if (this.networkSyncTimer < 0.033) return; // ~30 Hz tick
+    this.networkSyncTimer = 0;
+
+    if (this.isHost) {
+      // Host Authoritative Sync Broadcast
+      const squadState = [
+        {
+          slot: 1,
+          x: this.player.x,
+          y: this.player.y,
+          angle: this.player.angle,
+          hp: this.player.hp,
+          maxHp: this.player.maxHp,
+          shield: this.player.shield,
+          maxShield: this.player.maxShield,
+          isDowned: this.player.isDowned,
+          downedTimer: this.player.downedTimer,
+          weaponId: this.player.currentWeapon?.id
+        }
+      ];
+
+      this.squadPeers.forEach((p) => {
+        squadState.push({
+          slot: p.slot,
+          peerId: p.peerId,
+          x: p.x,
+          y: p.y,
+          angle: p.angle,
+          hp: p.hp,
+          maxHp: p.maxHp,
+          shield: p.shield,
+          maxShield: p.maxShield,
+          isDowned: p.isDowned,
+          downedTimer: p.downedTimer,
+          weaponId: p.currentWeapon?.id
+        });
+      });
+
+      const hostSyncPacket = {
+        type: 'HOST_SYNC',
+        squad: squadState,
+        wave: this.wave,
+        waveTimer: this.waveTimer
+      };
+
+      this.broadcastToSquad(hostSyncPacket);
+      this.updateMultiplayerSquadHUD();
+    } else {
+      // Client Input Transmission to Host
+      if (!this.player) return;
+      const inputPacket = {
+        type: 'CLIENT_INPUT',
+        peerId: this.peer?.id,
+        slot: this.mySlot,
         x: this.player.x,
         y: this.player.y,
         angle: this.player.angle,
+        shooting: this.mouse?.isDown || false,
+        weaponId: this.player.currentWeapon?.id,
         hp: this.player.hp,
         maxHp: this.player.maxHp,
         shield: this.player.shield,
         maxShield: this.player.maxShield,
         isDowned: this.player.isDowned,
-        downedTimer: this.player.downedTimer,
-        weaponId: this.player.currentWeapon?.id,
-        revivingTeammate: (this.keys['KeyF'] || this.isTouchReviving)
-      });
+        downedTimer: this.player.downedTimer
+      };
+
+      if (this.hostConn && this.hostConn.open) {
+        this.hostConn.send(inputPacket);
+      }
+      if (this.localNetChannel) {
+        this.localNetChannel.postMessage(inputPacket);
+      }
+      this.updateMultiplayerSquadHUD();
     }
   }
 
-  fireTeammateBullet(x, y, angle, weaponId) {
-    const weap = WEAPON_DEFS[weaponId] || this.teammate?.currentWeapon || WEAPON_DEFS.ak47;
-    if (this.teammate) {
-      this.teammate.muzzleFlash = 0.08;
-      this.teammate.recoil = 4;
-    }
-    this.audio.playShoot(weap.sound || weap.id);
-    this.particles.addShellCasing(x, y, angle + Math.PI * 0.5);
+  applyHostSync(data) {
+    if (!data || !data.squad) return;
 
-    if (weap.id === 'double_barrel') {
-      for (let i = 0; i < 8; i++) {
-        const spread = (Math.random() - 0.5) * 0.45;
-        const pelletAngle = angle + spread;
-        this.projectiles.push({
-          x, y,
-          vx: Math.cos(pelletAngle) * weap.bulletSpeed,
-          vy: Math.sin(pelletAngle) * weap.bulletSpeed,
-          radius: weap.bulletSize,
-          color: '#00ff88',
-          damage: 18,
-          range: weap.bulletRange,
-          isTeammate: true
-        });
-      }
-    } else {
-      this.projectiles.push({
-        x, y,
-        vx: Math.cos(angle) * weap.bulletSpeed,
-        vy: Math.sin(angle) * weap.bulletSpeed,
-        radius: weap.bulletSize,
-        color: '#00ff88',
-        damage: (weap.damage * 32),
-        range: weap.bulletRange,
-        pierce: weap.pierce || 0,
-        isTeammate: true
-      });
-    }
-  }
-
-  updateTeammate(dt) {
-    if (!this.teammate) return;
-    const tm = this.teammate;
-
-    // Regulate Shield
-    if (!tm.isDowned && tm.shield < tm.maxShield) {
-      tm.shield = Math.min(tm.maxShield, tm.shield + tm.shieldRegenRate * dt);
-    }
-
-    // Timers
-    if (tm.fireTimer > 0) tm.fireTimer -= dt;
-    if (tm.muzzleFlash > 0) tm.muzzleFlash -= dt;
-    if (tm.recoil > 0) tm.recoil = Math.max(0, tm.recoil - dt * 25);
-
-    // DOWNED TEAMMATE LOGIC
-    if (tm.isDowned) {
-      tm.downedTimer -= dt;
-      if (tm.downedTimer <= 0) {
-        if (this.player.isDowned) {
-          this.gameOver();
-          return;
-        } else {
-          tm.hp = Math.round(tm.maxHp * 0.3);
-          tm.isDowned = false;
-          tm.downedTimer = 0;
-          this.showNotification(`${tm.name} rebooted with emergency defibrillator!`, 'TEAMMATE REBOOTED', 'red');
-        }
-      }
-
-      // Proximity to Player 1 for Revive
-      const distToPlayer = Math.hypot(this.player.x - tm.x, this.player.y - tm.y);
-      const isNear = (distToPlayer < 85);
-      const revivePrompt = document.getElementById('hud-revive-prompt');
-      const touchReviveBtn = document.getElementById('touch-btn-revive');
-
-      if (isNear && !this.player.isDowned) {
-        if (revivePrompt) revivePrompt.classList.remove('hidden');
-        if (touchReviveBtn) touchReviveBtn.classList.remove('hidden');
-
-        const isReviving = (this.keys['KeyF'] || this.isTouchReviving || isNear);
-        if (isReviving) {
-          tm.reviveProgress += dt / 2.5;
-          this.particles.addSpark(tm.x + (Math.random() - 0.5) * 30, tm.y + (Math.random() - 0.5) * 30, '#00ff88');
-
-          const pct = Math.min(100, Math.round(tm.reviveProgress * 100));
-          const offset = 113.1 * (1 - tm.reviveProgress);
-          const circleFill = document.getElementById('hud-revive-circle-fill');
-          const pctText = document.getElementById('hud-revive-pct');
-          if (circleFill) circleFill.style.strokeDashoffset = offset;
-          if (pctText) pctText.textContent = `${pct}%`;
-
-          if (tm.reviveProgress >= 1.0) {
-            tm.isDowned = false;
-            tm.hp = Math.round(tm.maxHp * 0.5);
-            tm.shield = Math.round(tm.maxShield * 0.5);
-            tm.reviveProgress = 0;
-            if (revivePrompt) revivePrompt.classList.add('hidden');
-            if (touchReviveBtn) touchReviveBtn.classList.add('hidden');
-
-            this.audio.playLevelUp();
-            this.particles.addShockwave(tm.x, tm.y, 140, '#00ff88', 0.4);
-            this.particles.addCombatText(tm.x, tm.y - 45, 'TEAMMATE REVIVED!', '#00ff88', true);
-            this.showNotification(`${tm.name} revived by squadmate!`, 'REVIVAL COMPLETE', 'green');
-            this.player.xp += 100;
-            this.updateHUD();
-
-            this.netChannel?.postMessage({
-              type: 'REVIVED_YOU',
-              senderId: this.networkId
-            });
-          }
+    data.squad.forEach((state) => {
+      if (state.slot === this.mySlot) {
+        // Sync authoritatively if host revives us
+        if (!state.isDowned && this.player.isDowned) {
+          this.reviveLocalPlayer();
         }
       } else {
-        if (revivePrompt) revivePrompt.classList.add('hidden');
-        if (touchReviveBtn) touchReviveBtn.classList.add('hidden');
-        tm.reviveProgress = Math.max(0, tm.reviveProgress - dt * 0.5);
-      }
-
-      this.updateSquadHUD();
-      return;
-    }
-
-    // AUTONOMOUS BOT AI (when solo)
-    if (!tm.isHuman) {
-      if (this.player.isDowned) {
-        // Player 1 is Downed -> Rush to revive!
-        const dx = this.player.x - tm.x;
-        const dy = this.player.y - tm.y;
-        const dist = Math.hypot(dx, dy);
-
-        if (dist > 55) {
-          const moveAngle = Math.atan2(dy, dx);
-          tm.vx = Math.cos(moveAngle) * tm.speed * 1.15;
-          tm.vy = Math.sin(moveAngle) * tm.speed * 1.15;
-          tm.x += tm.vx * dt;
-          tm.y += tm.vy * dt;
-          tm.angle = moveAngle;
-          tm.walkTimer += dt * 10;
-        } else {
-          tm.vx = 0; tm.vy = 0;
-          this.player.reviveProgress += dt / 2.5;
-          this.particles.addSpark(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, '#00ff88');
-
-          const bannerSub = document.querySelector('.downed-banner-sub');
-          if (bannerSub) {
-            bannerSub.innerHTML = `Teammate is reviving you! <strong>${Math.round(this.player.reviveProgress * 100)}%</strong>`;
-          }
-
-          if (this.player.reviveProgress >= 1.0) {
-            this.reviveLocalPlayer();
+        const member = this.squadMembers.find(m => m.slot === state.slot);
+        if (member) {
+          member.x = state.x;
+          member.y = state.y;
+          member.angle = state.angle;
+          member.hp = state.hp;
+          member.maxHp = state.maxHp;
+          member.shield = state.shield;
+          member.maxShield = state.maxShield;
+          member.isDowned = state.isDowned;
+          member.downedTimer = state.downedTimer;
+          if (state.weaponId && WEAPON_DEFS[state.weaponId]) {
+            member.weapon = WEAPON_DEFS[state.weaponId];
           }
         }
-
-        this.teammateAutoCombat(dt);
-        this.updateSquadHUD();
-        return;
       }
+    });
 
-      // Tactical Formation near Player 1
-      const distToPlayer = Math.hypot(this.player.x - tm.x, this.player.y - tm.y);
-      if (distToPlayer > 260) {
-        const moveAngle = Math.atan2(this.player.y - tm.y, this.player.x - tm.x);
-        tm.vx = Math.cos(moveAngle) * tm.speed;
-        tm.vy = Math.sin(moveAngle) * tm.speed;
-        tm.x += tm.vx * dt;
-        tm.y += tm.vy * dt;
-        tm.angle = moveAngle;
-        tm.walkTimer += dt * 8;
-      } else if (distToPlayer < 65) {
-        const repAngle = Math.atan2(tm.y - this.player.y, tm.x - this.player.x);
-        tm.x += Math.cos(repAngle) * tm.speed * 0.5 * dt;
-        tm.y += Math.sin(repAngle) * tm.speed * 0.5 * dt;
-      } else {
-        tm.vx = 0; tm.vy = 0;
-      }
-
-      tm.x = Math.max(50, Math.min(WORLD_WIDTH - 50, tm.x));
-      tm.y = Math.max(50, Math.min(WORLD_HEIGHT - 50, tm.y));
-
-      this.teammateAutoCombat(dt);
-    }
-
-    this.updateSquadHUD();
+    this.updateMultiplayerSquadHUD();
   }
 
-  teammateAutoCombat(dt) {
-    const tm = this.teammate;
-    if (!tm || tm.isDowned) return;
+  fireSquadPeerBullet(peer, angle) {
+    if (!peer || !peer.currentWeapon) return;
+    const weap = peer.currentWeapon;
+    const bulletSpeed = (weap.speed || 800) * 0.9;
+    const bx = peer.x + Math.cos(angle) * 20;
+    const by = peer.y + Math.sin(angle) * 20;
 
-    let closestEnemy = null, minDist = 650;
-    for (let i = 0; i < this.enemies.length; i++) {
-      const e = this.enemies[i];
-      const d = Math.hypot(e.x - tm.x, e.y - tm.y);
-      if (d < minDist) {
-        minDist = d;
-        closestEnemy = e;
-      }
-    }
-
-    if (closestEnemy) {
-      tm.angle = Math.atan2(closestEnemy.y - tm.y, closestEnemy.x - tm.x);
-
-      if (tm.fireTimer <= 0) {
-        tm.fireTimer = (tm.currentWeapon?.fireRate || 0.12) * 1.5;
-        this.fireTeammateBullet(tm.x, tm.y, tm.angle, tm.currentWeapon?.id);
-
-        this.netChannel?.postMessage({
-          type: 'FIRE',
-          senderId: this.networkId,
-          x: tm.x,
-          y: tm.y,
-          angle: tm.angle,
-          weaponId: tm.currentWeapon?.id
-        });
-      }
-    }
-  }
-
-  damageTeammate(amount) {
-    if (!this.teammate || this.teammate.isDowned) return;
-    const tm = this.teammate;
-
-    if (tm.shield > 0) {
-      const shieldDmg = Math.min(tm.shield, amount);
-      tm.shield -= shieldDmg;
-      amount -= shieldDmg;
-      this.particles.addSpark(tm.x, tm.y, '#00d2ff', 4);
-    }
-
-    if (amount > 0) {
-      tm.hp -= amount;
-      this.particles.addBlood(tm.x, tm.y, '#00ff88', 6);
-    }
-
-    if (tm.hp <= 0) {
-      tm.hp = 0;
-      if (this.player.isDowned) {
-        this.gameOver();
-      } else {
-        tm.isDowned = true;
-        tm.downedTimer = 30;
-        tm.reviveProgress = 0;
-        this.audio.playHit(true);
-        this.particles.addShockwave(tm.x, tm.y, 80, '#ff0044', 0.3);
-        this.particles.addCombatText(tm.x, tm.y - 45, 'TEAMMATE DOWNED!', '#ff0044', true);
-        this.showNotification(`${tm.name} IS DOWNED! Hold [F] near them to revive!`, 'SQUAD CRITICAL', 'red');
-      }
-    }
-
-    this.updateSquadHUD();
+    this.projectiles.push({
+      x: bx,
+      y: by,
+      vx: Math.cos(angle) * bulletSpeed,
+      vy: Math.sin(angle) * bulletSpeed,
+      damage: (weap.damage || 25) * 1.0,
+      radius: 4,
+      color: peer.color || '#00ff88',
+      life: 1.2,
+      pierce: weap.pierce || 1,
+      isPlayerBullet: true
+    });
+    this.particles.addMuzzleFlash(bx, by, angle, peer.color);
   }
 
   enterPlayerDownedState() {
     this.player.isDowned = true;
     this.player.downedTimer = 30;
     this.player.reviveProgress = 0;
-    this.player.hp = 0;
-    this.audio.playHit(true);
-    this.addScreenShake(0.6);
+    this.player.speed = this.player.hero.speed * 0.35; // crawl speed
 
     const downedBanner = document.getElementById('hud-downed-banner');
     if (downedBanner) downedBanner.classList.remove('hidden');
 
     this.particles.addShockwave(this.player.x, this.player.y, 100, '#ff0044', 0.4);
-    this.particles.addCombatText(this.player.x, this.player.y - 50, 'DOWNED! WAIT FOR REVIVE!', '#ff0044', true);
-    this.showNotification('OPERATIVE DOWNED! Wait for teammate to revive you!', 'SQUAD CRITICAL', 'red');
+    this.particles.addCombatText(this.player.x, this.player.y - 50, 'OPERATIVE DOWNED!', '#ff0044', true);
+    this.showNotification('OPERATIVE DOWNED! Squadmate must revive you within 30s!', 'SQUAD CRITICAL', 'red');
 
-    this.netChannel?.postMessage({
-      type: 'SYNC',
-      senderId: this.networkId,
-      isDowned: true,
-      downedTimer: 30,
-      hp: 0,
-      x: this.player.x,
-      y: this.player.y
-    });
-
-    this.updateSquadHUD();
+    this.updateMultiplayerSquadHUD();
   }
 
   reviveLocalPlayer() {
     this.player.isDowned = false;
     this.player.downedTimer = 0;
     this.player.reviveProgress = 0;
-    this.player.hp = Math.round(this.player.maxHp * 0.5);
+    this.player.hp = Math.round(this.player.maxHp * 0.45);
     this.player.shield = Math.round(this.player.maxShield * 0.5);
     this.player.invulnTime = 3.0;
     this.player.speed = this.player.hero.speed;
@@ -7399,66 +7753,132 @@ class Game {
     this.audio.playLevelUp();
     this.particles.addShockwave(this.player.x, this.player.y, 160, '#00ff88', 0.4);
     this.particles.addCombatText(this.player.x, this.player.y - 50, 'REVIVED! BACK IN FIGHT!', '#00ff88', true);
-    this.showNotification('You have been revived by your teammate!', 'BACK IN ACTION', 'green');
+    this.showNotification('You have been revived by your squad!', 'REVIVED', 'green');
     this.updateHUD();
+    this.updateMultiplayerSquadHUD();
   }
 
-  updateSquadHUD() {
-    if (!this.teammate || !this.isPrivateMatch) return;
-    const tm = this.teammate;
+  // Revive tether mechanic across all connected real players
+  handleSquadReviveTethers(dt) {
+    if (!this.player || !this.squadMembers.length) return;
 
-    const squadPanel = document.getElementById('hud-squad-panel');
-    if (squadPanel) squadPanel.classList.remove('hidden');
+    // 1. If local player is downed: tick bleedout timer
+    if (this.player.isDowned) {
+      this.player.downedTimer -= dt;
+      const timerEl = document.getElementById('hud-bleedout-timer');
+      const fillEl = document.getElementById('hud-downed-fill');
+      if (timerEl) timerEl.textContent = Math.max(0, Math.ceil(this.player.downedTimer));
+      if (fillEl) fillEl.style.width = `${Math.max(0, (this.player.downedTimer / 30) * 100)}%`;
 
-    const nameEl = document.getElementById('hud-teammate-name');
-    const statusEl = document.getElementById('hud-teammate-status');
-    const dotEl = document.getElementById('hud-teammate-dot');
-    const hpFill = document.getElementById('hud-tm-hp-fill');
-    const shieldFill = document.getElementById('hud-tm-shield-fill');
-
-    if (nameEl) nameEl.textContent = tm.name;
-    if (hpFill) hpFill.style.width = `${Math.max(0, (tm.hp / tm.maxHp) * 100)}%`;
-    if (shieldFill) shieldFill.style.width = `${Math.max(0, (tm.shield / tm.maxShield) * 100)}%`;
-
-    if (statusEl && dotEl) {
-      if (tm.isDowned) {
-        statusEl.className = 'teammate-status-badge downed';
-        statusEl.textContent = `DOWNED (${Math.ceil(tm.downedTimer)}s)`;
-        dotEl.className = 'teammate-status-dot downed';
-      } else if (tm.reviveProgress > 0) {
-        statusEl.className = 'teammate-status-badge reviving';
-        statusEl.textContent = `REVIVING ${Math.round(tm.reviveProgress * 100)}%`;
-        dotEl.className = 'teammate-status-dot';
-      } else {
-        statusEl.className = 'teammate-status-badge healthy';
-        statusEl.textContent = (tm.isHuman ? 'ONLINE' : 'ACTIVE');
-        dotEl.className = 'teammate-status-dot';
+      if (this.player.downedTimer <= 0) {
+        this.gameOver();
+        return;
       }
     }
+
+    // 2. Check revives on any downed squad members near local player
+    this.squadMembers.forEach((member) => {
+      if (member.isDowned) {
+        member.downedTimer = Math.max(0, member.downedTimer - dt);
+        const dist = Math.hypot(this.player.x - member.x, this.player.y - member.y);
+
+        // If local player is alive and within 75px revive radius
+        if (!this.player.isDowned && dist <= 75) {
+          member.reviveProgress = Math.min(1.0, member.reviveProgress + dt * 0.35); // takes ~2.8s
+          this.particles.addSpark(member.x + (Math.random() - 0.5) * 20, member.y + (Math.random() - 0.5) * 20, '#00ff88');
+
+          if (member.reviveProgress >= 1.0) {
+            member.isDowned = false;
+            member.hp = Math.round(member.maxHp * 0.5);
+            member.shield = Math.round(member.maxShield * 0.5);
+            member.reviveProgress = 0;
+            this.showNotification(`You revived ${member.name}!`, 'REVIVE COMPLETE', 'green');
+            this.audio.playLevelUp();
+
+            const revivePacket = { type: 'REVIVE_SUCCESS', slot: member.slot, peerId: member.peerId };
+            if (this.isHost) {
+              this.broadcastToSquad(revivePacket);
+            } else if (this.hostConn && this.hostConn.open) {
+              this.hostConn.send(revivePacket);
+            }
+          }
+        } else {
+          member.reviveProgress = Math.max(0, member.reviveProgress - dt * 0.2);
+        }
+      }
+    });
   }
 
-  drawTeammate() {
-    if (!this.teammate || !this.player || !this.ctx) return;
-    const tm = this.teammate;
-    const ctx = this.ctx;
-    const cam = this.camera;
-    const tx = tm.x - cam.x;
-    const ty = tm.y - cam.y;
-    const now = performance.now();
-    const teamColor = '#00ff88';
+  updateMultiplayerSquadHUD() {
+    if (!this.isPrivateMatch) return;
+    const squadPanel = document.getElementById('hud-squad-panel');
+    const squadList = document.getElementById('hud-squad-members-list');
+    if (!squadPanel || !squadList) return;
 
-    // 1. Off-Screen Locator Arrow
+    squadPanel.classList.remove('hidden');
+    squadList.innerHTML = '';
+
+    // Render cards for all other squad members (up to 3 teammates)
+    this.squadMembers.forEach((m) => {
+      const slotDef = SQUAD_SLOT_DEFS[m.slot - 1] || SQUAD_SLOT_DEFS[1];
+      const card = document.createElement('div');
+      card.className = `hud-squad-card p${m.slot}-card ${m.isDowned ? 'downed' : ''}`;
+
+      const hpPct = Math.max(0, Math.min(100, (m.hp / m.maxHp) * 100));
+      const shieldPct = Math.max(0, Math.min(100, (m.shield / m.maxShield) * 100));
+      const statusText = m.isDowned
+        ? `DOWNED (${Math.ceil(m.downedTimer)}s)`
+        : m.reviveProgress > 0
+          ? `REVIVING ${Math.round(m.reviveProgress * 100)}%`
+          : 'ACTIVE';
+
+      card.innerHTML = `
+        <div class="hud-squad-avatar">${m.hero?.icon || '👤'}</div>
+        <div class="hud-squad-info">
+          <div class="hud-squad-name-row">
+            <span class="hud-squad-name" style="color: ${slotDef.color};">[P${m.slot}] ${m.name}</span>
+            <span class="hud-squad-badge" style="background: ${m.isDowned ? '#ff0044' : slotDef.color}; color: #020617;">${statusText}</span>
+          </div>
+          <div class="hud-squad-bars">
+            <div class="tm-bar-track tm-hp-track" style="height: 4px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden;">
+              <div style="height: 100%; width: ${hpPct}%; background: ${m.isDowned ? '#ff0044' : '#00ff88'};"></div>
+            </div>
+            <div class="tm-bar-track tm-shield-track" style="height: 3px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; margin-top: 1px;">
+              <div style="height: 100%; width: ${shieldPct}%; background: #00f0ff;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      squadList.appendChild(card);
+    });
+  }
+
+  drawSquadMembers() {
+    if (!this.squadMembers || !this.squadMembers.length || !this.player || !this.ctx) return;
+    const now = performance.now();
+    this.squadMembers.forEach((m) => {
+      this.drawSingleSquadMember(m, this.ctx, this.camera, now);
+    });
+  }
+
+  drawSingleSquadMember(m, ctx, cam, now) {
+    const tx = m.x - cam.x;
+    const ty = m.y - cam.y;
+    const slotDef = SQUAD_SLOT_DEFS[m.slot - 1] || SQUAD_SLOT_DEFS[1];
+    const teamColor = slotDef.color;
+
+    // 1. Off-Screen Direction Arrow & Distance
     const isOffScreen = (tx < 35 || tx > cam.width - 35 || ty < 35 || ty > cam.height - 35);
     if (isOffScreen) {
       const edgeX = Math.max(40, Math.min(cam.width - 40, tx));
       const edgeY = Math.max(40, Math.min(cam.height - 40, ty));
-      const toTeammateAngle = Math.atan2(ty - cam.height / 2, tx - cam.width / 2);
-      const distM = Math.round(Math.hypot(tm.x - this.player.x, tm.y - this.player.y) / 16);
+      const toAngle = Math.atan2(ty - cam.height / 2, tx - cam.width / 2);
+      const distM = Math.round(Math.hypot(m.x - this.player.x, m.y - this.player.y) / 16);
 
       ctx.save();
       ctx.translate(edgeX, edgeY);
-      ctx.rotate(toTeammateAngle);
-      const arrowColor = tm.isDowned ? '#ff0044' : '#00ff88';
+      ctx.rotate(toAngle);
+      const arrowColor = m.isDowned ? '#ff0044' : teamColor;
       ctx.fillStyle = arrowColor;
       ctx.shadowColor = arrowColor;
       ctx.shadowBlur = 12;
@@ -7476,7 +7896,7 @@ class Game {
       ctx.textAlign = 'center';
       ctx.shadowColor = arrowColor;
       ctx.shadowBlur = 8;
-      const tagText = tm.isDowned ? `⚠️ DOWNED [${distM}m]` : `P2 [${distM}m]`;
+      const tagText = m.isDowned ? `⚠️ [P${m.slot}] DOWNED [${distM}m]` : `P${m.slot} [${distM}m]`;
       ctx.fillText(tagText, edgeX, edgeY + (edgeY < cam.height / 2 ? 20 : -16));
       ctx.restore();
       return;
@@ -7490,8 +7910,8 @@ class Game {
     ctx.ellipse(tx, ty + 12, 18, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. Downed & Revive Auras
-    if (tm.isDowned) {
+    // 3. Downed Pulse Ring & Revive Tether
+    if (m.isDowned) {
       const pulseR = 32 + Math.sin(now * 0.008) * 8;
       ctx.strokeStyle = '#ff0044';
       ctx.lineWidth = 2.5;
@@ -7501,33 +7921,52 @@ class Game {
       ctx.arc(tx, ty, pulseR, 0, Math.PI * 2);
       ctx.stroke();
 
+      // Revive interaction radius
       ctx.strokeStyle = 'rgba(0, 255, 136, 0.4)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(tx, ty, 75, 0, Math.PI * 2);
       ctx.stroke();
 
-      if (tm.reviveProgress > 0) {
+      // Revive progress arc
+      if (m.reviveProgress > 0) {
         ctx.strokeStyle = '#00ff88';
         ctx.lineWidth = 4;
         ctx.shadowColor = '#00ff88';
         ctx.shadowBlur = 16;
         ctx.beginPath();
-        ctx.arc(tx, ty, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * tm.reviveProgress);
+        ctx.arc(tx, ty, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * m.reviveProgress);
         ctx.stroke();
+      }
+
+      // If local player is within revive range, draw glowing neon tether beam
+      const distToPlayer = Math.hypot(this.player.x - m.x, this.player.y - m.y);
+      if (distToPlayer <= 75 && !this.player.isDowned) {
+        const px = this.player.x - cam.x;
+        const py = this.player.y - cam.y;
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#00ff88';
+        ctx.shadowBlur = 10;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
     }
 
     // 4. Character Body & Weapon
     ctx.save();
     ctx.translate(tx, ty);
-    ctx.rotate(tm.angle);
+    ctx.rotate(m.angle);
 
-    const walk = tm.walkTimer || 0;
-    const legL = Math.sin(walk) * 8;
-    const legR = -Math.sin(walk) * 8;
-
-    if (!tm.isDowned) {
+    if (!m.isDowned) {
+      // Legs
+      const walk = m.walkTimer || 0;
+      const legL = Math.sin(walk) * 6;
+      const legR = -Math.sin(walk) * 6;
       ctx.fillStyle = '#101726';
       ctx.fillRect(-10 + legL, -13, 12, 6);
       ctx.fillRect(-10 + legR, 7, 12, 6);
@@ -7535,6 +7974,7 @@ class Game {
       ctx.fillRect(-6 + legL, -12, 3, 4);
       ctx.fillRect(-6 + legR, 8, 3, 4);
 
+      // Torso
       ctx.fillStyle = '#141d2f';
       ctx.strokeStyle = teamColor;
       ctx.lineWidth = 1.5;
@@ -7543,14 +7983,7 @@ class Game {
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = teamColor;
-      ctx.shadowColor = teamColor;
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
+      // Weapon
       ctx.fillStyle = '#0f141f';
       ctx.fillRect(4, 2, 18, 5);
       ctx.fillStyle = '#222d3d';
@@ -7558,6 +7991,7 @@ class Game {
       ctx.fillStyle = teamColor;
       ctx.fillRect(8, 4, 6, 8);
 
+      // Helmet
       ctx.fillStyle = '#101624';
       ctx.beginPath();
       ctx.arc(-2, 0, 8.5, 0, Math.PI * 2);
@@ -7567,6 +8001,7 @@ class Game {
       ctx.fillStyle = teamColor;
       ctx.fillRect(1, -5, 4, 10);
     } else {
+      // Downed body
       ctx.fillStyle = '#161d2d';
       ctx.beginPath();
       ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2);
@@ -7574,7 +8009,6 @@ class Game {
       ctx.strokeStyle = '#ff0044';
       ctx.lineWidth = 1.5;
       ctx.stroke();
-
       ctx.fillStyle = '#ff0044';
       ctx.beginPath();
       ctx.arc(-2, 0, 6, 0, Math.PI * 2);
@@ -7583,24 +8017,24 @@ class Game {
 
     ctx.restore();
 
-    // 5. Overhead Teammate Plate
+    // 5. Overhead Plate (P# Label, Name, Health)
     ctx.save();
-    const plateY = ty - (tm.isDowned ? 34 : 42);
+    const plateY = ty - (m.isDowned ? 34 : 42);
 
     ctx.font = '800 10px "Rajdhani", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(10, 16, 28, 0.88)';
-    ctx.strokeStyle = tm.isDowned ? '#ff0044' : '#00ff88';
+    ctx.strokeStyle = m.isDowned ? '#ff0044' : teamColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.roundRect(tx - 45, plateY - 10, 90, 16, 4);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = tm.isDowned ? '#ff3366' : '#ffffff';
-    ctx.fillText(`[P2] ${tm.name}`, tx, plateY + 2);
+    ctx.fillStyle = m.isDowned ? '#ff3366' : '#ffffff';
+    ctx.fillText(`[P${m.slot}] ${m.name}`, tx, plateY + 2);
 
-    if (!tm.isDowned) {
+    if (!m.isDowned) {
       const barW = 60;
       const barH = 4;
       const barX = tx - barW / 2;
@@ -7608,13 +8042,13 @@ class Game {
 
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(barX, barY, barW, barH);
-      const hpPct = Math.max(0, tm.hp / tm.maxHp);
-      ctx.fillStyle = hpPct > 0.4 ? '#00ff88' : '#ff0044';
+      const hpPct = Math.max(0, m.hp / m.maxHp);
+      ctx.fillStyle = hpPct > 0.4 ? teamColor : '#ff0044';
       ctx.fillRect(barX, barY, barW * hpPct, barH);
     } else {
       ctx.font = '900 10px "Share Tech Mono", monospace';
       ctx.fillStyle = '#ff0044';
-      ctx.fillText(`⚠️ DOWNED (${Math.ceil(tm.downedTimer)}s)`, tx, plateY + 18);
+      ctx.fillText(`⚠️ DOWNED (${Math.ceil(m.downedTimer)}s)`, tx, plateY + 18);
     }
 
     ctx.restore();
@@ -7735,11 +8169,11 @@ class Game {
       }
     }
 
-    if (this.isPrivateMatch && this.teammate) {
+    if (this.isPrivateMatch) {
       try {
-        this.drawTeammate();
+        this.drawSquadMembers();
       } catch (e) {
-        console.warn('drawTeammate fallback notice:', e);
+        console.warn('drawSquadMembers fallback notice:', e);
       }
     }
   }
@@ -7800,12 +8234,12 @@ class Game {
       console.warn('drawPlayer render error:', err);
     }
 
-    // 6b. Draw Co-Op Squad Teammate (Private Match)
-    if (this.isPrivateMatch && this.teammate) {
+    // 6b. Draw 4-Player Co-Op Squad Members
+    if (this.isPrivateMatch) {
       try {
-        this.drawTeammate();
+        this.drawSquadMembers();
       } catch (err) {
-        console.warn('drawTeammate render error:', err);
+        console.warn('drawSquadMembers render error:', err);
       }
     }
 
