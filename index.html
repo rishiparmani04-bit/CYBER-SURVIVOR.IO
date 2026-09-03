@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CYBER SURVIVOR: OVERDRIVE | Action Roguelite</title>
+  
+  <!-- Google Fonts: Orbitron & Rajdhani for futuristic sci-fi aesthetic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css?v=5.1">
+
+  <!-- Google H5 Games Ads SDK -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous" data-adbreak-test="on"></script>
+  <script>
+    window.adsbygoogle = window.adsbygoogle || [];
+    window.adBreak = window.adBreak || function(o) { adsbygoogle.push(o); };
+    window.adConfig = window.adConfig || function(o) { adsbygoogle.push(o); };
+  </script>
+
+  <!-- Google Identity Services (GIS) OAuth SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Anti-Cheat & DevTools Protection Guard -->
+  <script>
+    (function() {
+      'use strict';
+      // 1. Disable Right-Click Context Menu (allows inputs if needed)
+      document.addEventListener('contextmenu', function(e) {
+        var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if (tag !== 'input' && tag !== 'textarea') {
+          e.preventDefault();
+          return false;
+        }
+      }, { capture: true });
+
+      // 2. Intercept DevTools & Inspection Shortcuts
+      window.addEventListener('keydown', function(e) {
+        // F12
+        if (e.key === 'F12' || e.keyCode === 123) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        var isCtrl = e.ctrlKey || e.metaKey;
+        // Ctrl+Shift+I / J / C (Inspect / Console)
+        if (isCtrl && e.shiftKey) {
+          var k = (e.key || '').toUpperCase();
+          if (k === 'I' || k === 'J' || k === 'C' || e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }
+        // Ctrl+U (View Page Source)
+        if (isCtrl && (e.key === 'u' || e.key === 'U' || e.keyCode === 85)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        // Ctrl+S (Save Page)
+        if (isCtrl && (e.key === 's' || e.key === 'S' || e.keyCode === 83)) {
+          var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+          if (tag !== 'input' && tag !== 'textarea') {
+            e.preventDefault();
+            return false;
+          }
+        }
+      }, { capture: true });
+
+      // 3. Lightweight Debugger Trap (pauses execution if DevTools is opened)
+      var devToolsCheck = function() {
+        var start = performance.now();
+        debugger;
+        var diff = performance.now() - start;
+        if (diff > 150) {
+          // Execution halted by developer tools breakpoint
+        }
+      };
+      setInterval(devToolsCheck, 1500);
+    })();
+  </script>
+</head>
+<body class="cyber-theme">
+  <!-- Game Canvas -->
+  <div id="canvas-container">
+    <canvas id="game-canvas"></canvas>
+    <div id="crt-overlay" class="crt-lines"></div>
+  </div>
+
+  <!-- In-Game Heads-Up Display (HUD) -->
+  <div id="game-hud" class="ui-layer hud-hidden">
+    <!-- Top Left: Hero Health, Shield & XP -->
+    <div class="hud-top-left">
+      <div class="hero-avatar-box">
+        <div id="hud-hero-icon" class="hero-icon-display">🚀</div>
+        <div class="level-badge">LV <span id="hud-level">1</span></div>
+      </div>
+      <div class="bars-container">
+        <!-- Shield Bar -->
+        <div class="bar-wrapper shield-bar-wrapper">
+          <div class="bar-label">
+            <span class="bar-name">SHIELD</span>
+            <span class="bar-val" id="hud-shield-val">50/50</span>
+          </div>
+          <div class="bar-track">
+            <div id="hud-shield-fill" class="bar-fill shield-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+        <!-- Health Bar -->
+        <div class="bar-wrapper hp-bar-wrapper">
+          <div class="bar-label">
+            <span class="bar-name">HULL INTEGRITY</span>
+            <span class="bar-val" id="hud-hp-val">100/100</span>
+          </div>
+          <div class="bar-track">
+            <div id="hud-hp-fill" class="bar-fill hp-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+        <!-- XP Progress Bar -->
+        <div class="bar-wrapper xp-bar-wrapper">
+          <div class="bar-label">
+            <span class="bar-name">CYBER-LINK XP</span>
+            <span class="bar-val" id="hud-xp-val">0/100</span>
+          </div>
+          <div class="bar-track">
+            <div id="hud-xp-fill" class="bar-fill xp-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Co-Op Squad Teammate Panel (Private / Multiplayer Matches) -->
+      <div id="hud-squad-panel" class="squad-panel hidden">
+        <div class="squad-header">
+          <span class="squad-icon">👥</span>
+          <span class="squad-title">CO-OP DUO</span>
+          <span class="squad-room-tag" id="hud-squad-room">CYBER-7842</span>
+        </div>
+        <div class="teammate-card" id="hud-teammate-card">
+          <div class="teammate-avatar-wrap">
+            <span class="teammate-avatar-icon" id="hud-teammate-icon">🥷</span>
+            <span class="teammate-status-dot online" id="hud-teammate-dot"></span>
+          </div>
+          <div class="teammate-info">
+            <div class="teammate-name-row">
+              <span class="teammate-name" id="hud-teammate-name">P2 OPERATIVE</span>
+              <span class="teammate-status-badge healthy" id="hud-teammate-status">HEALTHY</span>
+            </div>
+            <div class="teammate-bars">
+              <div class="tm-bar-track tm-hp-track" title="Teammate HP">
+                <div class="tm-bar-fill tm-hp-fill" id="hud-tm-hp-fill" style="width: 100%;"></div>
+              </div>
+              <div class="tm-bar-track tm-shield-track" title="Teammate Shield">
+                <div class="tm-bar-fill tm-shield-fill" id="hud-tm-shield-fill" style="width: 100%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Center: Wave Status, Timer & Boss Bar -->
+    <div class="hud-top-center">
+      <div class="wave-display-box">
+        <div class="wave-title">WAVE <span id="hud-wave">1</span></div>
+        <div class="wave-timer" id="hud-timer">00:00</div>
+        <div class="threat-level" id="hud-threat">THREAT: NOMINAL</div>
+      </div>
+      <!-- Dynamic Boss Bar (Hidden until boss arrives) -->
+      <div id="boss-hud-bar" class="boss-bar-wrapper hidden">
+        <div class="boss-title">
+          <span class="boss-icon">⚠️</span>
+          <span id="boss-name">TITAN OVERLORD</span>
+          <span id="boss-hp-pct">100%</span>
+        </div>
+        <div class="bar-track boss-track">
+          <div id="boss-hp-fill" class="bar-fill boss-fill" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Right: Score, Combo & Pause -->
+    <div class="hud-top-right">
+      <div class="hud-top-actions-row">
+        <div class="stats-pill">
+          <span class="stat-icon">🪙</span>
+          <span class="stat-num" id="hud-credits">0</span>
+        </div>
+        <div class="stats-pill score-pill">
+          <span class="stat-label">SCORE</span>
+          <span class="stat-num" id="hud-score">000000</span>
+        </div>
+        <button id="btn-pause" class="hud-pause-btn" title="Pause Game (ESC / P)">⏸</button>
+      </div>
+      <div id="hud-combo-box" class="combo-box hidden">
+        <div class="combo-title"><span id="hud-combo-count">0</span>x COMBO!</div>
+        <div class="combo-tag" id="hud-combo-rating">RAMPAGE</div>
+        <div class="combo-timer-track">
+          <div id="hud-combo-fill" class="combo-timer-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Central Co-Op Revive Notification & Prompt -->
+    <div id="hud-revive-prompt" class="hud-revive-prompt hidden">
+      <div class="revive-prompt-box">
+        <span class="revive-icon">💫</span>
+        <div class="revive-text-group">
+          <span class="revive-title" id="revive-prompt-title">REVIVE TEAMMATE</span>
+          <span class="revive-hint" id="revive-prompt-hint">HOLD [F] OR STAY CLOSE</span>
+        </div>
+        <div class="revive-progress-ring-wrap">
+          <svg class="revive-svg" viewBox="0 0 44 44">
+            <circle class="revive-circle-bg" cx="22" cy="22" r="18"></circle>
+            <circle class="revive-circle-fill" id="hud-revive-circle-fill" cx="22" cy="22" r="18"></circle>
+          </svg>
+          <span class="revive-pct-text" id="hud-revive-pct">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Downed Alert Banner (When local player is knocked down) -->
+    <div id="hud-downed-banner" class="hud-downed-banner hidden">
+      <div class="downed-banner-content">
+        <div class="downed-banner-title">⚠️ CRITICAL: OPERATIVE DOWNED!</div>
+        <div class="downed-banner-sub">Bleeding out: <strong id="hud-bleedout-timer">30</strong>s &bull; Wait for teammate to revive you!</div>
+        <div class="downed-bar-track">
+          <div class="downed-bar-fill" id="hud-downed-fill" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Left: Active Perks & Drone Icons -->
+    <div class="hud-bottom-left">
+      <div class="perks-tray" id="hud-perks-tray">
+        <!-- Dynamically injected active perk icons -->
+      </div>
+    </div>
+
+    <!-- Bottom Right: Weapon Arsenal Loadout & Abilities Dock -->
+    <div class="hud-bottom-right">
+      <div class="hud-docks-container">
+        <!-- Weapon Arsenal Switcher Dock -->
+        <div class="weapons-dock" id="hud-weapons-dock">
+          <div class="weap-slot active" id="hud-weap-slot-1" data-slot="1" title="Primary Weapon [Press 1]">
+            <div class="weap-slot-key">1</div>
+            <div class="weap-slot-icon" id="hud-weap-1-icon">🔫</div>
+            <div class="weap-slot-info">
+              <span class="weap-slot-name" id="hud-weap-1-name">AK-47</span>
+              <span class="weap-slot-ammo" id="hud-weap-1-ammo">30 / 30</span>
+            </div>
+          </div>
+          <div class="weap-slot" id="hud-weap-slot-2" data-slot="2" title="Secondary Weapon [Press 2]">
+            <div class="weap-slot-key">2</div>
+            <div class="weap-slot-icon" id="hud-weap-2-icon">⚡</div>
+            <div class="weap-slot-info">
+              <span class="weap-slot-name" id="hud-weap-2-name">UMP-45</span>
+              <span class="weap-slot-ammo" id="hud-weap-2-ammo">25 / 25</span>
+            </div>
+          </div>
+          <!-- Ammo & Reload Action Module -->
+          <div class="hud-reload-module" id="hud-reload-module">
+            <div class="active-ammo-badge" id="hud-active-ammo-badge">
+              <span class="ammo-bullet-icon">🔘</span>
+              <span class="ammo-current" id="hud-ammo-current">30</span>
+              <span class="ammo-slash">/</span>
+              <span class="ammo-max" id="hud-ammo-max">30</span>
+            </div>
+            <button class="btn-hud-reload" id="btn-hud-reload" title="Reload Weapon [Press R]">
+              <span class="reload-icon">🔄</span>
+              <span class="reload-text">RELOAD [R]</span>
+            </button>
+            <div class="hud-reload-bar hidden" id="hud-reload-bar">
+              <div class="hud-reload-fill" id="hud-reload-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skills Dock -->
+        <div class="skills-dock">
+          <!-- Dash -->
+          <div class="skill-slot" id="skill-dash-slot">
+            <div class="skill-key">SHIFT</div>
+            <div class="skill-icon">⚡</div>
+            <div class="skill-cd-overlay" id="skill-dash-cd"></div>
+            <div class="skill-name">DASH</div>
+          </div>
+          <!-- Special Tactical Ability -->
+          <div class="skill-slot" id="skill-special-slot">
+            <div class="skill-key">Q</div>
+            <div class="skill-icon" id="hud-special-icon">🌀</div>
+            <div class="skill-cd-overlay" id="skill-special-cd"></div>
+            <div class="skill-name" id="hud-special-name">TACTICAL</div>
+          </div>
+          <!-- Ultimate -->
+          <div class="skill-slot ult-slot" id="skill-ult-slot">
+            <div class="skill-key">E</div>
+            <div class="skill-icon" id="hud-ult-icon">💥</div>
+            <div class="skill-cd-overlay" id="skill-ult-cd"></div>
+            <div class="skill-name" id="hud-ult-name">OVERCLOCK</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Virtual Controls (Shown on touch devices) -->
+    <div id="touch-controls" class="touch-controls-layer">
+      <div id="joystick-zone" class="joystick-zone">
+        <div id="joystick-base" class="joystick-base">
+          <div id="joystick-stick" class="joystick-stick"></div>
+        </div>
+      </div>
+      <div class="touch-actions-zone">
+        <button id="touch-btn-revive" class="touch-btn touch-btn-revive hidden">💫<span>REVIVE</span></button>
+        <button id="touch-btn-switch-weap" class="touch-btn touch-btn-weap">🔫<span>SWAP</span></button>
+        <button id="touch-btn-reload" class="touch-btn touch-btn-reload">🔄<span>RELOAD</span></button>
+        <button id="touch-btn-fire" class="touch-btn touch-btn-fire">🔥<span>FIRE</span></button>
+        <button id="touch-btn-dash" class="touch-btn touch-btn-dash">⚡<span>DASH</span></button>
+        <button id="touch-btn-skill" class="touch-btn touch-btn-skill">🌀<span>SKILL</span></button>
+        <button id="touch-btn-ult" class="touch-btn touch-btn-ult">💥<span>ULT</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen: Main Menu (DEADSHOT.io Style Lobby) -->
+  <div id="menu-screen" class="ui-screen active deadshot-lobby-screen">
+    <div class="cyber-grid-bg"></div>
+    <div class="menu-particles" id="menu-particles"></div>
+
+    <!-- DEADSHOT.io Top Navigation Header Bar -->
+    <header class="deadshot-topbar">
+      <div class="topbar-left">
+        <div class="deadshot-logo-container">
+          <h1 class="deadshot-logo">CYBER<span class="logo-gun-crosshair">🎯</span>SURVIVOR<span class="logo-io">.io</span></h1>
+        </div>
+        <button id="btn-fullscreen-header" class="topbar-btn-pill" title="Toggle Fullscreen Mode">
+          <span>📱</span> Fullscreen
+        </button>
+      </div>
+
+      <div class="topbar-right">
+        <div class="user-profile-badge">
+          <div class="user-avatar-frame">
+            <span id="topbar-hero-avatar">🪖</span>
+          </div>
+          <div class="user-meta">
+            <div class="user-handle" id="topbar-player-name" contenteditable="true" spellcheck="false" title="Click to change your handle">badhash</div>
+            <div class="user-wallet" id="topbar-user-wallet">
+              <span class="wallet-coins" id="btn-buy-coins" title="Coins (Earned from Eliminations & Missions)"><strong id="topbar-credits">700</strong> <span class="coin-dot">🪙</span> <span class="wallet-plus">+</span></span>
+              <span class="wallet-gems" id="btn-buy-gems" title="Diamonds (Bank Premium Currency)"><strong id="topbar-gems">50</strong> <span class="gem-dot">💎</span> <span class="wallet-plus">+</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="topbar-auth-row">
+          <button id="btn-profile-account" class="btn-auth-sm">Account</button>
+          <button id="btn-reset-data-top" class="btn-auth-sm btn-signout">Sign Out</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dedicated Sub-Navigation Bar: Full width, completely separate row, ZERO OVERLAP -->
+    <nav class="deadshot-subnav-bar">
+      <div class="subnav-inner">
+        <button class="nav-tab active" data-tab="tab-play">PLAY GAME</button>
+        <button class="nav-tab" data-tab="tab-settings">SETTINGS</button>
+        <button class="nav-tab" data-tab="tab-cybernetics">SHOP</button>
+        <button class="nav-tab" data-tab="tab-store" id="nav-tab-store" style="color: #00f0ff; font-weight: 800;">💎 BANK</button>
+        <button class="nav-tab" data-tab="tab-heroes">HEROES</button>
+        <button class="nav-tab" data-tab="tab-weapons">WEAPONS</button>
+        <button class="nav-tab" data-tab="tab-records">LEADERBOARD</button>
+      </div>
+    </nav>
+
+    <!-- Main Viewport Area -->
+    <div class="deadshot-viewport">
+      
+      <!-- TAB 1: PLAY GAME (DEADSHOT Center Stage Lobby) -->
+      <div id="tab-play" class="tab-pane active deadshot-play-stage">
+        
+        <!-- Left Sidebar: Daily & Weekly Missions & Community -->
+        <aside class="deadshot-left-col">
+          <!-- Watch Sponsored Ad for Free Diamonds -->
+          <div class="watch-ad-lobby-card" id="btn-watch-ad-lobby" title="Watch a quick sponsor video to earn +25 free diamonds">
+            <div class="ad-card-left">
+              <span class="ad-tv-icon">📺</span>
+              <div class="ad-card-meta">
+                <strong class="ad-card-title">WATCH AD: +25 💎</strong>
+                <span class="ad-card-sub" id="lobby-ad-count-text">10 / 10 Free Ads Left Today</span>
+              </div>
+            </div>
+            <button class="btn-watch-ad-play">WATCH ➔</button>
+          </div>
+
+          <div class="challenge-tabs-row">
+            <button class="ch-tab-btn active" id="btn-tab-daily" data-mission-tab="daily">Daily</button>
+            <button class="ch-tab-btn" id="btn-tab-weekly" data-mission-tab="weekly">Weekly</button>
+          </div>
+
+          <div class="daily-challenges-panel">
+            <div class="missions-diamond-banner">💎 Complete Missions to Earn +95 Diamonds Daily!</div>
+            <div class="panel-header-title" id="missions-panel-title">Daily Missions:</div>
+
+            <div id="missions-list-container" class="missions-list-wrap">
+              <!-- Dynamically populated daily & weekly mission cards with progress tracks and CLAIM buttons -->
+            </div>
+
+            <div class="ch-countdown-footer">
+              Resets In: <span id="challenge-timer-text">14h 45m 23s</span>
+            </div>
+          </div>
+
+          <div class="community-discord-box">
+            <div class="comm-title">Join the community!!</div>
+            <a href="https://discord.gg" target="_blank" class="deadshot-discord-btn" rel="noreferrer">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028z"/></svg>
+              <span>DISCORD</span>
+            </a>
+          </div>
+        </aside>
+
+        <!-- Center Stage: Soldier Showcase & Giant PLAY Button -->
+        <main class="deadshot-center-col">
+          
+          <!-- Hero Spotlight Stage -->
+          <div class="hero-stage-viewport">
+            <div class="stage-pod pod-left" id="btn-prev-hero" title="Previous Hero Class">
+              <span class="pod-symbol">+</span>
+            </div>
+
+            <div class="stage-soldier-display">
+              <div class="soldier-floating-handle" id="stage-player-name">badhash</div>
+              <div class="soldier-class-tag" id="stage-hero-class">CYBER COMMANDO</div>
+              <canvas id="hero-stage-canvas" width="320" height="340"></canvas>
+            </div>
+
+            <div class="stage-pod pod-right" id="btn-next-hero" title="Next Hero Class">
+              <span class="pod-symbol">+</span>
+            </div>
+          </div>
+
+          <!-- The Giant DEADSHOT.io Blue PLAY Button -->
+          <div class="deadshot-cta-block">
+            <button id="btn-start-game" class="deadshot-giant-play-btn">
+              PLAY
+            </button>
+
+            <!-- Mode Selector Pills directly below PLAY -->
+            <div class="deadshot-mode-pills">
+              <button class="mode-pill" id="btn-mode-private" data-mode="private">Private</button>
+              <button class="mode-pill" id="btn-mode-join" data-mode="join">Join</button>
+              <button class="mode-pill" id="btn-mode-bossrush" data-mode="bossrush">Boss Gauntlet</button>
+            </div>
+          </div>
+        </main>
+
+        <!-- Right Sidebar: Banner / Locker Quick Access -->
+        <aside class="deadshot-right-col">
+          <div class="sponsor-card">
+            <div class="sponsor-badge">TACTICAL INTEL</div>
+            <div class="sponsor-visual">
+              <span class="sponsor-icon">⚡</span>
+              <div class="sponsor-heading">CYBER WARFARE</div>
+            </div>
+            <p class="sponsor-desc">Equip high-frequency plasma weapons and augment your stats in the Shop.</p>
+            <button class="sponsor-cta btn-goto-shop">ENTER SHOP</button>
+          </div>
+        </aside>
+
+      </div>
+
+      <!-- Tab 2: Heroes Selection & Armory Stage -->
+      <div id="tab-heroes" class="tab-pane">
+        <div class="heroes-armory-layout">
+          
+          <!-- Left Column: Hero Selection Cards Grid -->
+          <div class="hero-grid" id="heroes-select-grid">
+            <!-- Hero 1: Commando -->
+            <div class="hero-card active" data-hero="commando">
+              <div class="hero-card-top">
+                <div class="hero-portrait">🚀</div>
+                <div class="hero-header">
+                  <h3>Cyber Commando</h3>
+                  <span class="hero-role">ASSAULT SPECIALIST</span>
+                </div>
+              </div>
+              <div class="hero-outfit-tag">🪖 Cyan Strike Ops Armor</div>
+              <p class="hero-lore">Rapid Plasma Rifle • Cluster Grenades • Overdrive Storm</p>
+              <div class="hero-skills-list">
+                <div class="h-skill"><span class="h-skill-tag">PRIMARY</span> <strong>Triple Plasma Rifle</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">TACTICAL (Q)</span> <strong>GRENADE VOLLEY</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">ULTIMATE (E)</span> <strong>BULLET STORM</strong></div>
+              </div>
+              <div class="hero-stat-bars">
+                <div class="stat-row"><span>SPEED</span><div class="mini-bar"><div style="width:81%; background:#00f0ff"></div></div></div>
+                <div class="stat-row"><span>DAMAGE</span><div class="mini-bar"><div style="width:40%; background:#00f0ff"></div></div></div>
+                <div class="stat-row"><span>DEFENSE</span><div class="mini-bar"><div style="width:64%; background:#00f0ff"></div></div></div>
+              </div>
+              <div class="hero-card-action">
+                <button class="btn-hero-select btn-primary">EQUIPPED (DEPLOY)</button>
+              </div>
+            </div>
+
+            <!-- Hero 2: Shadow Ninja -->
+            <div class="hero-card" data-hero="ninja">
+              <div class="hero-card-top">
+                <div class="hero-portrait">⚡</div>
+                <div class="hero-header">
+                  <h3>Shadow Ninja</h3>
+                  <span class="hero-role">CYBER SHINOBI</span>
+                </div>
+              </div>
+              <div class="hero-outfit-tag">🥷 Magenta Stealth Shinobi Cowl</div>
+              <p class="hero-lore">Neon Katana (Bullet Deflection) • Shadow Blink • Blade Hurricane</p>
+              <div class="hero-skills-list">
+                <div class="h-skill"><span class="h-skill-tag">PRIMARY</span> <strong>Neon Katana</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">TACTICAL (Q)</span> <strong>SHADOW BLINK</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">ULTIMATE (E)</span> <strong>BLADE VORTEX</strong></div>
+              </div>
+              <div class="hero-stat-bars">
+                <div class="stat-row"><span>SPEED</span><div class="mini-bar"><div style="width:97%; background:#ff007f"></div></div></div>
+                <div class="stat-row"><span>DAMAGE</span><div class="mini-bar"><div style="width:54%; background:#ff007f"></div></div></div>
+                <div class="stat-row"><span>DEFENSE</span><div class="mini-bar"><div style="width:46%; background:#ff007f"></div></div></div>
+              </div>
+              <div class="hero-card-action">
+                <button class="btn-hero-select btn-secondary">SELECT HERO</button>
+              </div>
+            </div>
+
+            <!-- Hero 3: Heavy Juggernaut -->
+            <div class="hero-card" data-hero="juggernaut">
+              <div class="hero-card-top">
+                <div class="hero-portrait">💥</div>
+                <div class="hero-header">
+                  <h3>Heavy Juggernaut</h3>
+                  <span class="hero-role">ARMORED SIEGE MECH</span>
+                </div>
+              </div>
+              <div class="hero-outfit-tag">🛡️ Gold Titanium Mech Chassis</div>
+              <p class="hero-lore">Flak Spread Shotgun • Kinetic Stun Slam • Orbital Laser</p>
+              <div class="hero-skills-list">
+                <div class="h-skill"><span class="h-skill-tag">PRIMARY</span> <strong>Flak Shotgun</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">TACTICAL (Q)</span> <strong>KINETIC SLAM</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">ULTIMATE (E)</span> <strong>ORBITAL BEAM</strong></div>
+              </div>
+              <div class="hero-stat-bars">
+                <div class="stat-row"><span>SPEED</span><div class="mini-bar"><div style="width:66%; background:#ffaa00"></div></div></div>
+                <div class="stat-row"><span>DAMAGE</span><div class="mini-bar"><div style="width:34%; background:#ffaa00"></div></div></div>
+                <div class="stat-row"><span>DEFENSE</span><div class="mini-bar"><div style="width:100%; background:#ffaa00"></div></div></div>
+              </div>
+              <div class="hero-card-action">
+                <button class="btn-hero-select btn-secondary">SELECT HERO</button>
+              </div>
+            </div>
+
+            <!-- Hero 4: Void Psionic -->
+            <div class="hero-card" data-hero="psionic">
+              <div class="hero-card-top">
+                <div class="hero-portrait">🔮</div>
+                <div class="hero-header">
+                  <h3>Void Psionic</h3>
+                  <span class="hero-role">DARK MATTER ADEPT</span>
+                </div>
+              </div>
+              <div class="hero-outfit-tag">🔮 Amethyst Void Robes & Orbs</div>
+              <p class="hero-lore">Homing Void Bolts • Gravity Black Hole • Supernova Cataclysm</p>
+              <div class="hero-skills-list">
+                <div class="h-skill"><span class="h-skill-tag">PRIMARY</span> <strong>Void Bolts</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">TACTICAL (Q)</span> <strong>GRAVITY HOLE</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">ULTIMATE (E)</span> <strong>SUPERNOVA</strong></div>
+              </div>
+              <div class="hero-stat-bars">
+                <div class="stat-row"><span>SPEED</span><div class="mini-bar"><div style="width:78%; background:#b336ff"></div></div></div>
+                <div class="stat-row"><span>DAMAGE</span><div class="mini-bar"><div style="width:46%; background:#b336ff"></div></div></div>
+                <div class="stat-row"><span>DEFENSE</span><div class="mini-bar"><div style="width:54%; background:#b336ff"></div></div></div>
+              </div>
+              <div class="hero-card-action">
+                <button class="btn-hero-select btn-secondary">SELECT HERO</button>
+              </div>
+            </div>
+
+            <!-- Hero 5: Cyber Valkyrie -->
+            <div class="hero-card" data-hero="valkyrie">
+              <div class="hero-card-top">
+                <div class="hero-portrait">🪽</div>
+                <div class="hero-header">
+                  <h3>Cyber Valkyrie</h3>
+                  <span class="hero-role">AERIAL JETPACK ACE</span>
+                </div>
+              </div>
+              <div class="hero-outfit-tag">🪽 Crimson Winged Jetpack Armor</div>
+              <p class="hero-lore">Dual Crimson SMGs • Napalm Dash • Plasma Missile Swarm</p>
+              <div class="hero-skills-list">
+                <div class="h-skill"><span class="h-skill-tag">PRIMARY</span> <strong>Dual SMGs</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">TACTICAL (Q)</span> <strong>NAPALM DASH</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">ULTIMATE (E)</span> <strong>MISSILE SWARM</strong></div>
+              </div>
+              <div class="hero-stat-bars">
+                <div class="stat-row"><span>SPEED</span><div class="mini-bar"><div style="width:88%; background:#ff2a4b"></div></div></div>
+                <div class="stat-row"><span>DAMAGE</span><div class="mini-bar"><div style="width:42%; background:#ff2a4b"></div></div></div>
+                <div class="stat-row"><span>DEFENSE</span><div class="mini-bar"><div style="width:64%; background:#ff2a4b"></div></div></div>
+              </div>
+              <div class="hero-card-action">
+                <button class="btn-hero-unlock">🔒 UNLOCK 🪙 1,600</button>
+              </div>
+            </div>
+
+            <!-- Hero 6: Phantom Ghost -->
+            <div class="hero-card" data-hero="phantom">
+              <div class="hero-card-top">
+                <div class="hero-portrait">🎯</div>
+                <div class="hero-header">
+                  <h3>Phantom Ghost</h3>
+                  <span class="hero-role">ARCTIC STEALTH REAPER</span>
+                </div>
+              </div>
+              <div class="hero-outfit-tag">❄️ Arctic Teal Ghillie Mantle</div>
+              <p class="hero-lore">Anti-Material Gauss Rifle • EMP Hologram • Orbital Death Ray</p>
+              <div class="hero-skills-list">
+                <div class="h-skill"><span class="h-skill-tag">PRIMARY</span> <strong>Gauss Rifle</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">TACTICAL (Q)</span> <strong>EMP HOLOGRAM</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">ULTIMATE (E)</span> <strong>DEATH RAY</strong></div>
+              </div>
+              <div class="hero-stat-bars">
+                <div class="stat-row"><span>SPEED</span><div class="mini-bar"><div style="width:84%; background:#00ffcc"></div></div></div>
+                <div class="stat-row"><span>DAMAGE</span><div class="mini-bar"><div style="width:96%; background:#00ffcc"></div></div></div>
+                <div class="stat-row"><span>DEFENSE</span><div class="mini-bar"><div style="width:50%; background:#00ffcc"></div></div></div>
+              </div>
+              <div class="hero-card-action">
+                <button class="btn-hero-unlock">🔒 UNLOCK 🪙 2,000</button>
+              </div>
+            </div>
+
+            <!-- Hero 7: Neon Matrix -->
+            <div class="hero-card" data-hero="matrix">
+              <div class="hero-card-top">
+                <div class="hero-portrait">🧬</div>
+                <div class="hero-header">
+                  <h3>Neon Matrix</h3>
+                  <span class="hero-role">ACID STREET HACKER</span>
+                </div>
+              </div>
+              <div class="hero-outfit-tag">🕶️ Acid Green Streetwear Jacket</div>
+              <p class="hero-lore">Chain Arc Blaster • Glitch Telefrag • Time-Freeze Overclock</p>
+              <div class="hero-skills-list">
+                <div class="h-skill"><span class="h-skill-tag">PRIMARY</span> <strong>Arc Blaster</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">TACTICAL (Q)</span> <strong>GLITCH TELEFRAG</strong></div>
+                <div class="h-skill"><span class="h-skill-tag">ULTIMATE (E)</span> <strong>TIME OVERCLOCK</strong></div>
+              </div>
+              <div class="hero-stat-bars">
+                <div class="stat-row"><span>SPEED</span><div class="mini-bar"><div style="width:91%; background:#00ff44"></div></div></div>
+                <div class="stat-row"><span>DAMAGE</span><div class="mini-bar"><div style="width:48%; background:#00ff44"></div></div></div>
+                <div class="stat-row"><span>DEFENSE</span><div class="mini-bar"><div style="width:64%; background:#00ff44"></div></div></div>
+              </div>
+              <div class="hero-card-action">
+                <button class="btn-hero-unlock">🔒 UNLOCK 🪙 2,500</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Dedicated Character Stage & Specials Showcase -->
+          <div class="hero-armory-showcase-panel">
+            <div class="armory-stage-header">
+              <div class="armory-badge" id="armory-badge">SPECIAL OPERATIVE</div>
+              <div class="armory-hero-name" id="armory-hero-name">CYBER COMMANDO</div>
+              <div class="armory-hero-role" id="armory-hero-role">ASSAULT SPECIALIST</div>
+              <div class="armory-hero-outfit" id="armory-hero-outfit">🪖 Cyan Strike Ops Armor</div>
+            </div>
+
+            <div class="armory-canvas-wrap">
+              <canvas id="armory-hero-canvas" width="240" height="240"></canvas>
+            </div>
+
+            <div class="armory-specials-box" id="armory-specials-box">
+              <div class="armory-special-item">
+                <span class="spec-icon" id="armory-prim-icon">🔫</span>
+                <div class="spec-detail">
+                  <div class="spec-title" id="armory-prim-title">Triple Plasma Rifle</div>
+                  <div class="spec-desc" id="armory-prim-desc">Rapid burst plasma lasers with high-speed suppression.</div>
+                </div>
+              </div>
+              <div class="armory-special-item">
+                <span class="spec-icon" id="armory-spec-icon">🌀</span>
+                <div class="spec-detail">
+                  <div class="spec-title" id="armory-spec-title">Cluster Grenade Volley [Q]</div>
+                  <div class="spec-desc" id="armory-spec-desc">Throws 3 fragmentation grenades that explode on contact.</div>
+                </div>
+              </div>
+              <div class="armory-special-item">
+                <span class="spec-icon" id="armory-ult-icon">💥</span>
+                <div class="spec-detail">
+                  <div class="spec-title" id="armory-ult-title">Bullet Storm Overdrive [E]</div>
+                  <div class="spec-desc" id="armory-ult-desc">Unleashes a 360-degree radial barrage of piercing plasma.</div>
+                </div>
+              </div>
+            </div>
+
+            <button id="btn-hero-launch" class="btn-primary btn-launch armory-launch-btn">
+              <span class="btn-glow"></span>
+              <span class="btn-text" id="btn-hero-launch-text">⚔️ DEPLOY WITH CYBER COMMANDO</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Tab: Weapons Arsenal & Armory -->
+      <div id="tab-weapons" class="tab-pane">
+        <div class="weapons-armory-layout">
+          
+          <!-- Left: Weapons Selection Grid -->
+          <div class="weapons-grid-column">
+            <div class="weapons-panel-header">
+              <div class="wph-title">ARSENAL LOADOUT & WEAPONS</div>
+              <div class="wph-sub">Equip Primary [1] and Secondary [2] Weapons to Deploy & Switch in Combat</div>
+            </div>
+            <div class="weapon-grid" id="weapons-select-grid">
+              <!-- Dynamically populated via renderWeaponsGridUI with 10 weapons -->
+            </div>
+          </div>
+
+          <!-- Right: Weapon Blueprint & 3D Inspect Showcase -->
+          <div class="weapon-inspect-panel">
+            <div class="inspect-header">
+              <div class="inspect-badge" id="inspect-weap-badge">ENERGY ARMAMENT</div>
+              <div class="inspect-name" id="inspect-weap-name">PLASMA ASSAULT RIFLE</div>
+              <div class="inspect-cat" id="inspect-weap-category">RAPID FULL-AUTO [ASSAULT]</div>
+            </div>
+
+            <div class="weapon-canvas-wrap">
+              <canvas id="weapon-inspect-canvas" width="280" height="180"></canvas>
+            </div>
+
+            <div class="weapon-specs-box">
+              <div class="spec-bar-row">
+                <span>DAMAGE</span>
+                <div class="spec-meter"><div id="spec-dmg-fill" style="width: 45%;"></div></div>
+                <strong id="spec-dmg-val">30 DPS</strong>
+              </div>
+              <div class="spec-bar-row">
+                <span>FIRE RATE</span>
+                <div class="spec-meter"><div id="spec-firerate-fill" style="width: 85%;"></div></div>
+                <strong id="spec-firerate-val">8.3 rps</strong>
+              </div>
+              <div class="spec-bar-row">
+                <span>RANGE</span>
+                <div class="spec-meter"><div id="spec-range-fill" style="width: 75%;"></div></div>
+                <strong id="spec-range-val">800 px</strong>
+              </div>
+              <div class="spec-bar-row">
+                <span>CRIT MULT</span>
+                <div class="spec-meter"><div id="spec-crit-fill" style="width: 60%;"></div></div>
+                <strong id="spec-crit-val">2.0x</strong>
+              </div>
+            </div>
+
+            <p class="inspect-lore-text" id="inspect-weap-lore">Standard-issue cyber-infantry assault armament designed for sustained suppressing fire.</p>
+
+            <!-- Custom Weapon Skins Section -->
+            <div class="weapon-skins-section">
+              <div class="skins-header-row">
+                <span class="skins-title">🎨 WEAPON SKINS</span>
+                <span class="skins-equipped-tag" id="current-equipped-skin-name">Skin: Tactical Standard</span>
+              </div>
+              <div class="skins-carousel" id="weapon-skins-list">
+                <!-- Dynamically populated skin cards -->
+              </div>
+            </div>
+
+            <div class="inspect-actions-row">
+              <button id="btn-equip-primary" class="btn-primary inspect-btn">EQUIP PRIMARY [1]</button>
+              <button id="btn-equip-secondary" class="btn-secondary inspect-btn">EQUIP SECONDARY [2]</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Tab 3: Cybernetics Lab (Persistent Upgrades) -->
+      <div id="tab-cybernetics" class="tab-pane">
+        <div class="lab-header">
+          <div class="credits-vault">
+            <span>AVAILABLE CREDITS:</span>
+            <strong id="lab-credits-display">🪙 0</strong>
+            <strong id="lab-gems-display" style="color: #00f0ff; margin-left: 1.2rem;">💎 0</strong>
+            <button id="btn-lab-buy-more" class="btn-primary" style="margin-left: 1.2rem; padding: 0.35rem 0.8rem; font-size: 0.75rem; font-family: var(--font-title);">⚡ BUY MORE COINS & GEMS</button>
+          </div>
+          <p class="lab-subtitle">Install permanent neural and cybernetic upgrades that apply to all future runs.</p>
+        </div>
+
+        <div class="upgrades-grid" id="cybernetics-upgrades-grid">
+          <!-- Upgrades injected dynamically via script.js -->
+        </div>
+
+        <div class="tab-bottom-actions">
+          <button class="btn-primary btn-goto-play">⚔️ BACK TO MISSION SELECT & PLAY</button>
+        </div>
+      </div>
+
+      <!-- Tab: Currency Bank & Black Market Store -->
+      <div id="tab-store" class="tab-pane">
+        <!-- Earn Free Diamonds Banner: Watch Ads & Daily Missions -->
+        <div class="earn-diamonds-hub-banner">
+          <div class="ed-hub-left">
+            <div class="ed-gem-icon">💎</div>
+            <div class="ed-meta">
+              <span class="ed-tag">FREE DIAMONDS SYSTEM</span>
+              <h2 class="ed-title">EARN DIAMONDS BY WATCHING ADS & DAILY MISSIONS</h2>
+              <p class="ed-desc">Watch quick sponsor broadcasts (+25 💎 each) or complete daily tactical missions (+95 💎 daily) to unlock rare skins and weapons!</p>
+            </div>
+          </div>
+          <div class="ed-hub-actions">
+            <button class="btn-primary btn-ed-watch-ad" id="btn-watch-ad-store">
+              <span>📺 WATCH AD FOR +25 💎</span>
+            </button>
+            <button class="btn-secondary btn-ed-missions" id="btn-goto-missions-store">
+              <span>🎯 DAILY MISSIONS (+95 💎)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="store-hero-banner">
+          <div class="store-banner-badge">🔥 SPECIAL OPERATIVE BUNDLE • LIMITED TIME (50% OFF)</div>
+          <div class="store-banner-content">
+            <div class="store-bundle-info">
+              <h2 class="store-bundle-title">CYBER OPS ELITE BUNDLE</h2>
+              <p class="store-bundle-desc">Instant delivery of <strong>1,200 💎 Diamonds</strong>, <strong>25,000 🪙 Cyber Coins</strong>, and the Legendary <strong>AK-47 "Dragonfire"</strong> Skin!</p>
+              <div class="store-bundle-perks">
+                <span class="bundle-pill">💎 1,200 Diamonds</span>
+                <span class="bundle-pill">🪙 25,000 Coins</span>
+                <span class="bundle-pill special-gold">🔥 AK-47 Dragonfire Skin</span>
+              </div>
+            </div>
+            <div class="store-bundle-action">
+              <div class="bundle-original-price">🪙 30,000</div>
+              <button class="btn-buy-pack store-buy-hero-btn" data-pack-id="bundle_starter" data-name="Cyber Ops Elite Bundle" data-cost-type="coins" data-cost="15000" data-gems="1200" data-coins="25000" data-skin="ak47_dragonfire">
+                <span class="buy-price">🪙 15,000</span>
+                <span class="buy-label">⚡ INSTANT UNLOCK</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Diamond Vault -->
+        <div class="store-section-title">
+          <span>💎 DIAMOND VAULT (EXCHANGE COINS FOR DIAMONDS)</span>
+          <small>Use Coins earned in battle to unlock Premium Diamonds for Weapon Skins & Legendary Outfits</small>
+        </div>
+        <div class="store-grid">
+          <div class="store-card">
+            <div class="store-card-visual">💎</div>
+            <div class="store-card-amount">120 DIAMONDS</div>
+            <div class="store-card-name">Pouch of Diamonds</div>
+            <button class="store-price-btn btn-buy-pack" data-pack-id="gems_120" data-name="Pouch of Diamonds" data-cost-type="coins" data-cost="1500" data-gems="120" data-coins="0">🪙 1,500</button>
+          </div>
+          <div class="store-card popular">
+            <div class="store-popular-ribbon">POPULAR</div>
+            <div class="store-card-visual">💎💎</div>
+            <div class="store-card-amount">650 DIAMONDS</div>
+            <div class="store-card-bonus">+10% BONUS</div>
+            <div class="store-card-name">Combat Satchel</div>
+            <button class="store-price-btn btn-buy-pack" data-pack-id="gems_650" data-name="Combat Satchel" data-cost-type="coins" data-cost="6000" data-gems="650" data-coins="0">🪙 6,000</button>
+          </div>
+          <div class="store-card best-value">
+            <div class="store-popular-ribbon best">BEST VALUE</div>
+            <div class="store-card-visual">💎📦</div>
+            <div class="store-card-amount">1,500 DIAMONDS</div>
+            <div class="store-card-bonus">+25% BONUS</div>
+            <div class="store-card-name">Armory Chest</div>
+            <button class="store-price-btn btn-buy-pack" data-pack-id="gems_1500" data-name="Armory Chest" data-cost-type="coins" data-cost="12000" data-gems="1500" data-coins="0">🪙 12,000</button>
+          </div>
+          <div class="store-card">
+            <div class="store-card-visual">💎🏦</div>
+            <div class="store-card-amount">4,000 DIAMONDS</div>
+            <div class="store-card-bonus">+50% MEGA BONUS</div>
+            <div class="store-card-name">Overlord Vault</div>
+            <button class="store-price-btn btn-buy-pack" data-pack-id="gems_4000" data-name="Overlord Vault" data-cost-type="coins" data-cost="28000" data-gems="4000" data-coins="0">🪙 28,000</button>
+          </div>
+        </div>
+
+        <!-- Section 2: Coins Caches -->
+        <div class="store-section-title">
+          <span>🪙 CYBER COINS CACHES (EXCHANGE DIAMONDS FOR COINS)</span>
+          <small>Use Diamonds to instantly obtain large caches of Coins for Cybernetics Lab & Gun Upgrades</small>
+        </div>
+        <div class="store-grid">
+          <div class="store-card">
+            <div class="store-card-visual">🪙</div>
+            <div class="store-card-amount">3,000 COINS</div>
+            <div class="store-card-name">Handful of Coins</div>
+            <button class="store-price-btn btn-buy-pack" data-pack-id="coins_3000" data-name="Handful of Coins" data-cost-type="diamonds" data-cost="25" data-gems="0" data-coins="3000">💎 25</button>
+          </div>
+          <div class="store-card popular">
+            <div class="store-popular-ribbon">POPULAR</div>
+            <div class="store-card-visual">🪙💼</div>
+            <div class="store-card-amount">18,000 COINS</div>
+            <div class="store-card-bonus">+20% BONUS</div>
+            <div class="store-card-name">Briefcase of Coins</div>
+            <button class="store-price-btn btn-buy-pack" data-pack-id="coins_18000" data-name="Briefcase of Coins" data-cost-type="diamonds" data-cost="120" data-gems="0" data-coins="18000">💎 120</button>
+          </div>
+          <div class="store-card best-value">
+            <div class="store-popular-ribbon best">BEST VALUE</div>
+            <div class="store-card-visual">🪙🏛️</div>
+            <div class="store-card-amount">45,000 COINS</div>
+            <div class="store-card-bonus">+50% BONUS</div>
+            <div class="store-card-name">War Treasury Safe</div>
+            <button class="store-price-btn btn-buy-pack" data-pack-id="coins_45000" data-name="War Treasury Safe" data-cost-type="diamonds" data-cost="250" data-gems="0" data-coins="45000">💎 250</button>
+          </div>
+        </div>
+
+        <!-- Section 3: In-Game Diamond To Coin Converter -->
+        <div class="store-section-title">
+          <span>⚡ INSTANT DIAMOND • COIN EXCHANGE</span>
+          <small>Convert your stored Diamonds directly into Cyber Coins instantly</small>
+        </div>
+        <div class="store-exchange-grid">
+          <div class="exchange-card">
+            <div class="exchange-left">
+              <span class="ex-gem">💎 50</span>
+              <span class="ex-arrow">➔</span>
+              <span class="ex-coin">🪙 1,500</span>
+            </div>
+            <button class="btn-exchange-action" data-cost-gems="50" data-get-coins="1500">EXCHANGE 50 💎</button>
+          </div>
+          <div class="exchange-card">
+            <div class="exchange-left">
+              <span class="ex-gem">💎 150</span>
+              <span class="ex-arrow">➔</span>
+              <span class="ex-coin">🪙 5,000</span>
+              <span class="ex-bonus">+10% BONUS</span>
+            </div>
+            <button class="btn-exchange-action" data-cost-gems="150" data-get-coins="5000">EXCHANGE 150 💎</button>
+          </div>
+          <div class="exchange-card">
+            <div class="exchange-left">
+              <span class="ex-gem">💎 300</span>
+              <span class="ex-arrow">➔</span>
+              <span class="ex-coin">🪙 12,000</span>
+              <span class="ex-bonus">+25% BONUS</span>
+            </div>
+            <button class="btn-exchange-action" data-cost-gems="300" data-get-coins="12000">EXCHANGE 300 💎</button>
+          </div>
+        </div>
+
+        <div class="tab-bottom-actions" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+          <button class="btn-primary btn-goto-play">⚔️ BACK TO MISSION SELECT & PLAY</button>
+          <button class="btn-secondary" id="btn-store-goto-weapons" style="border: 1px solid var(--neon-cyan); color: var(--neon-cyan);">🎨 GO TO WEAPONS & SKINS</button>
+        </div>
+      </div>
+
+      <!-- Tab 4: Records & Achievements -->
+      <div id="tab-records" class="tab-pane">
+        <div class="records-summary-grid">
+          <div class="stat-card">
+            <div class="sc-label">HIGH SCORE</div>
+            <div class="sc-val" id="rec-high-score">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">MAX WAVE REACHED</div>
+            <div class="sc-val" id="rec-max-wave">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">TOTAL CYBER KILLS</div>
+            <div class="sc-val" id="rec-total-kills">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">HIGHEST COMBO</div>
+            <div class="sc-val" id="rec-max-combo">0x</div>
+          </div>
+        </div>
+
+        <h3 class="section-title">ACHIEVEMENTS & TROPHIES</h3>
+        <div class="achievements-grid" id="achievements-grid">
+          <!-- Dynamically populated -->
+        </div>
+
+        <div class="tab-bottom-actions">
+          <button class="btn-primary btn-goto-play">⚔️ LAUNCH MISSION</button>
+        </div>
+      </div>
+
+      <!-- Tab 5: Settings -->
+      <div id="tab-settings" class="tab-pane">
+        <!-- Controls & Keybindings Reference Matrix -->
+        <div class="settings-controls-section">
+          <div class="settings-section-title">
+            <span>🎮 OPERATIVE CONTROLS & KEYBINDINGS</span>
+          </div>
+          <div class="controls-settings-grid">
+            <div class="control-card">
+              <div class="control-icon">🏃</div>
+              <div class="control-info">
+                <div class="control-label">Move Operative</div>
+                <div class="control-keys">
+                  <kbd class="key-badge">W</kbd>
+                  <kbd class="key-badge">A</kbd>
+                  <kbd class="key-badge">S</kbd>
+                  <kbd class="key-badge">D</kbd>
+                  <span class="key-sep">or</span>
+                  <kbd class="key-badge">↑</kbd>
+                  <kbd class="key-badge">←</kbd>
+                  <kbd class="key-badge">↓</kbd>
+                  <kbd class="key-badge">→</kbd>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">🎯</div>
+              <div class="control-info">
+                <div class="control-label">Aim Direction</div>
+                <div class="control-keys">
+                  <span class="key-badge mouse-badge">🖱️ Mouse Cursor (Manual Aim)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">🔫</div>
+              <div class="control-info">
+                <div class="control-label">Shoot / Primary Weapon</div>
+                <div class="control-keys">
+                  <kbd class="key-badge mouse-badge">Left Click</kbd>
+                  <span class="key-hint">(Tap or Hold to Spray)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">🔄</div>
+              <div class="control-info">
+                <div class="control-label">Reload Weapon</div>
+                <div class="control-keys">
+                  <kbd class="key-badge">R</kbd>
+                  <span class="key-hint">(or Auto-Reload on Empty)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">🔫</div>
+              <div class="control-info">
+                <div class="control-label">Switch Weapon Slot</div>
+                <div class="control-keys">
+                  <kbd class="key-badge">1</kbd>
+                  <span class="key-sep">/</span>
+                  <kbd class="key-badge">2</kbd>
+                  <span class="key-sep">or</span>
+                  <span class="key-badge mouse-badge">Scroll Wheel</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">⚡</div>
+              <div class="control-info">
+                <div class="control-label">Tactical Dash (Invulnerable)</div>
+                <div class="control-keys">
+                  <kbd class="key-badge">SHIFT</kbd>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">🌀</div>
+              <div class="control-info">
+                <div class="control-label">Tactical Skill</div>
+                <div class="control-keys">
+                  <kbd class="key-badge">Q</kbd>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">💥</div>
+              <div class="control-info">
+                <div class="control-label">Overclock Ultimate</div>
+                <div class="control-keys">
+                  <kbd class="key-badge">E</kbd>
+                  <span class="key-sep">or</span>
+                  <kbd class="key-badge">F</kbd>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">⏸️</div>
+              <div class="control-info">
+                <div class="control-label">Pause / Tactical Menu</div>
+                <div class="control-keys">
+                  <kbd class="key-badge">P</kbd>
+                  <span class="key-sep">or</span>
+                  <kbd class="key-badge">ESC</kbd>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <div class="control-icon">📱</div>
+              <div class="control-info">
+                <div class="control-label">Mobile Touchscreen Controls</div>
+                <div class="control-keys">
+                  <span class="key-badge touch-badge">🕹️ Left: Analog Stick</span>
+                  <span class="key-badge touch-badge">🔥 Right: Action Buttons</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section-title" style="margin-top: 1.6rem;">
+          <span>⚙️ GAMEPLAY & AUDIO PREFERENCES</span>
+        </div>
+
+        <div class="settings-form">
+          <div class="setting-row">
+            <label for="set-color-theme">🎨 Neon Theme Palette</label>
+            <select id="set-color-theme" class="setting-select">
+              <option value="cyber">💎 Cyber Neon (Cyan & Magenta)</option>
+              <option value="matrix">🟢 Matrix Acid Green</option>
+              <option value="crimson">🔴 Laser Crimson Red</option>
+              <option value="gold">⚡ Solar Overclock Amber</option>
+              <option value="void">🔮 Void Ultraviolet</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="set-sfx-vol">Master SFX Volume</label>
+            <input type="range" id="set-sfx-vol" min="0" max="100" value="80">
+            <span id="set-sfx-val">80%</span>
+          </div>
+          <div class="setting-row">
+            <label for="set-music-vol">Synthwave Music Volume</label>
+            <input type="range" id="set-music-vol" min="0" max="100" value="65">
+            <span id="set-music-val">65%</span>
+          </div>
+          <div class="setting-row">
+            <label for="set-shake">Screen Shake Intensity</label>
+            <input type="range" id="set-shake" min="0" max="150" value="100">
+            <span id="set-shake-val">100%</span>
+          </div>
+          <div class="setting-row">
+            <label for="set-crt">CRT Scanline Retro Filter</label>
+            <input type="checkbox" id="set-crt" checked>
+          </div>
+          <div class="setting-row">
+            <label for="set-dmg-numbers">Floating Damage Numbers</label>
+            <input type="checkbox" id="set-dmg-numbers" checked>
+          </div>
+          <div class="setting-row">
+            <label for="set-touch-mode">📱 On-Screen Mobile Touch Controls</label>
+            <select id="set-touch-mode" class="setting-select">
+              <option value="auto">📱 Auto-Detect (Mobile/Touchscreen)</option>
+              <option value="always">🕹️ Always Visible (Touch & PC)</option>
+              <option value="hidden">⌨️ Hidden (Keyboard & Mouse Only)</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="set-vibrate">📳 Mobile Haptic Vibration Feedback</label>
+            <input type="checkbox" id="set-vibrate" checked>
+          </div>
+          <div class="setting-row">
+            <label for="set-autoaim">🎯 Auto-Target Nearest Enemy</label>
+            <input type="checkbox" id="set-autoaim">
+          </div>
+          <div class="setting-actions">
+            <button id="btn-save-data" class="btn-save-action" title="Manually save all coins, diamonds, skins, heroes, and progress">
+              <span class="btn-action-icon">💾</span>
+              <div class="btn-action-text">
+                <span class="btn-main-label">SAVE GAME DATA</span>
+                <span class="btn-sub-label">Save Progress: Currencies, Skins & Heroes</span>
+              </div>
+            </button>
+            <button id="btn-reset-progress" class="btn-warning-action" title="Reset high scores, wave records, missions, and combat stats">
+              <span class="btn-action-icon">🔄</span>
+              <div class="btn-action-text">
+                <span class="btn-main-label">RESET GAME PROGRESS</span>
+                <span class="btn-sub-label">Scores, Waves, Missions & Stats</span>
+              </div>
+            </button>
+            <div class="setting-factory-reset-row">
+              <button id="btn-reset-data" class="btn-link-danger" title="Factory reset all data">⚠️ Wipe All Save Data (Factory Reset)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-bottom-actions">
+          <button class="btn-secondary btn-goto-play">🛡️ BACK TO MISSION SELECT</button>
+        </div>
+      </div>
+
+      <!-- DEADSHOT.io Style Footer -->
+      <footer class="deadshot-footer">
+        <div class="footer-links">
+          <a href="#terms" class="f-link">Terms</a>
+          <a href="#privacy" class="f-link">Privacy</a>
+          <a href="#partners" class="f-link">Partners</a>
+          <a href="#contact" class="f-link">Contact</a>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal: Mid-Run Roguelite Perk Draft (Level Up) -->
+  <div id="levelup-modal" class="modal-backdrop hidden">
+    <div class="levelup-card">
+      <div class="levelup-header">
+        <div class="glitch-text" data-text="SYSTEM UPGRADE READY">SYSTEM UPGRADE READY</div>
+        <div class="levelup-sub">SELECT 1 COMBAT PROTOCOL TO INSTALL</div>
+      </div>
+      <div class="perk-cards-container" id="perk-options-container">
+        <!-- 3 Roguelite Cards Injected Here -->
+      </div>
+      <div class="reroll-container">
+        <button id="btn-reroll-perks" class="btn-secondary">🎲 REROLL UPGRADES (<span id="reroll-count">1</span> LEFT)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Pause Menu -->
+  <div id="pause-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <h2 class="modal-title">MISSION PAUSED</h2>
+      <div class="modal-body">
+        <div class="pause-stats-list">
+          <div class="p-stat"><span>Current Wave:</span> <strong id="pause-wave">1</strong></div>
+          <div class="p-stat"><span>Current Score:</span> <strong id="pause-score">0</strong></div>
+          <div class="p-stat"><span>Hostiles Eliminated:</span> <strong id="pause-kills">0</strong></div>
+          <div class="p-stat"><span>Active Perks:</span> <strong id="pause-perk-count">0</strong></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-resume-game" class="btn-primary">▶️ RESUME MISSION</button>
+        <button id="btn-restart-game" class="btn-secondary">🔄 RESTART RUN</button>
+        <button id="btn-quit-to-menu" class="btn-danger">🚪 ABORT TO MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Game Over / Defeat -->
+  <div id="gameover-modal" class="modal-backdrop hidden">
+    <div class="modal-card gameover-card">
+      <div class="defeat-badge">MISSION FAILED</div>
+      <h2 class="gameover-title">NEURAL LINK SEVERED</h2>
+      <div class="run-stats-grid">
+        <div class="r-stat-box">
+          <div class="r-label">WAVE REACHED</div>
+          <div class="r-val highlight" id="go-wave">1</div>
+        </div>
+        <div class="r-stat-box">
+          <div class="r-label">FINAL SCORE</div>
+          <div class="r-val" id="go-score">0</div>
+        </div>
+        <div class="r-stat-box">
+          <div class="r-label">CYBER KILLS</div>
+          <div class="r-val" id="go-kills">0</div>
+        </div>
+        <div class="r-stat-box">
+          <div class="r-label">CREDITS SALVAGED</div>
+          <div class="r-val gold-text" id="go-credits">+0</div>
+        </div>
+      </div>
+      <div class="new-record-banner hidden" id="go-new-record">🔥 NEW HIGH SCORE RECORD! 🔥</div>
+      <div class="modal-actions">
+        <button id="btn-retry" class="btn-primary">⚔️ DEPLOY AGAIN</button>
+        <button id="btn-go-upgrades" class="btn-secondary">🧪 CYBERNETICS LAB</button>
+        <button id="btn-go-menu" class="btn-secondary">🏠 MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Victory / Mission Complete -->
+  <div id="victory-modal" class="modal-backdrop hidden">
+    <div class="modal-card victory-card">
+      <div class="victory-badge">SECTOR LIBERATED</div>
+      <h2 class="victory-title">MISSION ACCOMPLISHED!</h2>
+      <p class="victory-sub">All Sector Overlords and Cyber Hostiles have been purged.</p>
+      <div class="run-stats-grid">
+        <div class="r-stat-box">
+          <div class="r-label">TOTAL TIME</div>
+          <div class="r-val" id="vic-time">00:00</div>
+        </div>
+        <div class="r-stat-box">
+          <div class="r-label">TOTAL SCORE</div>
+          <div class="r-val highlight" id="vic-score">0</div>
+        </div>
+        <div class="r-stat-box">
+          <div class="r-label">TOTAL KILLS</div>
+          <div class="r-val" id="vic-kills">0</div>
+        </div>
+        <div class="r-stat-box">
+          <div class="r-label">CREDITS SECURED</div>
+          <div class="r-val gold-text" id="vic-credits">+0</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-vic-endless" class="btn-primary">♾️ CONTINUE IN ENDLESS OVERDRIVE</button>
+        <button id="btn-vic-menu" class="btn-secondary">🏠 RETURN TO HEADQUARTERS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-Game Centered Red Warning Alert Box -->
+  <div id="cyber-alert-modal" class="cyber-alert-container hidden">
+    <div class="cyber-alert-box red-warning" id="cyber-alert-box">
+      <div class="alert-icon-wrap" id="alert-modal-icon">⚠️</div>
+      <div class="alert-content">
+        <div class="alert-title" id="alert-modal-title">INSUFFICIENT CREDITS</div>
+        <div class="alert-message" id="alert-modal-msg">Insufficient Cyber Credits! Complete missions to earn more.</div>
+      </div>
+      <button id="btn-close-alert" class="alert-close-btn" aria-label="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- Modal: Google Account / Cloud Sync -->
+  <div id="google-auth-modal" class="modal-backdrop hidden">
+    <div class="google-auth-card">
+      <div class="google-card-header">
+        <div class="google-logo-pill">
+          <svg width="22" height="22" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+          </svg>
+          <span>Google Account Sync</span>
+        </div>
+        <button id="btn-close-google-modal" class="alert-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="google-card-body" id="google-auth-body">
+        <!-- If not connected -->
+        <div id="google-logged-out-state">
+          <h3 class="google-auth-title">Link your Google Account</h3>
+          <p class="google-auth-desc">Sign in with your verified Google Account to securely sync your progress, scores, and diamonds with Google Cloud Save.</p>
+          
+          <div class="google-form-box">
+            <div class="google-input-group">
+              <label class="google-input-label" for="input-google-name">Operative Handle / Call-Sign</label>
+              <div class="google-input-wrap">
+                <span class="google-input-icon">👤</span>
+                <input type="text" id="input-google-name" class="google-text-input" placeholder="e.g. Alex Vance" autocomplete="name">
+              </div>
+            </div>
+
+            <!-- Official Google Identity Services One-Tap / Button Container -->
+            <div id="g_id_signin_container" class="google-gis-btn-wrap"></div>
+
+            <button id="btn-google-login-action" class="google-action-btn" type="button">
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+              </svg>
+              <span>Sign In with Google</span>
+            </button>
+
+            <div id="google-auth-error" class="google-auth-error-msg hidden"></div>
+          </div>
+        </div>
+
+        <!-- If connected -->
+        <div id="google-logged-in-state" class="hidden">
+          <div class="google-user-profile-card">
+            <div class="google-avatar-wrap">
+              <img id="google-user-avatar-img" class="google-avatar-photo hidden" alt="Google Profile Photo" referrerpolicy="no-referrer">
+              <span id="google-user-avatar-badge" class="google-user-avatar-icon">🎮</span>
+            </div>
+            <div class="google-user-details">
+              <div class="google-user-name" id="google-user-display-name">Operative</div>
+              <div class="google-user-email" id="google-user-email">connected@gmail.com</div>
+              <div class="google-cloud-status"><span class="cloud-dot"></span> Google Cloud Save Active</div>
+              <div class="google-last-sync-text" id="google-last-sync-time">Last sync: Just now</div>
+            </div>
+          </div>
+          <div class="google-modal-actions">
+            <button id="btn-google-sync-now" class="btn-primary">☁️ Sync Cloud Save</button>
+            <button id="btn-google-signout-action" class="btn-danger">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create Private Match / Lobby -->
+  <div id="private-room-modal" class="modal-backdrop hidden">
+    <div class="google-auth-card private-room-card">
+      <div class="google-card-header">
+        <div class="google-logo-pill">
+          <span style="font-size: 1.25rem;">🔒</span>
+          <span>Create Private Match</span>
+        </div>
+        <button id="btn-close-private-modal" class="alert-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="google-card-body">
+        <div class="room-code-display-box">
+          <div class="room-code-title">INVITE CODE</div>
+          <div class="room-code-row">
+            <span class="room-code-value" id="private-lobby-code">CYBER-7842</span>
+            <button class="btn-copy-code" id="btn-copy-room-code">📋 COPY</button>
+          </div>
+        </div>
+
+        <div class="google-form-box">
+          <div class="google-input-group">
+            <label class="google-input-label" for="select-private-sector">Sector Map</label>
+            <div class="google-input-wrap">
+              <span class="google-input-icon">🗺️</span>
+              <select id="select-private-sector" class="google-text-input" style="background: #101626; color: #fff; cursor: pointer;">
+                <option value="alpha">Sector 01: Neon Slums (Normal)</option>
+                <option value="beta">Sector 02: Core Facility (Hard)</option>
+                <option value="apex">Sector 03: Apex Gauntlet (Overdrive)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="google-input-group">
+            <label class="google-input-label" for="select-private-players">Max Operatives</label>
+            <div class="google-input-wrap">
+              <span class="google-input-icon">👥</span>
+              <select id="select-private-players" class="google-text-input" style="background: #101626; color: #fff; cursor: pointer;">
+                <option value="4">4 Players (Squad Match)</option>
+                <option value="2">2 Players (Duo Match)</option>
+                <option value="1">1 Player (Solo Private Session)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="google-modal-actions" style="margin-top: 0.5rem;">
+            <button id="btn-launch-private-match" class="btn-primary" style="padding: 0.75rem; font-weight: 800; font-size: 0.95rem;">🚀 START PRIVATE MATCH</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Join Multiplayer Room -->
+  <div id="join-room-modal" class="modal-backdrop hidden">
+    <div class="google-auth-card join-room-card">
+      <div class="google-card-header">
+        <div class="google-logo-pill">
+          <span style="font-size: 1.25rem;">🌐</span>
+          <span>Join Multiplayer Lobby</span>
+        </div>
+        <button id="btn-close-join-modal" class="alert-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="google-card-body">
+        <div class="google-form-box">
+          <div class="google-input-group">
+            <label class="google-input-label" for="input-join-room-code">Enter Room / Invite Code</label>
+            <div class="room-join-input-row">
+              <div class="google-input-wrap" style="flex: 1;">
+                <span class="google-input-icon">🔑</span>
+                <input type="text" id="input-join-room-code" class="google-text-input" placeholder="e.g. CYBER-7842" style="text-transform: uppercase;">
+              </div>
+              <button id="btn-join-code-action" class="btn-primary" style="padding: 0 1.2rem; font-weight: 800; height: 42px;">JOIN</button>
+            </div>
+          </div>
+
+          <div class="google-divider-row">
+            <span class="google-divider-line"></span>
+            <span class="google-divider-text">LIVE PUBLIC SERVERS</span>
+            <span class="google-divider-line"></span>
+          </div>
+
+          <div class="public-server-list">
+            <div class="public-server-item" data-server="[US-EAST] Sector 01 Neon">
+              <div class="server-info">
+                <div class="server-name">[US-EAST] Sector 01: Neon</div>
+                <div class="server-meta">🟢 Online &bull; Co-Op Match</div>
+              </div>
+              <button class="btn-join-server-item">CONNECT</button>
+            </div>
+
+            <div class="public-server-item" data-server="[EU-CENTRAL] Boss Gauntlet">
+              <div class="server-info">
+                <div class="server-name">[EU-CENTRAL] Boss Gauntlet</div>
+                <div class="server-meta">🟢 Online &bull; Co-Op Match</div>
+              </div>
+              <button class="btn-join-server-item">CONNECT</button>
+            </div>
+
+            <div class="public-server-item" data-server="[ASIA-SOUTH] Core Overdrive">
+              <div class="server-info">
+                <div class="server-name">[ASIA-SOUTH] Core Overdrive</div>
+                <div class="server-meta">🟢 Online &bull; Co-Op Match</div>
+              </div>
+              <button class="btn-join-server-item">CONNECT</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-Game Currency Bank Purchase Confirmation Modal -->
+  <div id="bank-purchase-modal" class="modal-backdrop hidden">
+    <div class="bank-purchase-card">
+      <div class="bank-buy-header">
+        <span class="bp-icon" id="bp-icon">💎</span>
+        <div class="bp-meta">
+          <h3 id="bp-title">Combat Satchel</h3>
+          <p id="bp-desc">+650 Diamonds</p>
+        </div>
+        <button id="btn-close-buy-modal" class="btn-close-modal">✕</button>
+      </div>
+      <div class="bp-price-box">
+        <span>COST:</span>
+        <strong id="bp-cost-display">🪙 6,000 Coins</strong>
+      </div>
+      <div class="bp-actions">
+        <button id="btn-confirm-in-game-purchase" class="btn-primary btn-bp-confirm">CONFIRM UNLOCK</button>
+        <button id="btn-cancel-buy-modal" class="btn-secondary">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Earn Free Diamonds Hub Modal -->
+  <div id="earn-diamonds-modal" class="modal-backdrop hidden">
+    <div class="earn-diamonds-card">
+      <div class="earn-diamonds-header">
+        <div class="ed-header-left">
+          <span class="ed-modal-gem">💎</span>
+          <div>
+            <h2 class="ed-modal-title">EARN FREE DIAMONDS</h2>
+            <p class="ed-modal-sub">Earn Diamonds by watching ads and completing daily missions!</p>
+          </div>
+        </div>
+        <button id="btn-close-earn-modal" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="earn-options-grid">
+        <!-- Option 1: Watch Ads -->
+        <div class="earn-option-card highlighted">
+          <div class="e-opt-badge">⚡ FAST & REPEATABLE</div>
+          <div class="e-opt-icon">📺</div>
+          <div class="e-opt-title">Watch Sponsored Video</div>
+          <div class="e-opt-reward">+25 💎 DIAMONDS</div>
+          <p class="e-opt-desc">Watch a short 5-second sponsor broadcast and instantly receive 25 Diamonds in your vault!</p>
+          <div class="e-opt-quota" id="ad-quota-display">Available Today: 10 / 10</div>
+          <button class="btn-primary btn-e-watch-ad" id="btn-launch-ad-from-hub">
+            <span>📺 WATCH AD (+25 💎)</span>
+          </button>
+        </div>
+
+        <!-- Option 2: Daily Missions -->
+        <div class="earn-option-card">
+          <div class="e-opt-badge gold">🎯 DAILY MISSIONS</div>
+          <div class="e-opt-icon">🎯</div>
+          <div class="e-opt-title">Daily Field Missions</div>
+          <div class="e-opt-reward">UP TO +95 💎 / DAY</div>
+          <p class="e-opt-desc">Eliminate hostiles, survive sector waves, and complete objectives to claim daily diamond rewards.</p>
+          <div class="e-opt-quota">5 Missions Active Today</div>
+          <button class="btn-secondary btn-e-missions" id="btn-goto-missions-hub">
+            <span>🎯 VIEW MISSIONS</span>
+          </button>
+        </div>
+
+        <!-- Option 3: Coin Exchange in Bank -->
+        <div class="earn-option-card">
+          <div class="e-opt-badge cyan">🏦 BLACK MARKET</div>
+          <div class="e-opt-icon">🪙</div>
+          <div class="e-opt-title">Exchange Battle Coins</div>
+          <div class="e-opt-reward">1,500 🪙 ➔ 120 💎</div>
+          <p class="e-opt-desc">Convert coins you earned from combat kills directly into premium diamonds at the Bank vault.</p>
+          <div class="e-opt-quota">Instant Exchange</div>
+          <button class="btn-secondary btn-e-exchange" id="btn-goto-exchange-hub">
+            <span>🏦 OPEN BANK VAULT</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- High-Tech Rewarded Video Ad Player Modal -->
+  <div id="rewarded-ad-modal" class="modal-backdrop hidden">
+    <div class="rewarded-ad-player">
+      <div class="ad-player-header">
+        <div class="ad-tag-badge">
+          <span class="ad-live-dot">●</span> SPONSORED ADVERTISEMENT
+        </div>
+        <div class="ad-timer-badge" id="ad-timer-display">
+          Reward in: <strong id="ad-seconds-left">5s</strong>
+        </div>
+        <button id="btn-close-ad" class="btn-close-modal" title="Skip/Close Ad">✕</button>
+      </div>
+
+      <!-- Interactive Dynamic Ad Frame -->
+      <div class="ad-content-stage" id="ad-stage">
+        <div class="ad-media-showcase" id="ad-media-container">
+          <!-- Procedurally animated Cyber Strike Game Trailer -->
+          <div class="ad-game-trailer">
+            <div class="ad-game-banner">
+              <span class="ad-game-logo">⚔️ CYBER STRIKE 2077</span>
+              <span class="ad-game-genre">RTX MULTIPLAYER TACTICAL WARFARE</span>
+            </div>
+            <div class="ad-video-mockup">
+              <div class="ad-mock-hud">
+                <span class="hud-hp">HP: 100</span>
+                <span class="hud-kill">KILLSTREAK: 12 🔥</span>
+                <span class="hud-ammo">AMMO: 30 / 120</span>
+              </div>
+              <div class="ad-mock-center">
+                <div class="ad-mock-crosshair">✛</div>
+                <div class="ad-mock-soldier">🥷💥🤖</div>
+                <div class="ad-mock-splat">HEADSHOT! +500 PTS</div>
+              </div>
+            </div>
+            <div class="ad-features-ticker">
+              <span>🔥 120 FPS Ray-Tracing</span> &bull; <span>⚔️ Real-Time Co-Op</span> &bull; <span>🔫 100+ Custom Firearms</span> &bull; <span>⭐⭐⭐⭐⭐ 4.9 Rating</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ad Progress Bar -->
+        <div class="ad-progress-track">
+          <div class="ad-progress-fill" id="ad-progress-bar"></div>
+        </div>
+      </div>
+
+      <!-- Ad Footer / Claim Reward -->
+      <div class="ad-player-footer">
+        <div class="ad-reward-pill">
+          <span>REWARD:</span>
+          <strong class="ad-gem-reward-val">+25 💎 DIAMONDS</strong>
+        </div>
+        <button id="btn-claim-ad-reward" class="btn-primary btn-claim-ad disabled" disabled>
+          <span>⏳ WATCHING AD (5s)...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="ads.js?v=1.0"></script>
+  <script src="auth.js?v=1.0"></script>
+  <script src="script.js?v=5.1"></script>
+</body>
+</html>
