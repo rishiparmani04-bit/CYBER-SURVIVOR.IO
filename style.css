@@ -499,10 +499,11 @@ body.playing .hud-btn {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
+  margin-bottom: 60px; /* Sit strictly above the footer band */
   display: grid !important;
   grid-template-columns: 280px 1fr 280px;
   gap: 1.5rem;
-  padding: 1rem 2rem 5.5rem 2rem; /* 5.5rem (88px) bottom clearance above footer */
+  padding: 1rem 2rem 2rem 2rem;
   align-items: start;
   justify-content: space-between;
   min-height: calc(100vh - 130px);
@@ -519,8 +520,7 @@ body.playing .hud-btn {
   width: 100%;
   position: relative;
   z-index: 5;
-  padding-bottom: 90px; /* Explicit clearance ensuring content never clips above footer */
-  margin-bottom: 80px;
+  min-height: 0; /* Ensures inner scrollable area respects bounds and doesn't push down into footer */
 }
 
 .challenge-tabs-row {
@@ -552,19 +552,23 @@ body.playing .hud-btn {
 
 .daily-challenges-panel,
 .missions-panel,
-.daily-missions-card {
+.daily-missions-card,
+.missions-card {
   background: rgba(15, 20, 32, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   padding: 0.75rem 0.85rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-  max-height: calc(100vh - 240px);
+  max-height: calc(100vh - 280px);
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
   z-index: 5;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Respect parent flex bounds */
+  padding-bottom: 20px;
+  margin-bottom: 70px;
   scrollbar-width: thin;
   scrollbar-color: #00f0ff rgba(10, 15, 28, 0.7);
 }
@@ -573,6 +577,7 @@ body.playing .hud-btn {
 .daily-challenges-panel::-webkit-scrollbar,
 .missions-panel::-webkit-scrollbar,
 .daily-missions-card::-webkit-scrollbar,
+.missions-card::-webkit-scrollbar,
 .missions-list-wrap::-webkit-scrollbar {
   width: 6px;
 }
@@ -580,6 +585,7 @@ body.playing .hud-btn {
 .daily-challenges-panel::-webkit-scrollbar-track,
 .missions-panel::-webkit-scrollbar-track,
 .daily-missions-card::-webkit-scrollbar-track,
+.missions-card::-webkit-scrollbar-track,
 .missions-list-wrap::-webkit-scrollbar-track {
   background: rgba(10, 15, 28, 0.7);
   border-radius: 6px;
@@ -588,6 +594,7 @@ body.playing .hud-btn {
 .daily-challenges-panel::-webkit-scrollbar-thumb,
 .missions-panel::-webkit-scrollbar-thumb,
 .daily-missions-card::-webkit-scrollbar-thumb,
+.missions-card::-webkit-scrollbar-thumb,
 .missions-list-wrap::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #00f0ff, #0084ff);
   border-radius: 6px;
@@ -597,6 +604,7 @@ body.playing .hud-btn {
 .daily-challenges-panel::-webkit-scrollbar-thumb:hover,
 .missions-panel::-webkit-scrollbar-thumb:hover,
 .daily-missions-card::-webkit-scrollbar-thumb:hover,
+.missions-card::-webkit-scrollbar-thumb:hover,
 .missions-list-wrap::-webkit-scrollbar-thumb:hover {
   background: #00f0ff;
   box-shadow: 0 0 15px #00f0ff;
