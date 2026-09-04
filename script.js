@@ -143,15 +143,15 @@ const OPERATIVE_AVATARS = [
 ];
 
 const AVATAR_FALLBACK_SVGS = {
-  panda: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%23ff0044" stroke-width="2.5"/><polygon points="32,8 54,26 10,26" fill="%23d97706"/><polygon points="32,10 50,25 14,25" fill="%23f59e0b"/><circle cx="18" cy="28" r="7" fill="%231e293b"/><circle cx="46" cy="28" r="7" fill="%231e293b"/><circle cx="32" cy="38" r="18" fill="%23f8fafc"/><ellipse cx="25" cy="36" rx="5" ry="6" fill="%230f172a"/><ellipse cx="39" cy="36" rx="5" ry="6" fill="%230f172a"/><circle cx="25" cy="36" r="2.5" fill="%23ff0044"/><circle cx="39" cy="36" r="2.5" fill="%23ff0044"/><ellipse cx="32" cy="44" rx="3.5" ry="2.5" fill="%230f172a"/><path d="M14 40 L19 46 M50 40 L45 46" stroke="%23ff0044" stroke-width="2" stroke-linecap="round"/></svg>',
-  red_hood: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%23ff0044" stroke-width="2.5"/><path d="M32 8 C18 8 12 24 12 42 C12 54 20 58 32 58 C44 58 52 54 52 42 C52 24 46 8 32 8 Z" fill="%23b91c1c"/><path d="M32 11 C21 11 16 25 16 40 C16 50 23 54 32 54 C41 54 48 50 48 40 C48 25 43 11 32 11 Z" fill="%23dc2626"/><ellipse cx="32" cy="36" rx="14" ry="16" fill="%230f172a"/><rect x="20" y="29" width="24" height="7" rx="3" fill="%23020617" stroke="%2300f0ff" stroke-width="1"/><rect x="22" y="31" width="20" height="3" rx="1.5" fill="%2300f0ff"/><path d="M24 40 L40 40 L37 48 L27 48 Z" fill="%231e293b" stroke="%23ff0044" stroke-width="1"/></svg>',
-  scientist: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%23ffb700" stroke-width="2.5"/><path d="M18 26 C16 16 26 8 32 12 C38 8 48 16 46 26 Z" fill="%2367e8f9"/><circle cx="32" cy="36" r="16" fill="%23fed7aa"/><circle cx="24" cy="34" r="7" fill="%23020617" stroke="%23ffb700" stroke-width="2"/><circle cx="40" cy="34" r="7" fill="%23020617" stroke="%23ffb700" stroke-width="2"/><line x1="31" y1="34" x2="33" y2="34" stroke="%23ffb700" stroke-width="2"/><circle cx="24" cy="34" r="4.5" fill="%2310b981"/><circle cx="40" cy="34" r="4.5" fill="%2310b981"/><circle cx="22" cy="32" r="1.5" fill="%23ffffff"/><circle cx="38" cy="32" r="1.5" fill="%23ffffff"/><path d="M18 52 L32 46 L46 52 L44 60 L20 60 Z" fill="%23f8fafc" stroke="%23ffb700" stroke-width="1"/></svg>',
-  cyborg: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%239d4edd" stroke-width="2.5"/><path d="M18 20 C18 12 46 12 46 20 L46 44 C46 52 38 56 32 56 C26 56 18 52 18 44 Z" fill="%23475569"/><path d="M32 14 L44 20 L44 44 C44 50 38 54 32 54 Z" fill="%2364748b"/><circle cx="24" cy="32" r="6" fill="%23020617" stroke="%239d4edd" stroke-width="1.5"/><circle cx="24" cy="32" r="3" fill="%239d4edd"/><circle cx="24" cy="32" r="1" fill="%23ffffff"/><rect x="36" y="28" width="8" height="8" rx="2" fill="%23020617"/><line x1="22" y1="46" x2="42" y2="46" stroke="%239d4edd" stroke-width="1.5"/></svg>',
-  ninja: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%239d4edd" stroke-width="2.5"/><circle cx="32" cy="34" r="18" fill="%231e1b4b"/><rect x="18" y="20" width="28" height="6" rx="2" fill="%239d4edd"/><rect x="28" y="21" width="8" height="4" rx="1" fill="%23e2e8f0"/><path d="M18 28 L46 28 L44 38 L20 38 Z" fill="%23020617"/><polygon points="22,34 30,32 29,35" fill="%2300f0ff"/><polygon points="42,34 34,32 35,35" fill="%2300f0ff"/><path d="M20 38 L44 38 L38 52 L26 52 Z" fill="%23312e81"/></svg>',
-  cat_medic: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%2300f0ff" stroke-width="2.5"/><polygon points="14,14 26,24 16,30" fill="%2300f0ff"/><polygon points="50,14 38,24 48,30" fill="%2300f0ff"/><circle cx="32" cy="36" r="17" fill="%23f8fafc"/><path d="M30 22 H34 V26 H38 V30 H34 V34 H30 V30 H26 V26 H30 Z" fill="%2300f0ff"/><ellipse cx="24" cy="38" rx="4" ry="5" fill="%23020617"/><ellipse cx="40" cy="38" rx="4" ry="5" fill="%23020617"/><circle cx="23" cy="36" r="1.5" fill="%2300f0ff"/><circle cx="39" cy="36" r="1.5" fill="%2300f0ff"/></svg>',
-  punk: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%2300f0ff" stroke-width="2.5"/><polygon points="32,6 36,22 28,22" fill="%23ec4899"/><polygon points="32,10 37,24 27,24" fill="%2300f0ff"/><circle cx="32" cy="36" r="16" fill="%23fbcfe8"/><polygon points="18,29 46,29 42,37 22,37" fill="%23020617" stroke="%2300f0ff" stroke-width="1.5"/><line x1="20" y1="33" x2="44" y2="33" stroke="%23ec4899" stroke-width="1.5"/></svg>',
-  veteran: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%2300f0ff" stroke-width="2.5"/><path d="M14 24 C14 16 38 12 48 18 C52 20 50 26 44 26 L14 24 Z" fill="%232d3748"/><circle cx="28" cy="21" r="3.5" fill="%23eab308"/><circle cx="32" cy="36" r="16" fill="%23fed7aa"/><line x1="21" y1="28" x2="27" y2="40" stroke="%23b91c1c" stroke-width="2"/><circle cx="24" cy="34" r="3" fill="%23020617"/><circle cx="40" cy="34" r="3" fill="%23020617"/></svg>',
-  scout: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%2300f0ff" stroke-width="2.5"/><line x1="16" y1="8" x2="18" y2="24" stroke="%2394a3b8" stroke-width="2"/><circle cx="16" cy="8" r="2.5" fill="%2300f0ff"/><line x1="48" y1="8" x2="46" y2="24" stroke="%2394a3b8" stroke-width="2"/><circle cx="48" cy="8" r="2.5" fill="%2300f0ff"/><circle cx="32" cy="35" r="17" fill="%231e293b"/><path d="M18 28 Q32 23 46 28 L44 42 Q32 46 20 42 Z" fill="%2300f0ff" stroke="%230284c7" stroke-width="1.5"/></svg>'
+  panda: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#ff0044" stroke-width="2.5"/><polygon points="32,8 54,26 10,26" fill="#d97706"/><polygon points="32,10 50,25 14,25" fill="#f59e0b"/><circle cx="18" cy="28" r="7" fill="#1e293b"/><circle cx="46" cy="28" r="7" fill="#1e293b"/><circle cx="32" cy="38" r="18" fill="#f8fafc"/><ellipse cx="25" cy="36" rx="5" ry="6" fill="#0f172a"/><ellipse cx="39" cy="36" rx="5" ry="6" fill="#0f172a"/><circle cx="25" cy="36" r="2.5" fill="#ff0044"/><circle cx="39" cy="36" r="2.5" fill="#ff0044"/><ellipse cx="32" cy="44" rx="3.5" ry="2.5" fill="#0f172a"/><path d="M14 40 L19 46 M50 40 L45 46" stroke="#ff0044" stroke-width="2" stroke-linecap="round"/></svg>'),
+  red_hood: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#ff0044" stroke-width="2.5"/><path d="M32 8 C18 8 12 24 12 42 C12 54 20 58 32 58 C44 58 52 54 52 42 C52 24 46 8 32 8 Z" fill="#b91c1c"/><path d="M32 11 C21 11 16 25 16 40 C16 50 23 54 32 54 C41 54 48 50 48 40 C48 25 43 11 32 11 Z" fill="#dc2626"/><ellipse cx="32" cy="36" rx="14" ry="16" fill="#0f172a"/><rect x="20" y="29" width="24" height="7" rx="3" fill="#020617" stroke="#00f0ff" stroke-width="1"/><rect x="22" y="31" width="20" height="3" rx="1.5" fill="#00f0ff"/><path d="M24 40 L40 40 L37 48 L27 48 Z" fill="#1e293b" stroke="#ff0044" stroke-width="1"/></svg>'),
+  scientist: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#ffb700" stroke-width="2.5"/><path d="M18 26 C16 16 26 8 32 12 C38 8 48 16 46 26 Z" fill="#67e8f9"/><circle cx="32" cy="36" r="16" fill="#fed7aa"/><circle cx="24" cy="34" r="7" fill="#020617" stroke="#ffb700" stroke-width="2"/><circle cx="40" cy="34" r="7" fill="#020617" stroke="#ffb700" stroke-width="2"/><line x1="31" y1="34" x2="33" y2="34" stroke="#ffb700" stroke-width="2"/><circle cx="24" cy="34" r="4.5" fill="#10b981"/><circle cx="40" cy="34" r="4.5" fill="#10b981"/><circle cx="22" cy="32" r="1.5" fill="#ffffff"/><circle cx="38" cy="32" r="1.5" fill="#ffffff"/><path d="M18 52 L32 46 L46 52 L44 60 L20 60 Z" fill="#f8fafc" stroke="#ffb700" stroke-width="1"/></svg>'),
+  cyborg: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#9d4edd" stroke-width="2.5"/><path d="M18 20 C18 12 46 12 46 20 L46 44 C46 52 38 56 32 56 C26 56 18 52 18 44 Z" fill="#475569"/><path d="M32 14 L44 20 L44 44 C44 50 38 54 32 54 Z" fill="#64748b"/><circle cx="24" cy="32" r="6" fill="#020617" stroke="#9d4edd" stroke-width="1.5"/><circle cx="24" cy="32" r="3" fill="#9d4edd"/><circle cx="24" cy="32" r="1" fill="#ffffff"/><rect x="36" y="28" width="8" height="8" rx="2" fill="#020617"/><line x1="22" y1="46" x2="42" y2="46" stroke="#9d4edd" stroke-width="1.5"/></svg>'),
+  ninja: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#9d4edd" stroke-width="2.5"/><circle cx="32" cy="34" r="18" fill="#1e1b4b"/><rect x="18" y="20" width="28" height="6" rx="2" fill="#9d4edd"/><rect x="28" y="21" width="8" height="4" rx="1" fill="#e2e8f0"/><path d="M18 28 L46 28 L44 38 L20 38 Z" fill="#020617"/><polygon points="22,34 30,32 29,35" fill="#00f0ff"/><polygon points="42,34 34,32 35,35" fill="#00f0ff"/><path d="M20 38 L44 38 L38 52 L26 52 Z" fill="#312e81"/></svg>'),
+  cat_medic: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#00f0ff" stroke-width="2.5"/><polygon points="14,14 26,24 16,30" fill="#00f0ff"/><polygon points="50,14 38,24 48,30" fill="#00f0ff"/><circle cx="32" cy="36" r="17" fill="#f8fafc"/><path d="M30 22 H34 V26 H38 V30 H34 V34 H30 V30 H26 V26 H30 Z" fill="#00f0ff"/><ellipse cx="24" cy="38" rx="4" ry="5" fill="#020617"/><ellipse cx="40" cy="38" rx="4" ry="5" fill="#020617"/><circle cx="23" cy="36" r="1.5" fill="#00f0ff"/><circle cx="39" cy="36" r="1.5" fill="#00f0ff"/></svg>'),
+  punk: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#00f0ff" stroke-width="2.5"/><polygon points="32,6 36,22 28,22" fill="#ec4899"/><polygon points="32,10 37,24 27,24" fill="#00f0ff"/><circle cx="32" cy="36" r="16" fill="#fbcfe8"/><polygon points="18,29 46,29 42,37 22,37" fill="#020617" stroke="#00f0ff" stroke-width="1.5"/><line x1="20" y1="33" x2="44" y2="33" stroke="#ec4899" stroke-width="1.5"/></svg>'),
+  veteran: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#00f0ff" stroke-width="2.5"/><path d="M14 24 C14 16 38 12 48 18 C52 20 50 26 44 26 L14 24 Z" fill="#2d3748"/><circle cx="28" cy="21" r="3.5" fill="#eab308"/><circle cx="32" cy="36" r="16" fill="#fed7aa"/><line x1="21" y1="28" x2="27" y2="40" stroke="#b91c1c" stroke-width="2"/><circle cx="24" cy="34" r="3" fill="#020617"/><circle cx="40" cy="34" r="3" fill="#020617"/></svg>'),
+  scout: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#00f0ff" stroke-width="2.5"/><line x1="16" y1="8" x2="18" y2="24" stroke="#94a3b8" stroke-width="2"/><circle cx="16" cy="8" r="2.5" fill="#00f0ff"/><line x1="48" y1="8" x2="46" y2="24" stroke="#94a3b8" stroke-width="2"/><circle cx="48" cy="8" r="2.5" fill="#00f0ff"/><circle cx="32" cy="35" r="17" fill="#1e293b"/><path d="M18 28 Q32 23 46 28 L44 42 Q32 46 20 42 Z" fill="#00f0ff" stroke="#0284c7" stroke-width="1.5"/></svg>')
 };
 
 const HERO_DEFS = {
@@ -2220,39 +2220,10 @@ class Game {
     if (window.AuthManager && typeof window.AuthManager.setGameAuthHandler === 'function') {
       window.AuthManager.setGameAuthHandler({
         onUserLogin: (user) => {
-          this.saveData.googleAccount = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            picture: user.picture,
-            avatar: user.picture ? null : '🎮',
-            cloudSynced: true,
-            lastSync: user.lastSync || new Date().toLocaleTimeString()
-          };
-          if (user.name) {
-            this.saveData.playerName = user.name;
-            const stageName = document.getElementById('stage-player-name');
-            if (stageName) stageName.textContent = user.name;
-            const inputName = document.getElementById('input-google-name');
-            if (inputName) inputName.value = user.name;
-          }
-          SaveManager.save(this.saveData);
-          this.updateHeroPreview();
-          this.showGoogleAuthModalState();
-          if (this.audio && typeof this.audio.playLevelUp === 'function') {
-            this.audio.playLevelUp();
-          }
-          this.showNotification(`Authenticated via Google: ${user.email}`, 'GOOGLE CLOUD CONNECTED', 'green');
+          this.loginWithGoogle(user);
         },
         onUserLogout: () => {
-          this.saveData.googleAccount = null;
-          SaveManager.save(this.saveData);
-          this.updateHeroPreview();
-          this.showGoogleAuthModalState();
-          if (this.audio && typeof this.audio.playDeflect === 'function') {
-            this.audio.playDeflect();
-          }
-          this.showNotification('Google Account unlinked. Local save active.', 'SIGNED OUT', 'red');
+          this.signOutOperative();
         },
         onCloudSync: () => {
           if (this.saveData?.googleAccount) {
@@ -2868,6 +2839,13 @@ class Game {
     document.getElementById('btn-switch-avatar-from-callsign')?.addEventListener('click', () => {
       this.closeCallsignModal();
       this.openAvatarModal();
+    });
+
+    // Dual Auth: Direct Google Sign-In Button inside Operative Callsign Modal
+    document.getElementById('googleSignInBtn')?.addEventListener('click', () => {
+      if (window.AuthManager) {
+        window.AuthManager.signIn();
+      }
     });
 
     // Optional Google Account & Cloud Sync Modal Events
@@ -8378,9 +8356,8 @@ class Game {
 
   renderAvatarHTML(avatarKey, className = '', extraStyle = '') {
     const def = this.getAvatarDef(avatarKey);
-    const fallback = this.getAvatarFallbackSrc(def.id);
-    const iconSrc = def.icon || fallback;
-    return `<img src="${iconSrc}" alt="${def.name}" class="avatar-sprite-img ${className}" style="image-rendering: pixelated; object-fit: contain; ${extraStyle}" onerror="this.onerror=null; this.src='${fallback}';">`;
+    const iconSrc = def.icon || 'assets/avatars/avatar_panda.png';
+    return `<img src="${iconSrc}" alt="${def.name}" class="avatar-sprite-img ${className}" style="image-rendering: pixelated; object-fit: contain; ${extraStyle}" onerror="this.onerror=null; this.src='assets/avatars/avatar_panda.png';">`;
   }
 
   getUserAvatar() {
@@ -8526,10 +8503,9 @@ class Game {
       card.className = `avatar-card ${isSelected ? 'selected' : ''}`;
       card.dataset.id = av.id;
 
-      const fallbackSrc = this.getAvatarFallbackSrc(av.id);
       card.innerHTML = `
         <span class="avatar-tier-badge tier-${av.tier.toLowerCase()}">${av.tier}</span>
-        <img src="${av.icon}" alt="${av.name}" class="avatar-sprite-img" style="image-rendering: pixelated; width: 44px; height: 44px; object-fit: contain;" onerror="this.onerror=null; this.src='${fallbackSrc}';">
+        <img src="${av.icon}" alt="${av.name}" class="avatar-sprite-img" style="image-rendering: pixelated; width: 44px; height: 44px; object-fit: contain;" onerror="this.onerror=null; this.src='assets/avatars/avatar_panda.png';">
         <span class="avatar-card-name">${av.name}</span>
       `;
 
@@ -8567,7 +8543,33 @@ class Game {
       this.authUser = null;
     }
 
-    // If no direct auth user stored, check if player previously had a custom callsign
+    // If no direct auth user stored, check if Google account is saved in cyber_google_user
+    if (!this.authUser) {
+      try {
+        const googleRaw = localStorage.getItem('cyber_google_user');
+        if (googleRaw) {
+          const gUser = JSON.parse(googleRaw);
+          if (gUser && (gUser.name || gUser.email)) {
+            const cleanName = (gUser.name || 'Operative').trim();
+            this.authUser = {
+              id: 'op_g_' + (gUser.id ? String(gUser.id).slice(-8) : Date.now()),
+              username: cleanName,
+              email: gUser.email || '',
+              picture: gUser.picture || null,
+              avatar: this.getUserAvatar() || 'panda',
+              authenticated: true,
+              authProvider: 'google',
+              createdAt: Date.now()
+            };
+            try {
+              localStorage.setItem('cyber_auth_user', JSON.stringify(this.authUser));
+            } catch (e) {}
+          }
+        }
+      } catch (e) {}
+    }
+
+    // If still no direct auth user stored, check if player previously had a custom callsign
     if (!this.authUser) {
       const existingName = this.saveData?.playerName;
       if (existingName && existingName !== 'badhash' && existingName !== 'Guest Operative') {
@@ -8675,17 +8677,102 @@ class Game {
     return true;
   }
 
+  loginWithGoogle(googleUser) {
+    if (!googleUser) return false;
+    const cleanName = (googleUser.name || 'Operative').trim();
+    const existing = this.getAuthUser();
+    const user = {
+      id: existing?.id || ('op_g_' + (googleUser.id ? String(googleUser.id).slice(-8) : Date.now())),
+      username: cleanName,
+      email: googleUser.email || '',
+      picture: googleUser.picture || null,
+      avatar: this.getUserAvatar() || 'panda',
+      authenticated: true,
+      authProvider: 'google',
+      updatedAt: Date.now()
+    };
+
+    this.authUser = user;
+    try {
+      localStorage.setItem('cyber_auth_user', JSON.stringify(user));
+      localStorage.setItem('cyber_google_user', JSON.stringify(googleUser));
+    } catch (e) {}
+
+    this.saveData.playerName = cleanName;
+    this.saveData.userAvatar = user.avatar;
+    this.saveData.googleAccount = {
+      id: googleUser.id,
+      name: cleanName,
+      email: googleUser.email,
+      picture: googleUser.picture,
+      avatar: googleUser.picture ? null : '🎮',
+      cloudSynced: true,
+      lastSync: googleUser.lastSync || new Date().toLocaleTimeString()
+    };
+    SaveManager.save(this.saveData);
+
+    // Link user-specific friends storage
+    const userFriendsKey = `cyber_friends_${user.id}`;
+    try {
+      const existingUserFriends = localStorage.getItem(userFriendsKey);
+      if (!existingUserFriends) {
+        const legacy = localStorage.getItem('cyber_friends_list');
+        if (legacy) {
+          localStorage.setItem(userFriendsKey, legacy);
+        }
+      }
+    } catch (e) {}
+
+    // Update callsign input if modal is open
+    const input = document.getElementById('input-operative-callsign');
+    if (input) input.value = cleanName;
+
+    this.updateTopbarUserProfile();
+    this.updateUserAvatarDisplays();
+    this.renderFriendsDrawer();
+    this.updateHeroPreview();
+    this.showGoogleAuthModalState();
+
+    if (this.isPrivateMatch) {
+      this.broadcastSquadRoster();
+      this.updateSquadLobbyUI();
+    }
+
+    this.showNotification(`Authenticated via Google: ${user.email || cleanName}`, 'GOOGLE CLOUD CONNECTED', 'green');
+    if (this.audio && typeof this.audio.playLevelUp === 'function') {
+      this.audio.playLevelUp();
+    }
+
+    this.closeCallsignModal();
+
+    if (typeof this.pendingFriendAction === 'function') {
+      const action = this.pendingFriendAction;
+      this.pendingFriendAction = null;
+      action();
+    }
+
+    return true;
+  }
+
   signOutOperative() {
     this.authUser = null;
     try {
       localStorage.removeItem('cyber_auth_user');
+      localStorage.removeItem('cyber_google_user');
     } catch (e) {}
 
     this.saveData.playerName = 'Guest Operative';
+    this.saveData.googleAccount = null;
     SaveManager.save(this.saveData);
+
+    if (window.AuthManager) {
+      window.AuthManager.currentUser = null;
+    }
 
     this.updateTopbarUserProfile();
     this.renderFriendsDrawer();
+    this.updateHeroPreview();
+    this.showGoogleAuthModalState();
     this.showNotification('Signed out. Operating in Guest Mode.', 'GUEST ACTIVE', 'amber');
     this.audio.playDeflect();
   }
@@ -8707,6 +8794,12 @@ class Game {
     const modal = document.getElementById('callsign-auth-modal');
     if (!modal) return;
 
+    if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+      try {
+        window.AuthManager.renderGisButton();
+      } catch (e) {}
+    }
+
     const user = this.getAuthUser();
     const input = document.getElementById('input-operative-callsign');
     const avatarPreview = document.getElementById('callsign-avatar-preview');
@@ -8714,6 +8807,8 @@ class Game {
     const avatarTier = document.getElementById('callsign-avatar-tier');
     const profileActive = document.getElementById('callsign-profile-active');
     const profileId = document.getElementById('profile-operative-id');
+    const googleEmailRow = document.getElementById('profile-google-email-row');
+    const googleEmailVal = document.getElementById('profile-google-email');
     const confirmBtn = document.getElementById('btn-confirm-callsign');
     const subtitle = document.getElementById('callsign-modal-subtitle');
 
@@ -8736,10 +8831,19 @@ class Game {
     if (this.isUserAuthenticated()) {
       if (profileActive) profileActive.classList.remove('hidden');
       if (profileId) profileId.textContent = user.id;
+      if (googleEmailRow && googleEmailVal) {
+        if (user.email) {
+          googleEmailRow.style.display = 'flex';
+          googleEmailVal.textContent = user.email;
+        } else {
+          googleEmailRow.style.display = 'none';
+        }
+      }
       if (confirmBtn) confirmBtn.textContent = '✓ UPDATE CALLSIGN';
-      if (subtitle) subtitle.textContent = 'OPERATIVE CALLSIGN LINKED & ACTIVE';
+      if (subtitle) subtitle.textContent = user.authProvider === 'google' ? 'GOOGLE AUTHENTICATED OPERATIVE LINKED' : 'OPERATIVE CALLSIGN LINKED & ACTIVE';
     } else {
       if (profileActive) profileActive.classList.add('hidden');
+      if (googleEmailRow) googleEmailRow.style.display = 'none';
       if (confirmBtn) confirmBtn.textContent = '⚡ ENTER MATRIX / CONFIRM CALLSIGN';
       if (subtitle) subtitle.textContent = pendingAction ? 'SET CALLSIGN TO ENABLE FRIEND NETWORK' : 'DIRECT OPERATIVE IDENTITY • SQUAD COMM-LINK';
     }

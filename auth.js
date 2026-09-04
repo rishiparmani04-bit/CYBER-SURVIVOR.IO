@@ -203,8 +203,8 @@ class AuthManager {
    * running locally before pasting a Google Cloud Console Client ID.
    */
   simulateDevSignIn() {
-    const nameInput = document.getElementById('input-google-name');
-    const customHandle = nameInput?.value.trim() || 'Alex Vance';
+    const nameInput = document.getElementById('input-operative-callsign') || document.getElementById('input-google-name');
+    const customHandle = nameInput?.value?.trim() || 'Alex Vance';
 
     console.log('[AuthManager] Using simulated Google OAuth test profile.');
     this.applyAuthenticatedUser({
