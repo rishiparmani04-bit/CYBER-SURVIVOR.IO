@@ -1392,7 +1392,23 @@
             <span class="squad-modal-sub">REAL-TIME PEERJS PROTOCOL &bull; DIRECT P2P SYNC</span>
           </div>
         </div>
-        <button id="btn-close-squad-modal" class="alert-close-btn" aria-label="Close">✕</button>
+        <div class="squad-header-actions">
+          <button id="btn-toggle-friends-drawer" class="btn-squad-drawer-toggle" title="View Saved Friends">
+            <span>👥 FRIENDS</span> (<strong id="squad-friends-count">0</strong>)
+          </button>
+          <button id="btn-close-squad-modal" class="alert-close-btn" aria-label="Close">✕</button>
+        </div>
+      </div>
+
+      <!-- Friends Roster Drawer (Collapsible) -->
+      <div id="squad-friends-drawer" class="squad-friends-drawer hidden">
+        <div class="friends-drawer-header">
+          <span class="drawer-title">🤝 CYBER SQUAD COMM-LINK &bull; SAVED FRIENDS</span>
+          <button id="btn-close-friends-drawer" class="alert-close-btn" aria-label="Close">✕</button>
+        </div>
+        <div id="friends-list-container" class="friends-list-container">
+          <!-- Populated dynamically from localStorage cyber_friends_list -->
+        </div>
       </div>
 
       <!-- Mode Selector Tabs: CREATE SQUAD vs JOIN SQUAD -->
@@ -1773,6 +1789,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Cyber Friend Request Toast Container -->
+  <div id="friend-toast-container"></div>
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="ads.js?v=1.0"></script>

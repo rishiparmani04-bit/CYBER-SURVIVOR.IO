@@ -2180,6 +2180,8 @@ class Game {
     this.networkSyncTimer = 0;
     this.isTouchReviving = false;
     this.isAdShowing = false;
+    this.enemyIdCounter = 0;
+    this.sentFriendRequests = new Set();
 
     // Register Google H5 Games Ads Game Hooks (Pause Loop & Mute Audio)
     if (window.AdManager) {
@@ -2920,6 +2922,20 @@ class Game {
     // 4-Player Squad Modal Tab & Button Listeners
     document.getElementById('btn-close-squad-modal')?.addEventListener('click', () => {
       this.closeSquadLobbyModal();
+    });
+
+    document.getElementById('btn-toggle-friends-drawer')?.addEventListener('click', () => {
+      const drawer = document.getElementById('squad-friends-drawer');
+      if (drawer) {
+        drawer.classList.toggle('hidden');
+        if (!drawer.classList.contains('hidden')) {
+          this.renderFriendsDrawer();
+        }
+      }
+    });
+
+    document.getElementById('btn-close-friends-drawer')?.addEventListener('click', () => {
+      document.getElementById('squad-friends-drawer')?.classList.add('hidden');
     });
 
     document.getElementById('squad-lobby-modal')?.addEventListener('click', (e) => {
@@ -6091,6 +6107,11 @@ class Game {
   // ENEMY SPAWNER & WAVE DIRECTOR
   // ==========================================================================
   updateWaveDirector(dt) {
+    // In multiplayer co-op squad matches, Host is strictly authoritative for waves and enemy spawning
+    if (this.isPrivateMatch && !this.isHost) {
+      return;
+    }
+
     this.waveTimer += dt;
     this.runTime += dt;
 
@@ -6123,6 +6144,7 @@ class Game {
   }
 
   spawnEnemyGroup() {
+    if (this.isPrivateMatch && !this.isHost) return;
     if (!this.player || this.enemies.length >= 85) return;
 
     // Number of enemies to spawn per burst (higher waves spawn tactical squads)
@@ -6191,6 +6213,7 @@ class Game {
     const dmgScale = 1 + (this.wave - 1) * 0.18;
 
     let def = {
+      id: 'en_' + (++this.enemyIdCounter) + '_' + Math.random().toString(36).substring(2, 6),
       x, y,
       type,
       radius: 16,
@@ -6253,6 +6276,7 @@ class Game {
   }
 
   spawnBoss() {
+    if (this.isPrivateMatch && !this.isHost) return;
     this.audio.playBossAlarm();
     this.addScreenShake(0.8);
     const isApex = this.wave >= 7 && this.wave < 10;
@@ -6273,6 +6297,7 @@ class Game {
     }
 
     const boss = {
+      id: 'boss_' + (++this.enemyIdCounter) + '_' + Math.random().toString(36).substring(2, 6),
       x: this.player.x + 400,
       y: this.player.y - 300,
       radius: isApex ? 50 : 45,
@@ -6527,6 +6552,24 @@ class Game {
         const e = this.enemies[j];
         if (Math.hypot(e.x - p.x, e.y - p.y) < e.radius + p.radius) {
           this.damageEnemy(e, p.damage, p.isCrit);
+
+          // In Squad matches, Client reports bullet hit to authoritative Host
+          if (this.isPrivateMatch && !this.isHost && e.id) {
+            const hitPacket = {
+              type: 'BULLET_HIT',
+              enemyId: e.id,
+              damage: p.damage,
+              isCrit: Boolean(p.isCrit),
+              shooterSlot: this.mySlot
+            };
+            if (this.hostConn && this.hostConn.open) {
+              try { this.hostConn.send(hitPacket); } catch (err) {}
+            }
+            if (this.localNetChannel) {
+              try { this.localNetChannel.postMessage(hitPacket); } catch (err) {}
+            }
+          }
+
           if (p.isCryo) {
             e.slowTimer = 2.5;
             this.particles.addSpark(e.x, e.y, '#00e5ff', 6);
@@ -6567,11 +6610,16 @@ class Game {
         ep.range = 0;
       }
 
-      // Hit Teammate
-      if (this.isPrivateMatch && this.teammate && !this.teammate.isDowned) {
-        if (Math.hypot(this.teammate.x - ep.x, this.teammate.y - ep.y) < 18 + ep.radius) {
-          this.damageTeammate(ep.damage);
-          ep.range = 0;
+      // Hit Squad Members
+      if (this.isPrivateMatch && this.squadMembers && this.squadMembers.length) {
+        for (const member of this.squadMembers) {
+          if (!member.isDowned && Math.hypot(member.x - ep.x, member.y - ep.y) < 18 + ep.radius) {
+            if (this.isHost) {
+              this.damageSquadMember(member, ep.damage);
+            }
+            ep.range = 0;
+            break;
+          }
         }
       }
 
@@ -6619,8 +6667,36 @@ class Game {
       if (e.stunTimer > 0) { e.stunTimer -= dt; continue; }
       const currentSpeed = e.slowTimer > 0 ? (e.slowTimer -= dt, e.speed * 0.4) : e.speed;
 
-      const toPlayerAngle = Math.atan2(this.player.y - e.y, this.player.x - e.x);
-      const distToPlayer = Math.hypot(this.player.x - e.x, this.player.y - e.y);
+      // Target Selection: In Multiplayer Co-op, target closest active operative
+      let targetX = this.player.x;
+      let targetY = this.player.y;
+      let targetDist = Math.hypot(this.player.x - e.x, this.player.y - e.y);
+      let targetMember = null;
+
+      if (this.isPrivateMatch && this.squadMembers && this.squadMembers.length > 0) {
+        let closestDist = this.player.isDowned ? Infinity : targetDist;
+        for (const m of this.squadMembers) {
+          if (!m.isDowned) {
+            const d = Math.hypot(m.x - e.x, m.y - e.y);
+            if (d < closestDist) {
+              closestDist = d;
+              targetX = m.x;
+              targetY = m.y;
+              targetDist = d;
+              targetMember = m;
+            }
+          }
+        }
+        if (closestDist === Infinity) {
+          targetX = this.player.x;
+          targetY = this.player.y;
+          targetDist = Math.hypot(this.player.x - e.x, this.player.y - e.y);
+          targetMember = null;
+        }
+      }
+
+      const toPlayerAngle = Math.atan2(targetY - e.y, targetX - e.x);
+      const distToPlayer = targetDist;
 
       // AI Behaviors (Long-Range and Short-Range Attacks for ALL enemies)
       if (e.isBoss) {
@@ -6672,9 +6748,13 @@ class Game {
           e.meleeTimer = (e.meleeTimer || 0) - dt;
           if (e.meleeTimer <= 0) {
             e.meleeTimer = 1.2;
-            this.damagePlayer(e.damage);
+            if (targetMember && this.isHost) {
+              this.damageSquadMember(targetMember, e.damage);
+            } else {
+              this.damagePlayer(e.damage);
+            }
             this.particles.addShockwave(e.x, e.y, 130, e.color, 0.4);
-            this.particles.addCombatText(this.player.x, this.player.y, 'BOSS SLAM!', e.color, true);
+            this.particles.addCombatText(targetX, targetY, 'BOSS SLAM!', e.color, true);
           }
         }
       } else if (e.type === 'scrapper') {
@@ -6702,8 +6782,12 @@ class Game {
 
         // Short-Range Attack: Claw Melee Slash
         if (distToPlayer < e.radius + this.player.radius) {
-          this.damagePlayer(e.damage);
-          this.particles.addCombatText(this.player.x, this.player.y, 'SLASH!', '#ff2a4b');
+          if (targetMember && this.isHost) {
+            this.damageSquadMember(targetMember, e.damage);
+          } else {
+            this.damagePlayer(e.damage);
+          }
+          this.particles.addCombatText(targetX, targetY, 'SLASH!', '#ff2a4b');
           e.x -= Math.cos(toPlayerAngle) * 35;
           e.y -= Math.sin(toPlayerAngle) * 35;
         }
@@ -6735,9 +6819,13 @@ class Game {
 
         // Short-Range Attack: Plasma Blade Strike
         if (distToPlayer < e.radius + this.player.radius) {
-          this.damagePlayer(e.damage);
+          if (targetMember && this.isHost) {
+            this.damageSquadMember(targetMember, e.damage);
+          } else {
+            this.damagePlayer(e.damage);
+          }
           this.particles.addShockwave(e.x, e.y, 45, '#ff007f', 0.2);
-          this.particles.addCombatText(this.player.x, this.player.y, 'BLADE HIT!', '#ff007f');
+          this.particles.addCombatText(targetX, targetY, 'BLADE HIT!', '#ff007f');
           e.x -= Math.cos(toPlayerAngle) * 45;
           e.y -= Math.sin(toPlayerAngle) * 45;
         }
@@ -6766,9 +6854,13 @@ class Game {
 
         // Short-Range Attack: Heavy Ground Shockwave Slam
         if (distToPlayer < e.radius + this.player.radius + 15) {
-          this.damagePlayer(e.damage);
+          if (targetMember && this.isHost) {
+            this.damageSquadMember(targetMember, e.damage);
+          } else {
+            this.damagePlayer(e.damage);
+          }
           this.particles.addShockwave(e.x, e.y, 80, '#ffcc00', 0.35);
-          this.particles.addCombatText(this.player.x, this.player.y, 'HEAVY SLAM!', '#ffcc00');
+          this.particles.addCombatText(targetX, targetY, 'HEAVY SLAM!', '#ffcc00');
           e.x -= Math.cos(toPlayerAngle) * 50;
           e.y -= Math.sin(toPlayerAngle) * 50;
         }
@@ -6801,7 +6893,11 @@ class Game {
 
         // Short-Range Attack: Point-blank EMP burst & pushback
         if (distToPlayer < e.radius + this.player.radius + 25) {
-          this.damagePlayer(Math.round(e.damage * 0.6));
+          if (targetMember && this.isHost) {
+            this.damageSquadMember(targetMember, Math.round(e.damage * 0.6));
+          } else {
+            this.damagePlayer(Math.round(e.damage * 0.6));
+          }
           this.particles.addShockwave(e.x, e.y, 50, '#00f0ff', 0.25);
           e.x -= Math.cos(toPlayerAngle) * 70;
           e.y -= Math.sin(toPlayerAngle) * 70;
@@ -6831,10 +6927,14 @@ class Game {
         // Short-Range Attack: Thermal Detonation
         e.fuse -= dt;
         if (e.fuse <= 0 || distToPlayer < e.radius + this.player.radius) {
-          this.damagePlayer(e.damage);
+          if (targetMember && this.isHost) {
+            this.damageSquadMember(targetMember, e.damage);
+          } else {
+            this.damagePlayer(e.damage);
+          }
           this.audio.playExplosion();
           this.particles.addShockwave(e.x, e.y, 90, '#ff5500');
-          this.particles.addCombatText(this.player.x, this.player.y, 'DETONATION!', '#ff5500');
+          this.particles.addCombatText(targetX, targetY, 'DETONATION!', '#ff5500');
           e.dead = true;
         }
       } else if (e.type === 'shield') {
@@ -6861,10 +6961,22 @@ class Game {
 
         // Short-Range Attack: Shield Bash
         if (distToPlayer < e.radius + this.player.radius) {
-          this.damagePlayer(e.damage);
+          if (targetMember && this.isHost) {
+            this.damageSquadMember(targetMember, e.damage);
+          } else {
+            this.damagePlayer(e.damage);
+          }
           this.particles.addShockwave(e.x, e.y, 60, '#00ff88', 0.2);
           e.x -= Math.cos(toPlayerAngle) * 40;
           e.y -= Math.sin(toPlayerAngle) * 40;
+        }
+      }
+
+      // Collide with local player if not already targeted, guaranteeing no invincibility
+      if (targetMember && !this.player.isDowned) {
+        const distToLocal = Math.hypot(this.player.x - e.x, this.player.y - e.y);
+        if (distToLocal < e.radius + this.player.radius) {
+          this.damagePlayer(Math.round(e.damage * 0.7));
         }
       }
     }
@@ -6973,6 +7085,176 @@ class Game {
         this.enterPlayerDownedState();
       } else {
         this.gameOver();
+      }
+    }
+
+    if (this.isPrivateMatch) {
+      this.broadcastHealthUpdate();
+    }
+  }
+
+  broadcastHealthUpdate() {
+    if (!this.player || !this.isPrivateMatch) return;
+    const payload = {
+      type: 'HEALTH_UPDATE',
+      slot: this.mySlot || (this.isHost ? 1 : 2),
+      id: this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot))),
+      hp: this.player.hp,
+      maxHp: this.player.maxHp,
+      shield: this.player.shield,
+      maxShield: this.player.maxShield,
+      isDowned: Boolean(this.player.isDowned),
+      downedTimer: this.player.downedTimer
+    };
+
+    if (this.isHost) {
+      this.broadcastToSquad(payload);
+    } else {
+      if (this.hostConn && this.hostConn.open) {
+        try { this.hostConn.send(payload); } catch (e) {}
+      }
+      if (this.localNetChannel) {
+        try { this.localNetChannel.postMessage(payload); } catch (e) {}
+      }
+    }
+  }
+
+  damageSquadMember(member, amount) {
+    if (!member || member.isDowned) return;
+
+    if (member.shield > 0) {
+      const shieldDmg = Math.min(member.shield, amount);
+      member.shield -= shieldDmg;
+      amount -= shieldDmg;
+      this.particles.addSpark(member.x, member.y, '#00f0ff', 6);
+    }
+    if (amount > 0) {
+      member.hp -= amount;
+      this.particles.addBlood(member.x, member.y, '#ff0055', 8);
+    }
+
+    if (member.hp <= 0) {
+      member.hp = 0;
+      member.isDowned = true;
+      member.downedTimer = 30;
+      this.particles.addShockwave(member.x, member.y, 80, '#ff0044', 0.4);
+      this.particles.addCombatText(member.x, member.y - 40, `${member.name.toUpperCase()} DOWNED!`, '#ff0044', true);
+      this.showNotification(`${member.name} has been downed! Revive them!`, 'SQUAD CASUALTY', 'red');
+    }
+
+    const healthPacket = {
+      type: 'HEALTH_UPDATE',
+      slot: member.slot,
+      id: member.id || member.peerId,
+      hp: member.hp,
+      maxHp: member.maxHp,
+      shield: member.shield,
+      maxShield: member.maxShield,
+      isDowned: member.isDowned,
+      downedTimer: member.downedTimer
+    };
+    this.broadcastToSquad(healthPacket);
+    this.updateMultiplayerSquadHUD();
+  }
+
+  handleHealthUpdate(data) {
+    if (!data) return;
+    if (data.slot && data.slot === this.mySlot) {
+      if (data.isDowned && !this.player.isDowned) {
+        this.enterPlayerDownedState();
+      }
+      return;
+    }
+
+    const member = this.squadMembers.find(m =>
+      (data.slot && m.slot === data.slot) ||
+      (data.id && (m.id === data.id || m.peerId === data.id))
+    );
+    if (member) {
+      if (typeof data.hp === 'number') member.hp = data.hp;
+      if (typeof data.maxHp === 'number') member.maxHp = data.maxHp;
+      if (typeof data.shield === 'number') member.shield = data.shield;
+      if (typeof data.maxShield === 'number') member.maxShield = data.maxShield;
+      if (typeof data.isDowned === 'boolean') member.isDowned = data.isDowned;
+      if (typeof data.downedTimer === 'number') member.downedTimer = data.downedTimer;
+    }
+
+    // Host relays to other squad members
+    if (this.isHost && this.squadPeers) {
+      this.squadPeers.forEach((p, peerId) => {
+        if (peerId !== data.id && p.conn && p.conn.open) {
+          try { p.conn.send(data); } catch (e) {}
+        }
+      });
+    }
+
+    this.updateMultiplayerSquadHUD();
+  }
+
+  handleEnemySync(data) {
+    if (!data || !Array.isArray(data.enemies)) return;
+    if (typeof data.wave === 'number') this.wave = data.wave;
+
+    const serverEnemies = data.enemies;
+    const serverIds = new Set();
+
+    serverEnemies.forEach((se) => {
+      if (!se || !se.id) return;
+      serverIds.add(se.id);
+      let localEnemy = this.enemies.find(e => e.id === se.id);
+      if (localEnemy) {
+        // Smoothly interpolate coordinate & synchronize health
+        localEnemy.x += (se.x - localEnemy.x) * 0.4;
+        localEnemy.y += (se.y - localEnemy.y) * 0.4;
+        localEnemy.hp = se.hp;
+        localEnemy.maxHp = se.maxHp;
+        if (se.isBoss) {
+          localEnemy.isBoss = true;
+          localEnemy.name = se.name || localEnemy.name;
+          this.activeBoss = localEnemy;
+          const bossBar = document.getElementById('boss-hud-bar');
+          const bossNameEl = document.getElementById('boss-name');
+          if (bossBar) bossBar.classList.remove('hidden');
+          if (bossNameEl) bossNameEl.textContent = localEnemy.name;
+        }
+      } else {
+        // Spawn newly synchronized enemy from Host
+        const newEnemy = {
+          id: se.id,
+          x: se.x,
+          y: se.y,
+          type: se.type || 'scrapper',
+          radius: se.radius || 16,
+          color: se.color || '#ff2a4b',
+          hp: se.hp,
+          maxHp: se.maxHp,
+          speed: se.speed || 160,
+          damage: se.damage || 15,
+          isBoss: Boolean(se.isBoss),
+          name: se.name || '',
+          dead: false,
+          shootTimer: 2.0
+        };
+        if (newEnemy.isBoss) {
+          this.activeBoss = newEnemy;
+          const bossBar = document.getElementById('boss-hud-bar');
+          const bossNameEl = document.getElementById('boss-name');
+          if (bossBar) bossBar.classList.remove('hidden');
+          if (bossNameEl) bossNameEl.textContent = newEnemy.name;
+        }
+        this.enemies.push(newEnemy);
+      }
+    });
+
+    // Remove local hostiles that Host reported destroyed
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      if (e.id && !serverIds.has(e.id)) {
+        if (e.isBoss && this.activeBoss === e) {
+          this.activeBoss = null;
+          document.getElementById('boss-hud-bar')?.classList.add('hidden');
+        }
+        this.enemies.splice(i, 1);
       }
     }
   }
@@ -7460,6 +7742,36 @@ class Game {
           this.broadcastToSquad({ type: 'REVIVE_SUCCESS', peerId: data.targetPeerId });
         }
       }
+    } else if (data.type === 'BULLET_HIT') {
+      const targetEnemy = this.enemies.find(e => e.id === data.enemyId);
+      if (targetEnemy && !targetEnemy.dead) {
+        this.damageEnemy(targetEnemy, data.damage || 20, Boolean(data.isCrit));
+      }
+    } else if (data.type === 'HEALTH_UPDATE') {
+      this.handleHealthUpdate(data);
+    } else if (data.type === 'FRIEND_REQUEST') {
+      const myPeerId = this.peer ? this.peer.id : (this.localPlayerId || 'host_p1');
+      if (!data.targetPeerId || data.targetPeerId === myPeerId || data.targetSlot === 1) {
+        this.showFriendRequestToast(data.from, data.fromPeerId, data.fromSlot);
+      } else {
+        const targetPeer = this.squadPeers.get(data.targetPeerId);
+        if (targetPeer && targetPeer.conn && targetPeer.conn.open) {
+          try { targetPeer.conn.send(data); } catch (e) {}
+        }
+      }
+    } else if (data.type === 'FRIEND_ACCEPT') {
+      const myPeerId = this.peer ? this.peer.id : (this.localPlayerId || 'host_p1');
+      if (!data.targetPeerId || data.targetPeerId === myPeerId || data.targetSlot === 1) {
+        this.addFriend(data.from, data.fromPeerId);
+        this.showNotification(`${data.from} accepted your friend request!`, 'FRIEND LINKED', 'green');
+        this.audio.playLevelUp();
+        this.updateSquadLobbyUI();
+      } else {
+        const targetPeer = this.squadPeers.get(data.targetPeerId);
+        if (targetPeer && targetPeer.conn && targetPeer.conn.open) {
+          try { targetPeer.conn.send(data); } catch (e) {}
+        }
+      }
     }
   }
 
@@ -7494,6 +7806,25 @@ class Game {
       }
     } else if (data.type === 'HOST_SYNC') {
       this.applyHostSync(data);
+    } else if (data.type === 'SYNC_ENEMIES' || data.type === 'ENEMY_SYNC') {
+      this.handleEnemySync(data);
+    } else if (data.type === 'HEALTH_UPDATE') {
+      this.handleHealthUpdate(data);
+    } else if (data.type === 'FRIEND_REQUEST') {
+      const myPeerId = this.peer ? this.peer.id : (this.localPlayerId || ('p_' + this.mySlot));
+      if (!data.targetPeerId || data.targetPeerId === myPeerId || data.targetSlot === this.mySlot) {
+        this.showFriendRequestToast(data.from, data.fromPeerId, data.fromSlot);
+      }
+    } else if (data.type === 'FRIEND_ACCEPT') {
+      const myPeerId = this.peer ? this.peer.id : (this.localPlayerId || ('p_' + this.mySlot));
+      if (!data.targetPeerId || data.targetPeerId === myPeerId || data.targetSlot === this.mySlot) {
+        this.addFriend(data.from, data.fromPeerId);
+        this.showNotification(`${data.from} accepted your friend request!`, 'FRIEND LINKED', 'green');
+        this.audio.playLevelUp();
+        if (this.lastClientRoster) {
+          this.renderClientSquadPreview(this.lastClientRoster);
+        }
+      }
     } else if (data.type === 'REVIVE_SUCCESS') {
       if (data.peerId === this.peer?.id || this.mySlot === data.slot) {
         this.reviveLocalPlayer();
@@ -7587,7 +7918,24 @@ class Game {
         if (avatarEl) avatarEl.innerHTML = `<span>${peer.hero?.icon || '👤'}</span>`;
         if (statusEl) {
           statusEl.className = 'slot-status ready';
-          statusEl.innerHTML = '<span class="status-dot"></span> CONNECTED (READY)';
+          const isAlreadyFriend = this.isFriend(peer.name, peer.peerId);
+          const isPending = this.sentFriendRequests.has(peer.peerId) || this.sentFriendRequests.has(peer.name);
+          let btnHtml = '';
+          if (isAlreadyFriend) {
+            btnHtml = `<button class="btn-squad-friend is-friend" disabled>✓ FRIENDS</button>`;
+          } else if (isPending) {
+            btnHtml = `<button class="btn-squad-friend is-pending" disabled>⏳ PENDING</button>`;
+          } else {
+            btnHtml = `<button class="btn-squad-friend btn-friend-action" data-peerid="${peer.peerId || ''}" data-name="${peer.name}" data-slot="${slot}">+ ADD FRIEND</button>`;
+          }
+          statusEl.innerHTML = `<span class="status-dot"></span> CONNECTED (READY)<br>${btnHtml}`;
+          const fBtn = statusEl.querySelector('.btn-friend-action');
+          if (fBtn) {
+            fBtn.onclick = (ev) => {
+              ev.stopPropagation();
+              this.sendFriendRequest(peer.peerId, peer.name, slot);
+            };
+          }
         }
       } else {
         if (card) {
@@ -7630,6 +7978,7 @@ class Game {
   }
 
   renderClientSquadPreview(roster) {
+    this.lastClientRoster = roster;
     const previewBox = document.getElementById('client-squad-preview');
     const slotsRow = document.getElementById('client-preview-slots-row');
     if (!previewBox || !slotsRow || !roster) return;
@@ -7642,14 +7991,277 @@ class Game {
       const slotDef = SQUAD_SLOT_DEFS[p.slot - 1] || SQUAD_SLOT_DEFS[0];
       const pill = document.createElement('div');
       pill.className = `preview-player-pill p${p.slot}`;
-      pill.style.cssText = `display: flex; align-items: center; gap: 6px; background: rgba(15,23,42,0.85); border: 1px solid ${slotDef.color}; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;`;
+      pill.style.cssText = `display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(15,23,42,0.85); border: 1px solid ${slotDef.color}; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;`;
+
+      let friendBtnHtml = '';
+      if (!isMe) {
+        const isAlreadyFriend = this.isFriend(p.name, p.peerId);
+        const isPending = this.sentFriendRequests.has(p.peerId) || this.sentFriendRequests.has(p.name);
+        if (isAlreadyFriend) {
+          friendBtnHtml = `<button class="btn-squad-friend is-friend" disabled style="margin-top:0; font-size:0.6rem; padding:2px 6px;">✓ FRIENDS</button>`;
+        } else if (isPending) {
+          friendBtnHtml = `<button class="btn-squad-friend is-pending" disabled style="margin-top:0; font-size:0.6rem; padding:2px 6px;">⏳ PENDING</button>`;
+        } else {
+          friendBtnHtml = `<button class="btn-squad-friend btn-preview-friend-action" data-peerid="${p.peerId || ''}" data-name="${p.name}" data-slot="${p.slot}" style="margin-top:0; font-size:0.6rem; padding:2px 6px;">+ ADD FRIEND</button>`;
+        }
+      }
+
       pill.innerHTML = `
-        <span>${p.heroIcon || '👤'}</span>
-        <strong style="color: ${slotDef.color};">[${slotDef.title}] ${p.name}${isMe ? ' (YOU)' : ''}</strong>
-        <span style="font-size: 0.7rem; color: #94a3b8;">${p.heroName || ''}</span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span>${p.heroIcon || '👤'}</span>
+          <strong style="color: ${slotDef.color};">[${slotDef.title}] ${p.name}${isMe ? ' (YOU)' : ''}</strong>
+          <span style="font-size: 0.7rem; color: #94a3b8;">${p.heroName || ''}</span>
+        </div>
+        ${friendBtnHtml}
       `;
+
+      const fBtn = pill.querySelector('.btn-preview-friend-action');
+      if (fBtn) {
+        fBtn.onclick = (ev) => {
+          ev.stopPropagation();
+          this.sendFriendRequest(p.peerId, p.name, p.slot);
+        };
+      }
+
       slotsRow.appendChild(pill);
     });
+  }
+
+  // ==========================================================================
+  // SQUAD FRIEND REQUEST & CYBER CONTACT SYSTEM
+  // ==========================================================================
+  getFriendsList() {
+    try {
+      const raw = localStorage.getItem('cyber_friends_list');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  isFriend(name, peerId) {
+    const list = this.getFriendsList();
+    return list.some(f => (peerId && f.peerId === peerId) || (name && f.name.toLowerCase() === name.toLowerCase()));
+  }
+
+  addFriend(name, peerId) {
+    if (!name && !peerId) return;
+    const list = this.getFriendsList();
+    if (!this.isFriend(name, peerId)) {
+      list.push({
+        name: name || 'Cyber Operative',
+        peerId: peerId || '',
+        addedAt: new Date().toLocaleDateString()
+      });
+      try {
+        localStorage.setItem('cyber_friends_list', JSON.stringify(list));
+      } catch (e) {}
+    }
+    this.updateSquadFriendsCount();
+    this.renderFriendsDrawer();
+    if (this.isHost) {
+      this.updateSquadLobbyUI();
+    } else if (this.lastClientRoster) {
+      this.renderClientSquadPreview(this.lastClientRoster);
+    }
+  }
+
+  removeFriend(peerIdOrName) {
+    if (!peerIdOrName) return;
+    let list = this.getFriendsList();
+    list = list.filter(f => f.peerId !== peerIdOrName && f.name !== peerIdOrName);
+    try {
+      localStorage.setItem('cyber_friends_list', JSON.stringify(list));
+    } catch (e) {}
+    this.updateSquadFriendsCount();
+    this.renderFriendsDrawer();
+    if (this.isHost) {
+      this.updateSquadLobbyUI();
+    } else if (this.lastClientRoster) {
+      this.renderClientSquadPreview(this.lastClientRoster);
+    }
+  }
+
+  updateSquadFriendsCount() {
+    const countEl = document.getElementById('squad-friends-count');
+    if (countEl) {
+      const list = this.getFriendsList();
+      countEl.textContent = `(${list.length})`;
+    }
+  }
+
+  renderFriendsDrawer() {
+    const container = document.getElementById('friends-list-container');
+    if (!container) return;
+    const list = this.getFriendsList();
+    this.updateSquadFriendsCount();
+
+    if (list.length === 0) {
+      container.innerHTML = '<div class="friends-empty-msg">No cyber friends saved yet. Click [+ ADD FRIEND] on any squadmate in lobby to link up!</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    list.forEach((f) => {
+      const row = document.createElement('div');
+      row.className = 'friend-item-row';
+      row.innerHTML = `
+        <div class="friend-item-info">
+          <span style="font-size: 1rem;">👤</span>
+          <div>
+            <div class="friend-item-name">${f.name}</div>
+            <div class="friend-item-date">Linked ${f.addedAt || 'Recently'}</div>
+          </div>
+        </div>
+        <button class="btn-remove-friend" data-id="${f.peerId || f.name}">REMOVE</button>
+      `;
+      const remBtn = row.querySelector('.btn-remove-friend');
+      if (remBtn) {
+        remBtn.onclick = () => {
+          this.removeFriend(f.peerId || f.name);
+        };
+      }
+      container.appendChild(row);
+    });
+  }
+
+  sendFriendRequest(targetPeerId, targetName, targetSlot) {
+    if (this.isFriend(targetName, targetPeerId)) {
+      this.showNotification(`You and ${targetName} are already cyber friends!`, 'ALREADY LINKED', 'cyan');
+      return;
+    }
+
+    if (targetPeerId) this.sentFriendRequests.add(targetPeerId);
+    if (targetName) this.sentFriendRequests.add(targetName);
+
+    const reqPacket = {
+      type: 'FRIEND_REQUEST',
+      from: this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
+      fromPeerId: this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot))),
+      fromSlot: this.mySlot || (this.isHost ? 1 : 2),
+      targetPeerId: targetPeerId,
+      targetSlot: targetSlot
+    };
+
+    if (this.isHost) {
+      if (targetPeerId && this.squadPeers) {
+        const targetPeer = this.squadPeers.get(targetPeerId);
+        if (targetPeer && targetPeer.conn && targetPeer.conn.open) {
+          try { targetPeer.conn.send(reqPacket); } catch (e) {}
+        }
+      }
+      if (this.localNetChannel) {
+        try { this.localNetChannel.postMessage(reqPacket); } catch (e) {}
+      }
+      this.updateSquadLobbyUI();
+    } else {
+      if (this.hostConn && this.hostConn.open) {
+        try { this.hostConn.send(reqPacket); } catch (e) {}
+      }
+      if (this.localNetChannel) {
+        try { this.localNetChannel.postMessage(reqPacket); } catch (e) {}
+      }
+      if (this.lastClientRoster) {
+        this.renderClientSquadPreview(this.lastClientRoster);
+      }
+    }
+
+    this.showNotification(`Friend request transmitted to ${targetName}!`, 'REQUEST PENDING', 'cyan');
+  }
+
+  showFriendRequestToast(fromName, fromPeerId, fromSlot) {
+    if (this.isFriend(fromName, fromPeerId)) return;
+
+    let container = document.getElementById('friend-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'friend-toast-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'cyber-friend-toast';
+    toast.innerHTML = `
+      <div class="friend-toast-header">
+        <span class="friend-toast-icon">⚡</span>
+        <span class="friend-toast-title">INCOMING SQUAD FRIEND LINK</span>
+      </div>
+      <div class="friend-toast-body">
+        <strong style="color: #00f0ff;">${fromName}</strong> sent you a cyber friend request!
+      </div>
+      <div class="friend-toast-actions">
+        <button class="btn-friend-accept">ACCEPT</button>
+        <button class="btn-friend-decline">DECLINE</button>
+      </div>
+    `;
+
+    const acceptBtn = toast.querySelector('.btn-friend-accept');
+    const declineBtn = toast.querySelector('.btn-friend-decline');
+
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(60px)';
+      toast.style.transition = 'all 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    };
+
+    if (acceptBtn) {
+      acceptBtn.onclick = () => {
+        dismiss();
+        this.acceptFriendRequest(fromName, fromPeerId, fromSlot);
+      };
+    }
+
+    if (declineBtn) {
+      declineBtn.onclick = () => {
+        dismiss();
+        this.showNotification(`Declined friend request from ${fromName}.`, 'LINK DECLINED', 'red');
+      };
+    }
+
+    container.appendChild(toast);
+    this.audio.playLevelUp();
+
+    // Auto dismiss after 16s
+    setTimeout(dismiss, 16000);
+  }
+
+  acceptFriendRequest(fromName, fromPeerId, fromSlot) {
+    this.addFriend(fromName, fromPeerId);
+
+    const acceptPacket = {
+      type: 'FRIEND_ACCEPT',
+      from: this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
+      fromPeerId: this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot))),
+      fromSlot: this.mySlot || (this.isHost ? 1 : 2),
+      targetPeerId: fromPeerId,
+      targetSlot: fromSlot
+    };
+
+    if (this.isHost) {
+      if (fromPeerId && this.squadPeers) {
+        const targetPeer = this.squadPeers.get(fromPeerId);
+        if (targetPeer && targetPeer.conn && targetPeer.conn.open) {
+          try { targetPeer.conn.send(acceptPacket); } catch (e) {}
+        }
+      }
+      if (this.localNetChannel) {
+        try { this.localNetChannel.postMessage(acceptPacket); } catch (e) {}
+      }
+    } else {
+      if (this.hostConn && this.hostConn.open) {
+        try { this.hostConn.send(acceptPacket); } catch (e) {}
+      }
+      if (this.localNetChannel) {
+        try { this.localNetChannel.postMessage(acceptPacket); } catch (e) {}
+      }
+    }
+
+    this.showNotification(`Linked with ${fromName}! Added to Cyber Friends.`, 'FRIEND ADDED', 'green');
+    this.audio.playLevelUp();
   }
 
   buildSquadMembersList() {
@@ -7799,6 +8411,27 @@ class Game {
         waveTimer: this.waveTimer
       };
       this.broadcastToSquad(hostSyncPacket);
+
+      // Authoritative Host broadcasts full active enemy list at 20-30Hz
+      const enemySyncPacket = {
+        type: 'SYNC_ENEMIES',
+        wave: this.wave,
+        enemies: this.enemies.map(e => ({
+          id: e.id,
+          x: Math.round(e.x),
+          y: Math.round(e.y),
+          hp: Math.round(e.hp),
+          maxHp: Math.round(e.maxHp),
+          type: e.type || 'scrapper',
+          radius: e.radius || 16,
+          color: e.color || '#ff2a4b',
+          speed: e.speed || 160,
+          damage: e.damage || 15,
+          isBoss: Boolean(e.isBoss),
+          name: e.name || ''
+        }))
+      };
+      this.broadcastToSquad(enemySyncPacket);
       this.updateMultiplayerSquadHUD();
     } else {
       // Client transmits local player state to Host
@@ -9505,6 +10138,11 @@ window.addEventListener('DOMContentLoaded', () => {
   // Game instance and all core variables (diamonds, coins, score, stats)
   // are scoped safely within this closure and cannot be modified via window.
   const gameInstance = new Game();
+  window.game = {
+    removeFriend: (peerIdOrName) => gameInstance.removeFriend(peerIdOrName),
+    sendFriendRequest: (...args) => gameInstance.sendFriendRequest(...args),
+    acceptFriendRequest: (...args) => gameInstance.acceptFriendRequest(...args)
+  };
 });
 
 })();
