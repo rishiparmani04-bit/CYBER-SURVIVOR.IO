@@ -2261,9 +2261,15 @@ class Game {
     this.updateUserAvatarDisplays();
     this.initPresenceSystem();
 
+    // Game State & Loop Tracking
+    this.isGameOver = false;
+    this.gameState = 'MENU';
+    this.isMultiplayer = false;
+    this.gameLoopId = null;
+
     // Game Loop
     this.lastTime = performance.now();
-    requestAnimationFrame((t) => this.gameLoop(t));
+    this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
   }
 
   onAdStart() {
@@ -5234,6 +5240,8 @@ class Game {
     document.getElementById('menu-screen')?.classList.remove('active');
     document.getElementById('pause-modal')?.classList.add('hidden');
     document.getElementById('gameover-modal')?.classList.add('hidden');
+    document.getElementById('gameOverModal')?.classList.add('hidden');
+    document.getElementById('deathScreen')?.classList.add('hidden');
     document.getElementById('victory-modal')?.classList.add('hidden');
     document.getElementById('levelup-modal')?.classList.add('hidden');
     document.getElementById('squad-lobby-modal')?.classList.add('hidden');
@@ -5367,6 +5375,8 @@ class Game {
       if (roomTag) roomTag.textContent = this.roomCode || 'CYBER-42X';
       this.updateMultiplayerSquadHUD();
     } else {
+      this.isPrivateMatch = false;
+      this.isMultiplayer = false;
       this.teammate = null;
       this.squadMembers = [];
       document.getElementById('hud-squad-panel')?.classList.add('hidden');
@@ -5375,9 +5385,19 @@ class Game {
     this.updatePerksTray();
     this.updateHUD();
 
+    this.isGameOver = false;
+    this.gameState = 'PLAYING';
     this.state = 'PLAYING';
     document.body.classList.add('playing');
     this.addScreenShake(0.3);
+
+    // Restart game loop cleanly if cancelled/paused
+    if (this.gameLoopId) {
+      cancelAnimationFrame(this.gameLoopId);
+      this.gameLoopId = null;
+    }
+    this.lastTime = performance.now();
+    this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
 
     // Immediate fallback render call to guarantee immediate visible arena and player
     this.renderFallbackFrame();
@@ -5402,25 +5422,37 @@ class Game {
   }
 
   returnToMenu() {
+    this.isGameOver = false;
+    this.gameState = 'MENU';
     this.state = 'MENU';
     document.body.classList.remove('playing');
     this.audio.stopMusic();
-    document.getElementById('game-hud').classList.add('hud-hidden');
-    document.getElementById('pause-modal').classList.add('hidden');
-    document.getElementById('gameover-modal').classList.add('hidden');
-    document.getElementById('victory-modal').classList.add('hidden');
-    document.getElementById('levelup-modal').classList.add('hidden');
-    document.getElementById('menu-screen').classList.add('active');
+    document.getElementById('game-hud')?.classList.add('hud-hidden');
+    document.getElementById('pause-modal')?.classList.add('hidden');
+    document.getElementById('gameover-modal')?.classList.add('hidden');
+    document.getElementById('gameOverModal')?.classList.add('hidden');
+    document.getElementById('deathScreen')?.classList.add('hidden');
+    document.getElementById('victory-modal')?.classList.add('hidden');
+    document.getElementById('levelup-modal')?.classList.add('hidden');
+    document.getElementById('menu-screen')?.classList.add('active');
 
     // Clean up 4-Player Co-Op Squad network & panels
     this.cleanupSquadNetwork();
     this.isPrivateMatch = false;
+    this.isMultiplayer = false;
     this.teammate = null;
     this.squadMembers = [];
     document.getElementById('hud-squad-panel')?.classList.add('hidden');
     document.getElementById('hud-downed-banner')?.classList.add('hidden');
     document.getElementById('hud-revive-prompt')?.classList.add('hidden');
     document.getElementById('touch-btn-revive')?.classList.add('hidden');
+
+    if (this.gameLoopId) {
+      cancelAnimationFrame(this.gameLoopId);
+      this.gameLoopId = null;
+    }
+    this.lastTime = performance.now();
+    this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
 
     this.renderCyberneticsUI();
     this.renderRecordsUI();
@@ -5431,8 +5463,9 @@ class Game {
   }
 
   gameOver() {
-    // Co-op Squad Game Over Logic: Trigger gameOver() ONLY when ALL active players are downed simultaneously
-    if (this.isPrivateMatch && this.squadMembers && this.squadMembers.length > 0) {
+    // Co-op Squad Game Over Logic: Trigger gameOver() ONLY when in co-op AND ALL active players are downed simultaneously
+    const isCoopMultiplayer = Boolean(this.isMultiplayer || (this.isPrivateMatch && this.squadMembers && this.squadMembers.length > 0));
+    if (isCoopMultiplayer) {
       const anyTeammateAlive = this.squadMembers.some(m => !m.isDowned);
       if (anyTeammateAlive) {
         if (!this.player.isDowned) {
@@ -5442,8 +5475,29 @@ class Game {
       }
     }
 
-    document.getElementById('hud-downed-banner')?.classList.add('hidden');
+    // Force Game Over state
+    this.isGameOver = true;
+    this.gameState = 'GAME_OVER';
     this.state = 'GAMEOVER';
+
+    // Stop or cancel the animation frame loop
+    if (this.gameLoopId) {
+      cancelAnimationFrame(this.gameLoopId);
+      this.gameLoopId = null;
+    }
+
+    // Guarantee player movement, shooting, skills, and enemy updates are disabled immediately
+    if (this.player) {
+      this.player.hp = 0;
+      this.player.hullIntegrity = 0;
+      this.player.shield = 0;
+      this.player.isShooting = false;
+      this.player.isDashing = false;
+    }
+    this.mouse.isDown = false;
+    this.keys = {};
+
+    document.getElementById('hud-downed-banner')?.classList.add('hidden');
     document.body.classList.remove('playing');
     this.audio.playExplosion();
     this.audio.stopMusic();
@@ -5460,13 +5514,28 @@ class Game {
     this.updateAllCurrencyDisplays();
 
     // UI stats
-    document.getElementById('go-wave').textContent = this.wave;
-    document.getElementById('go-score').textContent = this.runScore.toLocaleString();
-    document.getElementById('go-kills').textContent = this.runKills;
-    document.getElementById('go-credits').textContent = `+${this.runCredits} CREDITS`;
+    const goWave = document.getElementById('go-wave');
+    const goScore = document.getElementById('go-score');
+    const goKills = document.getElementById('go-kills');
+    const goCredits = document.getElementById('go-credits');
+    if (goWave) goWave.textContent = this.wave;
+    if (goScore) goScore.textContent = this.runScore.toLocaleString();
+    if (goKills) goKills.textContent = this.runKills;
+    if (goCredits) goCredits.textContent = `+${this.runCredits} CREDITS`;
     const newRecBanner = document.getElementById('go-new-record');
     if (newRecBanner) newRecBanner.classList.toggle('hidden', !isNewHigh);
-    document.getElementById('gameover-modal').classList.remove('hidden');
+
+    // Display the Game Over screen/modal (#gameOverModal or #deathScreen or #gameover-modal)
+    ['gameover-modal', 'gameOverModal', 'deathScreen'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('hidden');
+        el.style.display = 'flex';
+      }
+    });
+
+    // Render final defeat frame
+    this.render();
 
     // Trigger Google H5 Games Ads Interstitial on Game Over
     if (window.AdManager) {
@@ -5604,7 +5673,7 @@ class Game {
   // PLAYER ABILITIES
   // ==========================================================================
   triggerDash() {
-    if (!this.player || this.player.isDowned || this.player.dashCooldown > 0 || this.player.isDashing) return;
+    if (!this.player || this.isGameOver || this.state === 'GAMEOVER' || this.gameState === 'GAME_OVER' || this.player.hp <= 0 || this.player.isDowned || this.player.dashCooldown > 0 || this.player.isDashing) return;
     this.audio.playDash();
     this.player.dashCooldown = this.player.dashMaxCd * this.player.cooldownMult;
     this.player.isDashing = true;
@@ -5651,7 +5720,7 @@ class Game {
   }
 
   triggerSpecialSkill() {
-    if (!this.player || this.player.isDowned || this.player.specialCooldown > 0) return;
+    if (!this.player || this.isGameOver || this.state === 'GAMEOVER' || this.gameState === 'GAME_OVER' || this.player.hp <= 0 || this.player.isDowned || this.player.specialCooldown > 0) return;
     this.player.specialCooldown = this.player.specialMaxCd * this.player.cooldownMult;
     this.trackMissionProgress('tactical', 1);
     const heroId = this.player.hero.id;
@@ -5789,7 +5858,7 @@ class Game {
   }
 
   triggerUltimate() {
-    if (!this.player || this.player.isDowned || this.player.ultCooldown > 0) return;
+    if (!this.player || this.isGameOver || this.state === 'GAMEOVER' || this.gameState === 'GAME_OVER' || this.player.hp <= 0 || this.player.isDowned || this.player.ultCooldown > 0) return;
     this.player.ultCooldown = this.player.ultMaxCd * this.player.cooldownMult;
     const heroId = this.player.hero.id;
     this.addScreenShake(0.8);
@@ -5918,7 +5987,7 @@ class Game {
   // COMBAT & FIRING
   // ==========================================================================
   firePrimaryWeapon() {
-    if (!this.player || this.player.isDowned || this.player.fireTimer > 0) return;
+    if (!this.player || this.isGameOver || this.state === 'GAMEOVER' || this.gameState === 'GAME_OVER' || this.player.hp <= 0 || this.player.isDowned || this.player.fireTimer > 0) return;
     const weap = this.player.currentWeapon || WEAPON_DEFS[this.saveData.primaryWeapon] || WEAPON_DEFS.ak47;
 
     // Reload check
@@ -6156,8 +6225,9 @@ class Game {
     }
 
     // Vampiric Siphon Perk
-    if (this.player.lifesteal && Math.random() < 0.2) {
+    if (this.player.lifesteal && Math.random() < 0.2 && this.player.hp > 0 && !this.isGameOver) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 4);
+      this.player.hullIntegrity = this.player.hp;
       this.player.shield = Math.min(this.player.maxShield, this.player.shield + 6);
       this.particles.addCombatText(this.player.x, this.player.y, '+HEAL', '#00ff88');
     }
@@ -6411,9 +6481,17 @@ class Game {
   // MAIN UPDATE & RENDER LOOP
   // ==========================================================================
   gameLoop(timestamp) {
+    if (this.isGameOver || this.state === 'GAMEOVER' || this.gameState === 'GAME_OVER') {
+      if (this.gameLoopId) {
+        cancelAnimationFrame(this.gameLoopId);
+        this.gameLoopId = null;
+      }
+      return;
+    }
+
     if (this.isAdShowing) {
       this.lastTime = timestamp;
-      requestAnimationFrame((t) => this.gameLoop(t));
+      this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
       return;
     }
 
@@ -6421,7 +6499,7 @@ class Game {
     this.lastTime = timestamp;
 
     try {
-      if (this.state === 'PLAYING') {
+      if (this.state === 'PLAYING' && !this.isGameOver && this.gameState !== 'GAME_OVER') {
         this.update(dt);
       }
       this.render();
@@ -6429,11 +6507,24 @@ class Game {
       console.warn('GameLoop frame non-fatal error:', loopErr);
     }
 
-    requestAnimationFrame((t) => this.gameLoop(t));
+    if (!this.isGameOver && this.state !== 'GAMEOVER' && this.gameState !== 'GAME_OVER') {
+      this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+    }
   }
 
   update(dt) {
     if (!this.player) return;
+
+    // Immediately stop simulation if game is over or player is dead in solo mode
+    const isCoopMultiplayer = Boolean(this.isMultiplayer || this.isPrivateMatch);
+    if (this.isGameOver || this.state === 'GAMEOVER' || this.gameState === 'GAME_OVER') {
+      return;
+    }
+    if ((this.player.hp <= 0 || (typeof this.player.hullIntegrity === 'number' && this.player.hullIntegrity <= 0)) && !isCoopMultiplayer) {
+      this.gameOver();
+      return;
+    }
+
     this.runTime = (this.runTime || 0) + dt;
     this.trackMissionProgress('survive_time', dt);
     this.trackMissionProgress('max_wave', this.wave);
@@ -6458,7 +6549,7 @@ class Game {
       if (bleedFill) bleedFill.style.width = `${Math.max(0, (this.player.downedTimer / 30) * 100)}%`;
 
       if (this.player.downedTimer <= 0) {
-        if (!this.isPrivateMatch) {
+        if (!isCoopMultiplayer) {
           this.gameOver();
           return;
         } else if (this.squadMembers && this.squadMembers.length > 0 && this.squadMembers.every(m => m.isDowned)) {
@@ -6542,12 +6633,12 @@ class Game {
       this.updateWeaponHUD();
     }
 
-    if (this.player.shield < this.player.maxShield) {
+    if (this.player.shield < this.player.maxShield && this.player.hp > 0 && !this.player.isDowned && !this.isGameOver) {
       this.player.shield = Math.min(this.player.maxShield, this.player.shield + this.player.shieldRegenRate * dt);
     }
 
     // Continuous Primary Firing if holding mouse down
-    if (this.mouse.isDown && !this.player.isDowned) {
+    if (this.mouse.isDown && !this.player.isDowned && this.player.hp > 0 && !this.isGameOver) {
       this.firePrimaryWeapon();
     }
 
@@ -7133,8 +7224,11 @@ class Game {
           this.trackMissionProgress('credits', p.val);
           this.audio.playCoin();
         } else if (p.type === 'heal') {
-          this.player.hp = Math.min(this.player.maxHp, this.player.hp + p.val);
-          this.particles.addCombatText(this.player.x, this.player.y, `+${p.val} HP`, '#00ff88');
+          if (this.player.hp > 0 && !this.isGameOver) {
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + p.val);
+            this.player.hullIntegrity = this.player.hp;
+            this.particles.addCombatText(this.player.x, this.player.y, `+${p.val} HP`, '#00ff88');
+          }
         }
         this.pickups.splice(i, 1);
       }
@@ -7180,7 +7274,14 @@ class Game {
   }
 
   takeDamage(amount) {
-    if (!this.player || this.player.isDowned) return;
+    if (!this.player || this.isGameOver || this.state === 'GAMEOVER' || this.gameState === 'GAME_OVER') return;
+
+    const isCoopMultiplayer = Boolean(this.isMultiplayer || this.isPrivateMatch);
+    if ((this.player.hp <= 0 || (typeof this.player.hullIntegrity === 'number' && this.player.hullIntegrity <= 0)) && !isCoopMultiplayer) {
+      this.gameOver();
+      return;
+    }
+    if (this.player.isDowned) return;
 
     // Verify invulnerability / hit cooldown flag is not active
     if (this.player.isInvulnerable || (this.player.invulnTime && this.player.invulnTime > 0)) {
@@ -7252,12 +7353,17 @@ class Game {
     if (hpVal) hpVal.textContent = `${Math.ceil(this.player.hp)}/${this.player.maxHp}`;
     if (shieldVal) shieldVal.textContent = `${Math.ceil(this.player.shield)}/${this.player.maxShield}`;
 
-    // If player.hp <= 0, trigger gameOver() in solo mode (or triggerDownedState() only when in multiplayer co-op)
-    if (this.player.hp <= 0) {
+    // Confirm HP is actively decreasing upon enemy contact
+    console.log('Player HP:', this.player.hp);
+
+    // Force Game Over Trigger on Zero HP:
+    // In takeDamage(), explicitly check if player.hp <= 0 or player.hullIntegrity <= 0
+    if (this.player.hp <= 0 || (typeof this.player.hullIntegrity === 'number' && this.player.hullIntegrity <= 0)) {
       this.player.hp = 0;
       this.player.hullIntegrity = 0;
-      const isCoop = Boolean(this.isPrivateMatch || this.isMultiplayer);
-      if (isCoop) {
+      this.player.shield = 0;
+
+      if (isCoopMultiplayer) {
         this.triggerDownedState();
         const allSquadDowned = this.squadMembers && this.squadMembers.length > 0 && this.squadMembers.every(m => m.isDowned);
         if (allSquadDowned) {
@@ -7267,7 +7373,9 @@ class Game {
           this.gameOver();
         }
       } else {
+        // Single-player mode: immediately call the game over routine without delay or suppression!
         this.gameOver();
+        return;
       }
     }
 

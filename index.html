@@ -1238,7 +1238,9 @@
   </div>
 
   <!-- Modal: Game Over / Defeat -->
-  <div id="gameover-modal" class="modal-backdrop hidden">
+  <div id="gameover-modal" class="modal-backdrop hidden" data-alias="gameOverModal deathScreen">
+    <div id="gameOverModal" class="hidden" style="display:none;" aria-hidden="true"></div>
+    <div id="deathScreen" class="hidden" style="display:none;" aria-hidden="true"></div>
     <div class="modal-card gameover-card">
       <div class="defeat-badge">MISSION FAILED</div>
       <h2 class="gameover-title">NEURAL LINK SEVERED</h2>
