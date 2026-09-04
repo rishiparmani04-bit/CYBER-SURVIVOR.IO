@@ -6869,3 +6869,497 @@ body.hide-touch-controls .touch-controls-layer {
   box-shadow: 0 0 15px rgba(255, 0, 68, 0.5);
 }
 
+/* ==========================================================================
+   OPERATIVE AVATAR CUSTOMIZATION & PROTOCOL MODAL
+   ========================================================================== */
+.user-avatar-frame {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-avatar-frame:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.7);
+}
+
+.avatar-edit-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -8px;
+  background: rgba(0, 240, 255, 0.95);
+  color: #050811;
+  font-size: 0.52rem;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+  pointer-events: none;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.slot-avatar#slot-1-avatar {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.slot-avatar#slot-1-avatar:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.8);
+  border-color: #00f0ff;
+}
+
+.slot-avatar-edit-tag {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.62rem;
+  background: rgba(0, 240, 255, 0.9);
+  color: #050811;
+  border-radius: 3px;
+  padding: 1px 3px;
+  line-height: 1;
+}
+
+.avatar-modal-card {
+  width: 92%;
+  max-width: 620px;
+  background: rgba(10, 13, 20, 0.97);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  box-shadow: 0 0 45px rgba(0, 240, 255, 0.25);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.avatar-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  padding-bottom: 12px;
+}
+
+.avatar-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-modal-icon {
+  font-size: 1.8rem;
+}
+
+.avatar-modal-title {
+  font-family: var(--font-cyber);
+  font-size: 1.25rem;
+  color: #00f0ff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+  margin: 0;
+}
+
+.avatar-modal-sub {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+.avatar-live-preview-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.08);
+}
+
+.avatar-preview-badge {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.25) 0%, rgba(5, 8, 17, 0.95) 70%);
+  border: 2px solid #00f0ff;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.1rem;
+}
+
+.avatar-preview-name {
+  font-family: var(--font-cyber);
+  font-size: 1.15rem;
+  color: #f8fafc;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.avatar-preview-desc {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 3px;
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.avatar-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.avatar-card:hover {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: rgba(0, 240, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 240, 255, 0.25);
+}
+
+.avatar-card.selected {
+  background: rgba(0, 240, 255, 0.18);
+  border: 2px solid #00f0ff;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.7);
+  transform: translateY(-2px);
+}
+
+.avatar-card-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.avatar-card-name {
+  font-family: var(--font-cyber);
+  font-size: 0.72rem;
+  color: #f1f5f9;
+  text-align: center;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.avatar-card.selected .avatar-card-name {
+  color: #00f0ff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+}
+
+.avatar-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.btn-avatar-confirm {
+  background: linear-gradient(135deg, #00f0ff, #0088ff);
+  color: #030712;
+  font-family: var(--font-cyber);
+  font-weight: 900;
+  font-size: 0.85rem;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+  transition: all 0.2s ease;
+  letter-spacing: 1px;
+}
+
+.btn-avatar-confirm:hover {
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.85);
+  transform: translateY(-1px);
+}
+
+.btn-avatar-cancel {
+  background: transparent;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-avatar-cancel:hover {
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ==========================================================================
+   REAL-TIME FRIEND PRESENCE & 1-CLICK SQUAD INVITES
+   ========================================================================== */
+.friend-item-presence {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+.presence-badge.online {
+  color: #00ff88;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.presence-badge.offline {
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.presence-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.presence-dot.pulsing {
+  background: #00ff88;
+  box-shadow: 0 0 8px #00ff88;
+  animation: presencePulse 1.8s infinite ease-in-out;
+}
+
+.presence-dot.dim {
+  background: #475569;
+}
+
+@keyframes presencePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 8px #00ff88;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.65;
+    box-shadow: 0 0 16px #00ff88;
+  }
+}
+
+.friend-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-squad-invite {
+  background: rgba(0, 240, 255, 0.12);
+  color: #00f0ff;
+  border: 1px solid #00f0ff;
+  font-family: var(--font-cyber);
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+  white-space: nowrap;
+}
+
+.btn-squad-invite:hover:not(:disabled) {
+  background: #00f0ff;
+  color: #030712;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.7);
+  transform: translateY(-1px);
+}
+
+.btn-squad-invite:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: #475569;
+  color: #64748b;
+  box-shadow: none;
+  background: transparent;
+}
+
+.btn-squad-invite.sent {
+  border-color: #ffaa00;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.15);
+  box-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+}
+
+/* Squad Comm-Link Invitation Modal */
+.squad-invite-card {
+  width: 90%;
+  max-width: 480px;
+  background: rgba(10, 13, 20, 0.98);
+  border: 2px solid #00f0ff;
+  box-shadow: 0 0 50px rgba(0, 240, 255, 0.4);
+  border-radius: 12px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+}
+
+.invite-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.invite-header-titles {
+  flex: 1;
+}
+
+.invite-icon-pulse {
+  font-size: 2.2rem;
+  animation: presencePulse 1.5s infinite ease-in-out;
+}
+
+.invite-title {
+  font-family: var(--font-cyber);
+  font-size: 1.15rem;
+  color: #00f0ff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+  margin: 0;
+}
+
+.invite-sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+.invite-body {
+  text-align: center;
+  padding: 10px 0 16px;
+}
+
+.invite-desc-text {
+  font-family: var(--font-cyber);
+  font-size: 1rem;
+  color: #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.invite-hostname {
+  color: #00f0ff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  font-size: 1.15rem;
+}
+
+.invite-room-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px dashed #00ff88;
+  padding: 8px 18px;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.25);
+  margin-top: 4px;
+}
+
+.invite-room-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.invite-room-val {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #00ff88;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+}
+
+.invite-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.btn-invite-accept {
+  flex: 1;
+  background: linear-gradient(135deg, #00ff88, #00c853);
+  color: #030712;
+  font-family: var(--font-cyber);
+  font-weight: 900;
+  font-size: 0.95rem;
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+  transition: all 0.2s ease;
+  letter-spacing: 1px;
+}
+
+.btn-invite-accept:hover {
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.85);
+  transform: translateY(-2px);
+}
+
+.btn-invite-decline {
+  background: transparent;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 12px 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-invite-decline:hover {
+  color: #ff0055;
+  border-color: #ff0055;
+  box-shadow: 0 0 12px rgba(255, 0, 85, 0.35);
+}
+

@@ -130,6 +130,21 @@ const WEEKLY_BUNDLES = [
   }
 ];
 
+const OPERATIVE_AVATARS = [
+  { id: 'rocket', icon: '🚀', name: 'Vanguard Rocket', desc: 'High-velocity strike operative • Kinetic vanguard' },
+  { id: 'cyborg', icon: '🤖', name: 'Cyber Cyborg', desc: 'Synthetic biomechanical enforcer • Alloy plating' },
+  { id: 'shinobi', icon: '🥷', name: 'Shadow Shinobi', desc: 'Stealth & tactical infiltration • Monoblade specialist' },
+  { id: 'volt', icon: '⚡', name: 'Volt Striker', desc: 'Overclocked kinetic specialist • Arc pulse matrix' },
+  { id: 'phantom', icon: '💀', name: 'Ghost Phantom', desc: 'Spectral recon operative • Silent execution protocol' },
+  { id: 'titan', icon: '🛡️', name: 'Aegis Titan', desc: 'Heavy defensive bulkhead • Kinetic barrier specialist' },
+  { id: 'deadeye', icon: '🎯', name: 'Deadeye', desc: 'Precision ballistic sniper • Armor-piercing expert' },
+  { id: 'glitch', icon: '👾', name: 'Glitch', desc: 'Anomalous digital disruptor • Logic bomb hacker' },
+  { id: 'commando', icon: '🪖', name: 'Commando Veteran', desc: 'Battle-hardened vanguard • Plasma rifle maestro' },
+  { id: 'psionic', icon: '🔮', name: 'Void Psionic', desc: 'Dark matter energy adept • Graviton field wielder' },
+  { id: 'valkyrie', icon: '🪽', name: 'Cyber Valkyrie', desc: 'Aerial jetpack assault ace • Dual SMG barrage' },
+  { id: 'fox', icon: '🦊', name: 'Cyber Fox', desc: 'Nimble electronic warfare scout • Rapid dash tactician' }
+];
+
 const HERO_DEFS = {
   commando: {
     id: 'commando',
@@ -1732,6 +1747,7 @@ class SaveManager {
       primaryWeapon: 'ak47',
       secondaryWeapon: 'ump',
       playerName: 'badhash',
+      userAvatar: '🚀',
       settings: {
         sfxVol: 80,
         musicVol: 65,
@@ -2261,6 +2277,8 @@ class Game {
     this.updateHeroPreview();
     this.updateLobbyLoadoutSlots();
     this.initChallengeTimer();
+    this.updateUserAvatarDisplays();
+    this.initPresenceSystem();
 
     // Game Loop
     this.lastTime = performance.now();
@@ -2929,6 +2947,7 @@ class Game {
       if (drawer) {
         drawer.classList.toggle('hidden');
         if (!drawer.classList.contains('hidden')) {
+          this.checkFriendsPresence();
           this.renderFriendsDrawer();
         }
       }
@@ -2936,6 +2955,42 @@ class Game {
 
     document.getElementById('btn-close-friends-drawer')?.addEventListener('click', () => {
       document.getElementById('squad-friends-drawer')?.classList.add('hidden');
+    });
+
+    // Operative Avatar Protocol Modal Listeners
+    document.getElementById('topbar-avatar-frame')?.addEventListener('click', () => {
+      this.openAvatarModal();
+    });
+    document.getElementById('slot-1-avatar')?.addEventListener('click', () => {
+      this.openAvatarModal();
+    });
+    document.getElementById('btn-close-avatar-modal')?.addEventListener('click', () => {
+      this.closeAvatarModal();
+    });
+    document.getElementById('btn-cancel-avatar')?.addEventListener('click', () => {
+      this.closeAvatarModal();
+    });
+    document.getElementById('btn-confirm-avatar')?.addEventListener('click', () => {
+      this.confirmEquipAvatar();
+    });
+    document.getElementById('avatarModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'avatarModal') this.closeAvatarModal();
+    });
+
+    // Squad Comm-Link Invitation Modal Listeners
+    document.getElementById('btn-accept-squad-invite')?.addEventListener('click', () => {
+      this.acceptSquadInvite();
+    });
+    document.getElementById('btn-decline-squad-invite')?.addEventListener('click', () => {
+      document.getElementById('squad-invite-modal')?.classList.add('hidden');
+    });
+    document.getElementById('btn-close-invite-modal')?.addEventListener('click', () => {
+      document.getElementById('squad-invite-modal')?.classList.add('hidden');
+    });
+    document.getElementById('squad-invite-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'squad-invite-modal') {
+        document.getElementById('squad-invite-modal')?.classList.add('hidden');
+      }
     });
 
     document.getElementById('squad-lobby-modal')?.addEventListener('click', (e) => {
@@ -7542,6 +7597,7 @@ class Game {
           type: 'JOIN_REQ',
           clientId: clientPeerId,
           name: this.saveData.playerName || 'Operative',
+          avatar: this.getUserAvatar(),
           heroId: this.selectedHero || 'commando',
           weaponId: this.saveData.primaryWeapon || 'ak47'
         });
@@ -7585,6 +7641,7 @@ class Game {
         type: 'JOIN_REQ',
         id: this.localPlayerId || this.peer?.id,
         name: this.saveData.playerName || 'Operative',
+        avatar: this.getUserAvatar(),
         heroId: this.selectedHero || 'commando',
         weaponId: this.saveData.primaryWeapon || 'ak47'
       };
@@ -7657,6 +7714,7 @@ class Game {
         peerId: data.id || ('slot_' + data.slot),
         slot: data.slot,
         name: data.name || (data.slot === 1 ? 'Host Operative' : `Operative_P${data.slot}`),
+        avatar: data.avatar || '🚀',
         hero: HERO_DEFS[data.heroId] || HERO_DEFS.commando,
         heroId: data.heroId || 'commando',
         color: slotDef.color,
@@ -7682,6 +7740,7 @@ class Game {
     }
 
     if (remotePlayer) {
+      if (data.avatar) remotePlayer.avatar = data.avatar;
       // Direct coordinate updates: no broken interpolation, no division by zero
       if (typeof data.x === 'number' && !isNaN(data.x)) remotePlayer.x = data.x;
       if (typeof data.y === 'number' && !isNaN(data.y)) remotePlayer.y = data.y;
@@ -7708,6 +7767,7 @@ class Game {
       if (this.squadPeers && data.id) {
         const peerObj = this.squadPeers.get(data.id);
         if (peerObj) {
+          if (data.avatar) peerObj.avatar = data.avatar;
           peerObj.x = data.x;
           peerObj.y = data.y;
           peerObj.angle = data.angle;
@@ -7767,6 +7827,7 @@ class Game {
         conn: conn,
         slot: assignedSlot,
         name: data.name || `Operative_P${assignedSlot}`,
+        avatar: data.avatar || '🚀',
         heroId: data.heroId || 'commando',
         hero: peerHero,
         color: slotDef.color,
@@ -7874,7 +7935,7 @@ class Game {
     } else if (data.type === 'FRIEND_REQUEST') {
       const myPeerId = this.peer ? this.peer.id : (this.localPlayerId || 'host_p1');
       if (!data.targetPeerId || data.targetPeerId === myPeerId || data.targetSlot === 1) {
-        this.showFriendRequestToast(data.from, data.fromPeerId, data.fromSlot);
+        this.showFriendRequestToast(data.from, data.fromPeerId, data.fromSlot, data.avatar, data.fromPresenceId);
       } else {
         const targetPeer = this.squadPeers.get(data.targetPeerId);
         if (targetPeer && targetPeer.conn && targetPeer.conn.open) {
@@ -7884,7 +7945,7 @@ class Game {
     } else if (data.type === 'FRIEND_ACCEPT') {
       const myPeerId = this.peer ? this.peer.id : (this.localPlayerId || 'host_p1');
       if (!data.targetPeerId || data.targetPeerId === myPeerId || data.targetSlot === 1) {
-        this.addFriend(data.from, data.fromPeerId);
+        this.addFriend(data.from, data.fromPeerId, data.avatar, data.fromPresenceId);
         this.showNotification(`${data.from} accepted your friend request!`, 'FRIEND LINKED', 'green');
         this.audio.playLevelUp();
         this.updateSquadLobbyUI();
@@ -7894,6 +7955,8 @@ class Game {
           try { targetPeer.conn.send(data); } catch (e) {}
         }
       }
+    } else if (data.type === 'SQUAD_INVITE') {
+      this.handleSquadInvite(data);
     }
   }
 
@@ -7935,18 +7998,20 @@ class Game {
     } else if (data.type === 'FRIEND_REQUEST') {
       const myPeerId = this.peer ? this.peer.id : (this.localPlayerId || ('p_' + this.mySlot));
       if (!data.targetPeerId || data.targetPeerId === myPeerId || data.targetSlot === this.mySlot) {
-        this.showFriendRequestToast(data.from, data.fromPeerId, data.fromSlot);
+        this.showFriendRequestToast(data.from, data.fromPeerId, data.fromSlot, data.avatar, data.fromPresenceId);
       }
     } else if (data.type === 'FRIEND_ACCEPT') {
       const myPeerId = this.peer ? this.peer.id : (this.localPlayerId || ('p_' + this.mySlot));
       if (!data.targetPeerId || data.targetPeerId === myPeerId || data.targetSlot === this.mySlot) {
-        this.addFriend(data.from, data.fromPeerId);
+        this.addFriend(data.from, data.fromPeerId, data.avatar, data.fromPresenceId);
         this.showNotification(`${data.from} accepted your friend request!`, 'FRIEND LINKED', 'green');
         this.audio.playLevelUp();
         if (this.lastClientRoster) {
           this.renderClientSquadPreview(this.lastClientRoster);
         }
       }
+    } else if (data.type === 'SQUAD_INVITE') {
+      this.handleSquadInvite(data);
     } else if (data.type === 'REVIVE_SUCCESS' || data.type === 'PLAYER_REVIVED') {
       const targetPeerId = data.peerId || data.targetPeerId || data.id;
       const targetSlot = data.slot || data.targetSlot;
@@ -7981,14 +8046,16 @@ class Game {
 
   getSquadRosterSnapshot() {
     const hostHero = HERO_DEFS[this.selectedHero] || HERO_DEFS.commando;
+    const hostAvatar = this.getUserAvatar();
     const roster = [
       {
         slot: 1,
         isHost: true,
         name: this.saveData.playerName || 'Operative (Host)',
+        avatar: hostAvatar,
         heroId: this.selectedHero || 'commando',
         heroName: hostHero.name,
-        heroIcon: hostHero.icon || '🚀',
+        heroIcon: hostAvatar || hostHero.icon || '🚀',
         color: SQUAD_SLOT_DEFS[0].color,
         weaponId: this.player?.currentWeapon?.id || this.saveData.primaryWeapon || 'ak47'
       }
@@ -8000,9 +8067,10 @@ class Game {
         isHost: false,
         peerId: p.peerId,
         name: p.name,
+        avatar: p.avatar || '🚀',
         heroId: p.heroId,
         heroName: p.hero?.name || 'Operative',
-        heroIcon: p.hero?.icon || '👤',
+        heroIcon: p.avatar || p.hero?.icon || '👤',
         color: p.color,
         weaponId: p.weaponId
       });
@@ -8042,9 +8110,12 @@ class Game {
     const s1Name = document.getElementById('slot-1-name');
     const s1Hero = document.getElementById('slot-1-hero');
     const s1Avatar = document.getElementById('slot-1-avatar');
+    const s1AvatarIcon = document.getElementById('slot-1-avatar-icon');
     if (s1Name) s1Name.textContent = (this.saveData.playerName || 'OPERATIVE') + ' (YOU)';
     if (s1Hero) s1Hero.textContent = hostHero.name;
-    if (s1Avatar) s1Avatar.textContent = hostHero.icon || '🚀';
+    const hostAv = this.getUserAvatar();
+    if (s1AvatarIcon) s1AvatarIcon.textContent = hostAv;
+    else if (s1Avatar) s1Avatar.textContent = hostAv;
 
     // Slots 2, 3, 4
     const peerList = Array.from(this.squadPeers.values());
@@ -8062,7 +8133,7 @@ class Game {
         }
         if (nameEl) nameEl.textContent = peer.name;
         if (heroEl) heroEl.textContent = peer.hero?.name || 'Operative';
-        if (avatarEl) avatarEl.innerHTML = `<span>${peer.hero?.icon || '👤'}</span>`;
+        if (avatarEl) avatarEl.innerHTML = `<span>${peer.avatar || peer.hero?.icon || '👤'}</span>`;
         if (statusEl) {
           statusEl.className = 'slot-status ready';
           const isAlreadyFriend = this.isFriend(peer.name, peer.peerId);
@@ -8155,7 +8226,7 @@ class Game {
 
       pill.innerHTML = `
         <div style="display: flex; align-items: center; gap: 6px;">
-          <span>${p.heroIcon || '👤'}</span>
+          <span>${p.avatar || p.heroIcon || '👤'}</span>
           <strong style="color: ${slotDef.color};">[${slotDef.title}] ${p.name}${isMe ? ' (YOU)' : ''}</strong>
           <span style="font-size: 0.7rem; color: #94a3b8;">${p.heroName || ''}</span>
         </div>
@@ -8175,6 +8246,389 @@ class Game {
   }
 
   // ==========================================================================
+  // OPERATIVE AVATAR PROTOCOL
+  // ==========================================================================
+  getUserAvatar() {
+    try {
+      const stored = localStorage.getItem('cyber_user_avatar');
+      if (stored) return stored;
+    } catch (e) {}
+    return this.saveData?.userAvatar || '🚀';
+  }
+
+  setUserAvatar(avatarIcon) {
+    if (!avatarIcon) return;
+    try {
+      localStorage.setItem('cyber_user_avatar', avatarIcon);
+    } catch (e) {}
+    if (this.saveData) {
+      this.saveData.userAvatar = avatarIcon;
+      SaveManager.save(this.saveData);
+    }
+    this.updateUserAvatarDisplays();
+
+    // Sync avatar across squad if in lobby or match
+    if (this.isPrivateMatch) {
+      if (this.isHost) {
+        this.broadcastSquadRoster();
+        this.updateSquadLobbyUI();
+      } else {
+        const payload = {
+          type: 'PLAYER_UPDATE',
+          slot: this.mySlot,
+          id: this.peer ? this.peer.id : this.localPlayerId,
+          name: this.saveData.playerName,
+          avatar: avatarIcon,
+          x: this.player ? this.player.x : WORLD_WIDTH / 2,
+          y: this.player ? this.player.y : WORLD_HEIGHT / 2,
+          angle: this.player ? this.player.angle : 0,
+          hp: this.player ? this.player.hp : 150,
+          maxHp: this.player ? this.player.maxHp : 150,
+          shield: this.player ? this.player.shield : 50,
+          maxShield: this.player ? this.player.maxShield : 50,
+          isDowned: Boolean(this.player?.isDowned),
+          downedTimer: this.player?.downedTimer || 0,
+          weaponId: this.player?.currentWeapon?.id || this.saveData.primaryWeapon || 'ak47',
+          heroId: this.selectedHero || 'commando',
+          shooting: Boolean(this.player?.isShooting)
+        };
+        if (this.hostConn && this.hostConn.open) {
+          try { this.hostConn.send(payload); } catch (e) {}
+        }
+        if (this.localNetChannel) {
+          try { this.localNetChannel.postMessage(payload); } catch (e) {}
+        }
+      }
+    }
+  }
+
+  updateUserAvatarDisplays() {
+    const avatar = this.getUserAvatar();
+    const topbarAvatar = document.getElementById('topbar-hero-avatar');
+    if (topbarAvatar) topbarAvatar.textContent = avatar;
+
+    const hudIcon = document.getElementById('hud-hero-icon');
+    if (hudIcon) hudIcon.textContent = avatar;
+
+    const s1AvatarIcon = document.getElementById('slot-1-avatar-icon');
+    if (s1AvatarIcon) {
+      s1AvatarIcon.textContent = avatar;
+    } else {
+      const s1 = document.getElementById('slot-1-avatar');
+      if (s1 && !s1.querySelector('.slot-avatar-edit-tag')) {
+        s1.textContent = avatar;
+      }
+    }
+  }
+
+  openAvatarModal() {
+    const modal = document.getElementById('avatarModal');
+    if (!modal) return;
+    this.renderAvatarModal();
+    modal.classList.remove('hidden');
+    this.audio.playDeflect();
+  }
+
+  closeAvatarModal() {
+    document.getElementById('avatarModal')?.classList.add('hidden');
+  }
+
+  renderAvatarModal() {
+    const grid = document.getElementById('avatar-selection-grid');
+    if (!grid) return;
+    const currentAvatar = this.getUserAvatar();
+    this.tempSelectedAvatar = currentAvatar;
+
+    const found = OPERATIVE_AVATARS.find(a => a.icon === currentAvatar) || OPERATIVE_AVATARS[0];
+    const previewIcon = document.getElementById('avatar-preview-icon');
+    const previewName = document.getElementById('avatar-preview-name');
+    const previewDesc = document.getElementById('avatar-preview-desc');
+    if (previewIcon) previewIcon.textContent = found.icon;
+    if (previewName) previewName.textContent = found.name;
+    if (previewDesc) previewDesc.textContent = found.desc;
+
+    grid.innerHTML = '';
+    OPERATIVE_AVATARS.forEach((av) => {
+      const card = document.createElement('div');
+      card.className = `avatar-card ${av.icon === this.tempSelectedAvatar ? 'selected' : ''}`;
+      card.dataset.icon = av.icon;
+      card.innerHTML = `
+        <span class="avatar-card-icon">${av.icon}</span>
+        <span class="avatar-card-name">${av.name}</span>
+      `;
+      card.onclick = () => {
+        this.tempSelectedAvatar = av.icon;
+        grid.querySelectorAll('.avatar-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        if (previewIcon) previewIcon.textContent = av.icon;
+        if (previewName) previewName.textContent = av.name;
+        if (previewDesc) previewDesc.textContent = av.desc;
+        this.audio.playDeflect();
+      };
+      grid.appendChild(card);
+    });
+  }
+
+  confirmEquipAvatar() {
+    if (this.tempSelectedAvatar) {
+      this.setUserAvatar(this.tempSelectedAvatar);
+      const avDef = OPERATIVE_AVATARS.find(a => a.icon === this.tempSelectedAvatar);
+      this.showNotification(`Equipped ${avDef ? avDef.name : 'Operative Avatar'}!`, 'AVATAR EQUIPPED', 'green');
+      this.audio.playLevelUp();
+    }
+    this.closeAvatarModal();
+  }
+
+  // ==========================================================================
+  // REAL-TIME FRIEND PRESENCE & 1-CLICK SQUAD INVITES
+  // ==========================================================================
+  initPresenceSystem() {
+    try {
+      this.userPresenceId = localStorage.getItem('cyber_presence_id');
+      if (!this.userPresenceId) {
+        this.userPresenceId = 'cyber_usr_' + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem('cyber_presence_id', this.userPresenceId);
+      }
+    } catch (e) {
+      this.userPresenceId = 'cyber_usr_' + Math.random().toString(36).substring(2, 9);
+    }
+
+    this.friendsPresence = new Map();
+
+    // 1. BroadcastChannel for instant local cross-tab presence
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        this.presenceBus = new BroadcastChannel('cyber_presence_bus');
+        this.presenceBus.onmessage = (ev) => this.handlePresencePacket(ev.data, null);
+      }
+    } catch (e) {}
+
+    // 2. Background PeerJS Presence Peer for cross-device / remote Wi-Fi presence
+    if (typeof Peer !== 'undefined') {
+      try {
+        this.presencePeer = new Peer(this.userPresenceId, {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+          }
+        });
+
+        this.presencePeer.on('open', (id) => {
+          console.log('[Presence] Persistent presence registered:', id);
+          this.checkFriendsPresence();
+        });
+
+        this.presencePeer.on('connection', (conn) => {
+          conn.on('data', (data) => this.handlePresencePacket(data, conn));
+        });
+
+        this.presencePeer.on('error', (err) => {
+          console.warn('[Presence] Peer notice:', err.type);
+        });
+      } catch (err) {
+        console.warn('[Presence] Peer exception:', err);
+      }
+    }
+
+    // Initial check
+    this.checkFriendsPresence();
+
+    // 10-second heartbeat interval
+    if (this.presenceInterval) clearInterval(this.presenceInterval);
+    this.presenceInterval = setInterval(() => {
+      this.checkFriendsPresence();
+    }, 10000);
+  }
+
+  handlePresencePacket(data, conn) {
+    if (!data) return;
+
+    if (data.type === 'PRESENCE_PING') {
+      if (data.fromPresenceId === this.userPresenceId) return;
+
+      const pong = {
+        type: 'PRESENCE_PONG',
+        fromPresenceId: this.userPresenceId,
+        fromName: this.saveData.playerName || 'Cyber Operative',
+        avatar: this.getUserAvatar(),
+        status: 'ONLINE_IN_LOBBY'
+      };
+
+      if (conn && conn.open) {
+        try { conn.send(pong); } catch (e) {}
+      }
+      if (this.presenceBus) {
+        try { this.presenceBus.postMessage(pong); } catch (e) {}
+      }
+    } else if (data.type === 'PRESENCE_PONG') {
+      if (data.fromPresenceId === this.userPresenceId) return;
+
+      const info = {
+        online: true,
+        status: 'ONLINE - IN LOBBY',
+        name: data.fromName,
+        presenceId: data.fromPresenceId,
+        avatar: data.avatar || '🚀',
+        lastSeen: Date.now()
+      };
+
+      if (data.fromPresenceId) this.friendsPresence.set(data.fromPresenceId, info);
+      if (data.fromName) this.friendsPresence.set(data.fromName.toLowerCase(), info);
+
+      this.renderFriendsDrawer();
+    } else if (data.type === 'SQUAD_INVITE') {
+      this.handleSquadInvite(data);
+    }
+  }
+
+  checkFriendsPresence() {
+    const friends = this.getFriendsList();
+    if (!friends || friends.length === 0) return;
+
+    const now = Date.now();
+    // Decay presence if not seen in 22 seconds
+    friends.forEach((f) => {
+      const key = f.presenceId || f.peerId || f.name.toLowerCase();
+      const existing = this.friendsPresence.get(key) || this.friendsPresence.get(f.name.toLowerCase());
+      if (existing && (now - (existing.lastSeen || 0) > 22000)) {
+        existing.online = false;
+        existing.status = 'OFFLINE';
+      }
+    });
+
+    // Broadcast ping over BroadcastChannel
+    const ping = {
+      type: 'PRESENCE_PING',
+      fromPresenceId: this.userPresenceId,
+      fromName: this.saveData.playerName || 'Cyber Operative',
+      avatar: this.getUserAvatar()
+    };
+    if (this.presenceBus) {
+      try { this.presenceBus.postMessage(ping); } catch (e) {}
+    }
+
+    // Ping friends over PeerJS
+    if (this.presencePeer && !this.presencePeer.destroyed) {
+      friends.forEach((f) => {
+        const targetId = f.presenceId || f.peerId;
+        if (targetId && targetId !== this.userPresenceId) {
+          try {
+            const testConn = this.presencePeer.connect(targetId, { reliable: false });
+            testConn.on('open', () => {
+              testConn.send(ping);
+              const info = {
+                online: true,
+                status: 'ONLINE - IN LOBBY',
+                name: f.name,
+                presenceId: targetId,
+                avatar: f.avatar || '🚀',
+                lastSeen: Date.now()
+              };
+              this.friendsPresence.set(targetId, info);
+              this.friendsPresence.set(f.name.toLowerCase(), info);
+              this.renderFriendsDrawer();
+              setTimeout(() => { try { testConn.close(); } catch(e){} }, 1000);
+            });
+            testConn.on('error', () => {});
+          } catch (e) {}
+        }
+      });
+    }
+
+    this.renderFriendsDrawer();
+  }
+
+  sendSquadInvite(friendPeerId, friendName, btnEl) {
+    if (!this.roomCode) {
+      this.roomCode = this.generateSquadRoomCode();
+      const codeEl = document.getElementById('squad-generated-code');
+      if (codeEl) codeEl.textContent = this.roomCode;
+    }
+
+    const payload = {
+      type: 'SQUAD_INVITE',
+      hostName: this.saveData.playerName || 'Host Operative',
+      roomCode: this.roomCode,
+      hostPeerId: this.peer ? this.peer.id : this.userPresenceId,
+      targetName: friendName,
+      targetPeerId: friendPeerId
+    };
+
+    if (this.presenceBus) {
+      try { this.presenceBus.postMessage(payload); } catch (e) {}
+    }
+
+    if (friendPeerId && this.presencePeer && !this.presencePeer.destroyed) {
+      try {
+        const conn = this.presencePeer.connect(friendPeerId, { reliable: true });
+        conn.on('open', () => {
+          conn.send(payload);
+          setTimeout(() => { try { conn.close(); } catch(e){} }, 2000);
+        });
+      } catch (e) {}
+    }
+
+    if (btnEl) {
+      btnEl.textContent = 'INVITE SENT...';
+      btnEl.classList.add('sent');
+      btnEl.disabled = true;
+      setTimeout(() => {
+        if (btnEl) {
+          btnEl.textContent = '[+ INVITE TO SQUAD]';
+          btnEl.classList.remove('sent');
+          btnEl.disabled = false;
+        }
+      }, 3500);
+    }
+
+    this.showNotification(`Squad invite transmitted to ${friendName}!`, 'INVITE DISPATCHED', 'cyan');
+    this.audio.playDeflect();
+  }
+
+  handleSquadInvite(data) {
+    if (!data || !data.roomCode) return;
+    if (data.targetName && this.saveData.playerName && data.targetName.toLowerCase() !== this.saveData.playerName.toLowerCase() && data.targetPeerId !== this.userPresenceId) {
+      return;
+    }
+    if (data.hostPeerId === this.userPresenceId || (data.hostName && data.hostName.toLowerCase() === (this.saveData.playerName || '').toLowerCase())) {
+      return;
+    }
+
+    const modal = document.getElementById('squad-invite-modal');
+    const hostEl = document.getElementById('squad-invite-hostname');
+    const roomEl = document.getElementById('squad-invite-roomcode');
+    if (!modal) return;
+
+    if (hostEl) hostEl.textContent = data.hostName || 'Squad Host';
+    if (roomEl) roomEl.textContent = data.roomCode;
+    this.pendingSquadInviteCode = data.roomCode;
+
+    modal.classList.remove('hidden');
+    this.audio.playLevelUp();
+  }
+
+  acceptSquadInvite() {
+    const roomCode = this.pendingSquadInviteCode;
+    document.getElementById('squad-invite-modal')?.classList.add('hidden');
+    if (!roomCode) return;
+
+    const squadModal = document.getElementById('squad-lobby-modal');
+    if (squadModal) squadModal.classList.remove('hidden');
+
+    document.getElementById('tab-btn-join-squad')?.click();
+
+    const inputCode = document.getElementById('input-join-squad-code');
+    if (inputCode) inputCode.value = roomCode;
+
+    this.joinSquadRoom(roomCode);
+    this.showNotification(`Connecting to squad ${roomCode}...`, 'SQUAD JOIN', 'green');
+    this.audio.playLevelUp();
+  }
+
+  // ==========================================================================
   // SQUAD FRIEND REQUEST & CYBER CONTACT SYSTEM
   // ==========================================================================
   getFriendsList() {
@@ -8191,13 +8645,15 @@ class Game {
     return list.some(f => (peerId && f.peerId === peerId) || (name && f.name.toLowerCase() === name.toLowerCase()));
   }
 
-  addFriend(name, peerId) {
+  addFriend(name, peerId, avatar, presenceId) {
     if (!name && !peerId) return;
     const list = this.getFriendsList();
     if (!this.isFriend(name, peerId)) {
       list.push({
         name: name || 'Cyber Operative',
         peerId: peerId || '',
+        presenceId: presenceId || '',
+        avatar: avatar || '🚀',
         addedAt: new Date().toLocaleDateString()
       });
       try {
@@ -8205,6 +8661,7 @@ class Game {
       } catch (e) {}
     }
     this.updateSquadFriendsCount();
+    this.checkFriendsPresence();
     this.renderFriendsDrawer();
     if (this.isHost) {
       this.updateSquadLobbyUI();
@@ -8250,24 +8707,49 @@ class Game {
 
     container.innerHTML = '';
     list.forEach((f) => {
+      const presenceKey = f.presenceId || f.peerId || f.name.toLowerCase();
+      const pres = this.friendsPresence?.get(presenceKey) || this.friendsPresence?.get(f.name.toLowerCase());
+      const isOnline = Boolean(pres && pres.online);
+      const friendAvatar = pres?.avatar || f.avatar || '🚀';
+
       const row = document.createElement('div');
       row.className = 'friend-item-row';
       row.innerHTML = `
         <div class="friend-item-info">
-          <span style="font-size: 1rem;">👤</span>
+          <span style="font-size: 1.4rem; line-height: 1;">${friendAvatar}</span>
           <div>
             <div class="friend-item-name">${f.name}</div>
-            <div class="friend-item-date">Linked ${f.addedAt || 'Recently'}</div>
+            <div class="friend-item-presence">
+              ${isOnline
+                ? '<span class="presence-badge online"><span class="presence-dot pulsing"></span> 🟢 ONLINE - IN LOBBY</span>'
+                : '<span class="presence-badge offline"><span class="presence-dot dim"></span> ⚪ OFFLINE</span>'
+              }
+            </div>
+            <div class="friend-item-date" style="font-size: 0.65rem; color: #64748b; margin-top: 1px;">Linked ${f.addedAt || 'Recently'}</div>
           </div>
         </div>
-        <button class="btn-remove-friend" data-id="${f.peerId || f.name}">REMOVE</button>
+        <div class="friend-item-actions">
+          <button class="btn-squad-invite ${isOnline ? '' : 'disabled'}" ${isOnline ? '' : 'disabled'} data-peerid="${f.presenceId || f.peerId || ''}" data-name="${f.name}" title="${isOnline ? 'Invite to Squad' : 'Friend is currently offline'}">
+            [+ INVITE TO SQUAD]
+          </button>
+          <button class="btn-remove-friend" data-id="${f.peerId || f.name}">REMOVE</button>
+        </div>
       `;
+
+      const inviteBtn = row.querySelector('.btn-squad-invite');
+      if (inviteBtn && isOnline) {
+        inviteBtn.onclick = () => {
+          this.sendSquadInvite(f.presenceId || f.peerId, f.name, inviteBtn);
+        };
+      }
+
       const remBtn = row.querySelector('.btn-remove-friend');
       if (remBtn) {
         remBtn.onclick = () => {
           this.removeFriend(f.peerId || f.name);
         };
       }
+
       container.appendChild(row);
     });
   }
@@ -8285,6 +8767,8 @@ class Game {
       type: 'FRIEND_REQUEST',
       from: this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
       fromPeerId: this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot))),
+      fromPresenceId: this.userPresenceId,
+      avatar: this.getUserAvatar(),
       fromSlot: this.mySlot || (this.isHost ? 1 : 2),
       targetPeerId: targetPeerId,
       targetSlot: targetSlot
@@ -8316,7 +8800,7 @@ class Game {
     this.showNotification(`Friend request transmitted to ${targetName}!`, 'REQUEST PENDING', 'cyan');
   }
 
-  showFriendRequestToast(fromName, fromPeerId, fromSlot) {
+  showFriendRequestToast(fromName, fromPeerId, fromSlot, avatar, fromPresenceId) {
     if (this.isFriend(fromName, fromPeerId)) return;
 
     let container = document.getElementById('friend-toast-container');
@@ -8330,7 +8814,7 @@ class Game {
     toast.className = 'cyber-friend-toast';
     toast.innerHTML = `
       <div class="friend-toast-header">
-        <span class="friend-toast-icon">⚡</span>
+        <span class="friend-toast-icon">${avatar || '⚡'}</span>
         <span class="friend-toast-title">INCOMING SQUAD FRIEND LINK</span>
       </div>
       <div class="friend-toast-body">
@@ -8358,7 +8842,7 @@ class Game {
     if (acceptBtn) {
       acceptBtn.onclick = () => {
         dismiss();
-        this.acceptFriendRequest(fromName, fromPeerId, fromSlot);
+        this.acceptFriendRequest(fromName, fromPeerId, fromSlot, avatar, fromPresenceId);
       };
     }
 
@@ -8376,13 +8860,15 @@ class Game {
     setTimeout(dismiss, 16000);
   }
 
-  acceptFriendRequest(fromName, fromPeerId, fromSlot) {
-    this.addFriend(fromName, fromPeerId);
+  acceptFriendRequest(fromName, fromPeerId, fromSlot, avatar, presenceId) {
+    this.addFriend(fromName, fromPeerId, avatar, presenceId);
 
     const acceptPacket = {
       type: 'FRIEND_ACCEPT',
       from: this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
       fromPeerId: this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot))),
+      fromPresenceId: this.userPresenceId,
+      avatar: this.getUserAvatar(),
       fromSlot: this.mySlot || (this.isHost ? 1 : 2),
       targetPeerId: fromPeerId,
       targetSlot: fromSlot
@@ -8423,6 +8909,7 @@ class Game {
         isLocal: false,
         peerId: p.peerId,
         name: p.name,
+        avatar: p.avatar || '🚀',
         hero: p.hero,
         heroId: p.heroId,
         color: p.color,
@@ -8463,6 +8950,7 @@ class Game {
           isLocal: false,
           peerId: p.peerId,
           name: p.name,
+          avatar: p.avatar || '🚀',
           hero: hero,
           heroId: p.heroId,
           color: slotDef.color,
@@ -8528,6 +9016,7 @@ class Game {
       id: localPlayerId,
       slot: this.mySlot || (this.isHost ? 1 : 2),
       name: this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
+      avatar: this.getUserAvatar(),
       heroId: this.selectedHero || 'commando',
       x: this.player.x,
       y: this.player.y,
@@ -8561,6 +9050,7 @@ class Game {
           slot: 1,
           id: localPlayerId,
           name: this.saveData.playerName || 'Host Operative',
+          avatar: this.getUserAvatar(),
           hp: Math.round(this.player.hp),
           maxHp: Math.round(this.player.maxHp),
           shield: Math.round(this.player.shield),
@@ -8575,6 +9065,7 @@ class Game {
             slot: m.slot,
             id: m.peerId || m.id,
             name: m.name,
+            avatar: m.avatar || '🚀',
             hp: Math.round(m.hp),
             maxHp: Math.round(m.maxHp),
             shield: Math.round(m.shield),
@@ -8664,6 +9155,7 @@ class Game {
             (state.peerId && m.peerId === state.peerId)
           );
           if (member) {
+            if (state.avatar) member.avatar = state.avatar;
             if (typeof state.x === 'number') member.x = state.x;
             if (typeof state.y === 'number') member.y = state.y;
             if (typeof state.angle === 'number') member.angle = state.angle;
@@ -8951,7 +9443,7 @@ class Game {
           : 'ACTIVE';
 
       card.innerHTML = `
-        <div class="hud-squad-avatar">${m.hero?.icon || '👤'}</div>
+        <div class="hud-squad-avatar">${m.avatar || m.hero?.icon || '👤'}</div>
         <div class="hud-squad-info">
           <div class="hud-squad-name-row">
             <span class="hud-squad-name" style="color: ${slotDef.color};">[P${m.slot}] ${m.name}</span>
@@ -9150,7 +9642,7 @@ class Game {
     ctx.stroke();
 
     ctx.fillStyle = m.isDowned ? '#ff3366' : '#ffffff';
-    ctx.fillText(`[P${m.slot}] ${m.name}`, tx, plateY + 2);
+    ctx.fillText(`${m.avatar ? m.avatar + ' ' : ''}[P${m.slot}] ${m.name}`, tx, plateY + 2);
 
     if (!m.isDowned) {
       const barW = 60;

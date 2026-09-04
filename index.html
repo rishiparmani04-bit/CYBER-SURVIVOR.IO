@@ -326,8 +326,9 @@
 
       <div class="topbar-right">
         <div class="user-profile-badge">
-          <div class="user-avatar-frame">
-            <span id="topbar-hero-avatar">🪖</span>
+          <div class="user-avatar-frame" id="topbar-avatar-frame" title="Click to customize Operative Avatar">
+            <span id="topbar-hero-avatar">🚀</span>
+            <span class="avatar-edit-badge" title="Customize Avatar">✏️ EDIT</span>
           </div>
           <div class="user-meta">
             <div class="user-handle" id="topbar-player-name" contenteditable="true" spellcheck="false" title="Click to change your handle">badhash</div>
@@ -1441,7 +1442,10 @@
           <!-- Slot 1: Host (P1) -->
           <div class="squad-slot-card host-slot" id="slot-card-1">
             <div class="slot-badge p1-badge">P1 [HOST]</div>
-            <div class="slot-avatar" id="slot-1-avatar">🚀</div>
+            <div class="slot-avatar" id="slot-1-avatar" title="Click to customize Operative Avatar">
+              <span id="slot-1-avatar-icon">🚀</span>
+              <span class="slot-avatar-edit-tag">✏️</span>
+            </div>
             <div class="slot-name" id="slot-1-name">OPERATIVE (YOU)</div>
             <div class="slot-hero" id="slot-1-hero">COMMANDO</div>
             <div class="slot-status ready">
@@ -1787,6 +1791,71 @@
         <button id="btn-claim-ad-reward" class="btn-primary btn-claim-ad disabled" disabled>
           <span>⏳ WATCHING AD (5s)...</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operative Avatar Protocol Modal -->
+  <div id="avatarModal" class="modal-backdrop hidden">
+    <div class="modal-card avatar-modal-card">
+      <div class="avatar-modal-header">
+        <div class="avatar-modal-title-group">
+          <span class="avatar-modal-icon">🎭</span>
+          <div>
+            <h2 class="avatar-modal-title">OPERATIVE AVATAR PROTOCOL</h2>
+            <span class="avatar-modal-sub">SELECT YOUR CYBERNETIC COMBAT AVATAR IDENTIFIER</span>
+          </div>
+        </div>
+        <button id="btn-close-avatar-modal" class="alert-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="avatar-modal-body">
+        <!-- Live Selected Preview -->
+        <div class="avatar-live-preview-box">
+          <div class="avatar-preview-badge" id="avatar-preview-icon">🚀</div>
+          <div class="avatar-preview-meta">
+            <div class="avatar-preview-name" id="avatar-preview-name">Vanguard Rocket</div>
+            <div class="avatar-preview-desc" id="avatar-preview-desc">High-velocity strike operative &bull; Kinetic vanguard</div>
+          </div>
+        </div>
+
+        <!-- Avatar Selection Grid -->
+        <div class="avatar-grid" id="avatar-selection-grid">
+          <!-- Dynamically injected via script.js -->
+        </div>
+      </div>
+
+      <div class="avatar-modal-actions">
+        <button id="btn-confirm-avatar" class="btn-avatar-confirm">✓ CONFIRM &amp; EQUIP</button>
+        <button id="btn-cancel-avatar" class="btn-avatar-cancel">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Squad Comm-Link Invitation Modal -->
+  <div id="squad-invite-modal" class="modal-backdrop hidden">
+    <div class="modal-card squad-invite-card">
+      <div class="invite-header">
+        <span class="invite-icon-pulse">📡</span>
+        <div class="invite-header-titles">
+          <h3 class="invite-title">SQUAD COMM-LINK INVITATION</h3>
+          <span class="invite-sub">INCOMING ENCRYPTED TACTICAL TRANSMISSION</span>
+        </div>
+        <button id="btn-close-invite-modal" class="alert-close-btn" aria-label="Close">✕</button>
+      </div>
+      <div class="invite-body">
+        <div class="invite-radar-ring"></div>
+        <p class="invite-desc-text">
+          <strong id="squad-invite-hostname" class="invite-hostname">Host</strong> has invited you to join Squad Room:
+        </p>
+        <div class="invite-room-chip">
+          <span class="invite-room-label">ROOM CODE</span>
+          <span id="squad-invite-roomcode" class="invite-room-val">CYBER-42X</span>
+        </div>
+      </div>
+      <div class="invite-actions">
+        <button id="btn-accept-squad-invite" class="btn-invite-accept">⚡ ACCEPT &amp; JOIN</button>
+        <button id="btn-decline-squad-invite" class="btn-invite-decline">DECLINE</button>
       </div>
     </div>
   </div>
