@@ -2676,6 +2676,43 @@ body.playing .hud-btn {
   transition: width 0.1s linear;
 }
 
+.btn-self-redeploy {
+  pointer-events: auto;
+  margin-top: 10px;
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.25), rgba(255, 0, 68, 0.35));
+  border: 1px solid #ffaa00;
+  color: #ffcc00;
+  font-family: var(--font-title, sans-serif);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-self-redeploy:hover:not(:disabled) {
+  background: #ffaa00;
+  color: #050811;
+  box-shadow: 0 0 25px rgba(255, 170, 0, 0.8);
+  transform: scale(1.04);
+}
+
+.btn-self-redeploy:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: #64748b;
+  color: #94a3b8;
+  background: rgba(30, 41, 59, 0.5);
+  box-shadow: none;
+}
+
 .touch-btn-revive {
   background: rgba(0, 255, 136, 0.35);
   border-color: #00ff88;

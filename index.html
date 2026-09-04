@@ -207,11 +207,12 @@
     <!-- Downed Alert Banner (When local player is knocked down) -->
     <div id="hud-downed-banner" class="hud-downed-banner hidden">
       <div class="downed-banner-content">
-        <div class="downed-banner-title">⚠️ CRITICAL: OPERATIVE DOWNED!</div>
-        <div class="downed-banner-sub">Bleeding out: <strong id="hud-bleedout-timer">30</strong>s &bull; Wait for teammate to revive you!</div>
+        <div class="downed-banner-title">⚠️ SQUAD CRITICAL: OPERATIVE DOWNED!</div>
+        <div class="downed-banner-sub">Bleeding out: <strong id="hud-bleedout-timer">30</strong>s &bull; Stay near teammate to revive!</div>
         <div class="downed-bar-track">
           <div class="downed-bar-fill" id="hud-downed-fill" style="width: 100%;"></div>
         </div>
+        <button id="btn-self-redeploy" class="btn-self-redeploy hidden">⚡ WATCH AD / AUTO-REDEPLOY (<span id="redeploy-timer-sec">10</span>s)</button>
       </div>
     </div>
 

@@ -3070,6 +3070,7 @@ class Game {
       }
     });
     document.getElementById('btn-quit-to-menu')?.addEventListener('click', () => this.returnToMenu());
+    document.getElementById('btn-self-redeploy')?.addEventListener('click', () => this.selfRedeployPlayer());
     document.getElementById('btn-retry')?.addEventListener('click', () => {
       if (window.AdManager) {
         window.AdManager.showInterstitial({
@@ -5359,6 +5360,18 @@ class Game {
   }
 
   gameOver() {
+    // Co-op Squad Game Over Logic: Trigger gameOver() ONLY when ALL active players are downed simultaneously
+    if (this.isPrivateMatch && this.squadMembers && this.squadMembers.length > 0) {
+      const anyTeammateAlive = this.squadMembers.some(m => !m.isDowned);
+      if (anyTeammateAlive) {
+        if (!this.player.isDowned) {
+          this.enterPlayerDownedState();
+        }
+        return;
+      }
+    }
+
+    document.getElementById('hud-downed-banner')?.classList.add('hidden');
     this.state = 'GAMEOVER';
     document.body.classList.remove('playing');
     this.audio.playExplosion();
@@ -6367,15 +6380,21 @@ class Game {
 
     // Downed Player State Handling
     if (this.player.isDowned) {
-      this.player.downedTimer -= dt;
+      this.player.downedTimer = Math.max(0, this.player.downedTimer - dt);
       const bleedEl = document.getElementById('hud-bleedout-timer');
       const bleedFill = document.getElementById('hud-downed-fill');
       if (bleedEl) bleedEl.textContent = Math.max(0, Math.ceil(this.player.downedTimer));
       if (bleedFill) bleedFill.style.width = `${Math.max(0, (this.player.downedTimer / 30) * 100)}%`;
 
       if (this.player.downedTimer <= 0) {
-        this.gameOver();
-        return;
+        if (!this.isPrivateMatch) {
+          this.gameOver();
+          return;
+        } else if (this.squadMembers && this.squadMembers.length > 0 && this.squadMembers.every(m => m.isDowned)) {
+          if (this.isHost) this.broadcastToSquad({ type: 'SQUAD_GAME_OVER' });
+          this.gameOver();
+          return;
+        }
       }
     }
 
@@ -6981,6 +7000,39 @@ class Game {
       }
     }
 
+    // 5.5 Universal Squad Damage Collision (Host Authoritative & Client Local)
+    if (this.isPrivateMatch) {
+      if (this.isHost && this.squadMembers && this.squadMembers.length > 0) {
+        // Host Authoritatively computes enemy collision against ALL squad members
+        this.squadMembers.forEach((member) => {
+          if (member.isDowned) return;
+          if (member.invulnTime > 0) member.invulnTime = Math.max(0, member.invulnTime - dt);
+
+          this.enemies.forEach((enemy) => {
+            if (enemy.dead) return;
+            const dist = Math.hypot(member.x - enemy.x, member.y - enemy.y);
+            const mRadius = member.radius || 16;
+            const eRadius = enemy.radius || 16;
+            if (dist < mRadius + eRadius) {
+              this.applySquadMemberDamage(member, enemy.damage || 15);
+            }
+          });
+        });
+      }
+
+      // Both Host and Client compute collision against local player
+      if (!this.player.isDowned) {
+        this.enemies.forEach((enemy) => {
+          if (enemy.dead) return;
+          const dist = Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y);
+          const eRadius = enemy.radius || 16;
+          if (dist < this.player.radius + eRadius) {
+            this.damagePlayer(enemy.damage || 15);
+          }
+        });
+      }
+    }
+
     // 6. Pickups Magnet & Collection
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const p = this.pickups[i];
@@ -7080,9 +7132,13 @@ class Game {
 
     if (this.player.hp <= 0) {
       this.player.hp = 0;
-      const anyTeammateAlive = this.isPrivateMatch && this.squadMembers.some(m => !m.isDowned);
-      if (anyTeammateAlive) {
+      if (this.isPrivateMatch) {
         this.enterPlayerDownedState();
+        const allSquadDowned = this.squadMembers.length > 0 && this.squadMembers.every(m => m.isDowned);
+        if (allSquadDowned) {
+          if (this.isHost) this.broadcastToSquad({ type: 'SQUAD_GAME_OVER' });
+          this.gameOver();
+        }
       } else {
         this.gameOver();
       }
@@ -7119,8 +7175,14 @@ class Game {
     }
   }
 
+  applySquadMemberDamage(member, amount) {
+    this.damageSquadMember(member, amount);
+  }
+
   damageSquadMember(member, amount) {
     if (!member || member.isDowned) return;
+    if (member.invulnTime && member.invulnTime > 0) return;
+    member.invulnTime = 0.35;
 
     if (member.shield > 0) {
       const shieldDmg = Math.min(member.shield, amount);
@@ -7140,6 +7202,26 @@ class Game {
       this.particles.addShockwave(member.x, member.y, 80, '#ff0044', 0.4);
       this.particles.addCombatText(member.x, member.y - 40, `${member.name.toUpperCase()} DOWNED!`, '#ff0044', true);
       this.showNotification(`${member.name} has been downed! Revive them!`, 'SQUAD CASUALTY', 'red');
+
+      // Check if this down wiped the entire squad
+      if (this.isPrivateMatch && this.player && this.player.isDowned) {
+        const allSquadDowned = this.squadMembers.length > 0 && this.squadMembers.every(m => m.isDowned);
+        if (allSquadDowned) {
+          if (this.isHost) this.broadcastToSquad({ type: 'SQUAD_GAME_OVER' });
+          this.gameOver();
+          return;
+        }
+      }
+    }
+
+    // Update squadPeers map if on Host
+    if (this.isHost && this.squadPeers) {
+      const p = this.squadPeers.get(member.peerId || member.id);
+      if (p) {
+        p.hp = member.hp;
+        p.shield = member.shield;
+        p.isDowned = member.isDowned;
+      }
     }
 
     const healthPacket = {
@@ -7587,6 +7669,8 @@ class Game {
         maxHp: typeof data.maxHp === 'number' ? data.maxHp : 150,
         shield: typeof data.shield === 'number' ? data.shield : 50,
         maxShield: typeof data.maxShield === 'number' ? data.maxShield : 50,
+        radius: 16,
+        invulnTime: 0,
         isDowned: Boolean(data.isDowned),
         downedTimer: typeof data.downedTimer === 'number' ? data.downedTimer : 0,
         reviveProgress: 0,
@@ -7696,6 +7780,8 @@ class Game {
         maxHp: peerHero.hp + 50,
         shield: peerHero.shield + 20,
         maxShield: peerHero.shield + 20,
+        radius: 16,
+        invulnTime: 0,
         isDowned: false,
         downedTimer: 0,
         reviveProgress: 0,
@@ -7739,9 +7825,45 @@ class Game {
           targetPeer.shield = Math.round(targetPeer.maxShield * 0.5);
           targetPeer.downedTimer = 0;
           targetPeer.reviveProgress = 0;
-          this.broadcastToSquad({ type: 'REVIVE_SUCCESS', peerId: data.targetPeerId });
+          this.broadcastToSquad({ type: 'PLAYER_REVIVED', peerId: data.targetPeerId, id: data.targetPeerId });
         }
       }
+    } else if (data.type === 'PLAYER_REVIVED' || data.type === 'REVIVE_SUCCESS') {
+      const targetPeerId = data.peerId || data.targetPeerId || data.id;
+      const targetSlot = data.slot || data.targetSlot;
+      if (targetSlot === 1 || targetPeerId === this.peer?.id || targetPeerId === this.localPlayerId || targetPeerId === 'host_p1') {
+        this.reviveLocalPlayer();
+      } else {
+        const targetPeer = (targetPeerId && this.squadPeers?.get(targetPeerId)) ||
+                           Array.from(this.squadPeers?.values() || []).find(p => p.slot === targetSlot);
+        if (targetPeer) {
+          targetPeer.isDowned = false;
+          targetPeer.hp = Math.round(targetPeer.maxHp * 0.5);
+          targetPeer.shield = Math.round(targetPeer.maxShield * 0.5);
+          targetPeer.downedTimer = 0;
+          targetPeer.reviveProgress = 0;
+        }
+      }
+      const member = (this.squadMembers || []).find(m =>
+        (targetSlot && m.slot === targetSlot) ||
+        (targetPeerId && (m.id === targetPeerId || m.peerId === targetPeerId))
+      );
+      if (member) {
+        member.isDowned = false;
+        member.hp = Math.round(member.maxHp * 0.5);
+        member.shield = Math.round(member.maxShield * 0.5);
+        member.reviveProgress = 0;
+        member.downedTimer = 0;
+        this.showNotification(`${member.name} is back in the fight!`, 'SQUAD REVIVE', 'green');
+        this.audio.playLevelUp();
+      }
+      this.broadcastToSquad({
+        type: 'PLAYER_REVIVED',
+        id: targetPeerId,
+        slot: targetSlot,
+        peerId: targetPeerId
+      });
+      this.updateMultiplayerSquadHUD();
     } else if (data.type === 'BULLET_HIT') {
       const targetEnemy = this.enemies.find(e => e.id === data.enemyId);
       if (targetEnemy && !targetEnemy.dead) {
@@ -7825,10 +7947,35 @@ class Game {
           this.renderClientSquadPreview(this.lastClientRoster);
         }
       }
-    } else if (data.type === 'REVIVE_SUCCESS') {
-      if (data.peerId === this.peer?.id || this.mySlot === data.slot) {
+    } else if (data.type === 'REVIVE_SUCCESS' || data.type === 'PLAYER_REVIVED') {
+      const targetPeerId = data.peerId || data.targetPeerId || data.id;
+      const targetSlot = data.slot || data.targetSlot;
+      if (targetSlot === this.mySlot || (this.peer && targetPeerId === this.peer.id) || targetPeerId === this.localPlayerId) {
         this.reviveLocalPlayer();
+      } else {
+        const member = (this.squadMembers || []).find(m =>
+          (targetSlot && m.slot === targetSlot) ||
+          (targetPeerId && (m.id === targetPeerId || m.peerId === targetPeerId))
+        );
+        if (member) {
+          member.isDowned = false;
+          member.hp = Math.round(member.maxHp * 0.5);
+          member.shield = Math.round(member.maxShield * 0.5);
+          member.reviveProgress = 0;
+          member.downedTimer = 0;
+          this.showNotification(`${member.name} is back in the fight!`, 'TEAMMATE REVIVED', 'green');
+          this.audio.playLevelUp();
+        }
       }
+      this.updateMultiplayerSquadHUD();
+    } else if (data.type === 'SQUAD_GAME_OVER') {
+      if (this.squadMembers) {
+        this.squadMembers.forEach(m => m.isDowned = true);
+      }
+      if (this.player) {
+        this.player.isDowned = true;
+      }
+      this.gameOver();
     }
   }
 
@@ -8288,6 +8435,8 @@ class Game {
         maxHp: p.maxHp,
         shield: p.shield,
         maxShield: p.maxShield,
+        radius: 16,
+        invulnTime: 0,
         isDowned: p.isDowned,
         downedTimer: p.downedTimer,
         reviveProgress: p.reviveProgress,
@@ -8326,6 +8475,8 @@ class Game {
           maxHp: hero.hp + 50,
           shield: hero.shield + 20,
           maxShield: hero.shield + 20,
+          radius: 16,
+          invulnTime: 0,
           isDowned: false,
           downedTimer: 0,
           reviveProgress: 0,
@@ -8404,11 +8555,41 @@ class Game {
         try { this.localNetChannel.postMessage(payload); } catch (e) {}
       }
 
-      // Host also broadcasts authoritative wave progression
+      // Host broadcasts authoritative wave progression and SQUAD HP/Shield/Downed Snapshot
+      const squadSnapshot = [
+        {
+          slot: 1,
+          id: localPlayerId,
+          name: this.saveData.playerName || 'Host Operative',
+          hp: Math.round(this.player.hp),
+          maxHp: Math.round(this.player.maxHp),
+          shield: Math.round(this.player.shield),
+          maxShield: Math.round(this.player.maxShield),
+          isDowned: Boolean(this.player.isDowned),
+          downedTimer: Math.round(this.player.downedTimer)
+        }
+      ];
+      if (this.squadMembers) {
+        this.squadMembers.forEach((m) => {
+          squadSnapshot.push({
+            slot: m.slot,
+            id: m.peerId || m.id,
+            name: m.name,
+            hp: Math.round(m.hp),
+            maxHp: Math.round(m.maxHp),
+            shield: Math.round(m.shield),
+            maxShield: Math.round(m.maxShield),
+            isDowned: Boolean(m.isDowned),
+            downedTimer: Math.round(m.downedTimer)
+          });
+        });
+      }
+
       const hostSyncPacket = {
         type: 'HOST_SYNC',
         wave: this.wave,
-        waveTimer: this.waveTimer
+        waveTimer: this.waveTimer,
+        squad: squadSnapshot
       };
       this.broadcastToSquad(hostSyncPacket);
 
@@ -8454,18 +8635,44 @@ class Game {
     if (data.squad && Array.isArray(data.squad)) {
       data.squad.forEach((state) => {
         if (state.slot === this.mySlot) {
-          if (!state.isDowned && this.player.isDowned) {
+          // Authoritative Host health/downed state synchronization for my own local player
+          if (typeof state.hp === 'number') {
+            this.player.hp = state.hp;
+          }
+          if (typeof state.maxHp === 'number') {
+            this.player.maxHp = state.maxHp;
+          }
+          if (typeof state.shield === 'number') {
+            this.player.shield = state.shield;
+          }
+          if (typeof state.maxShield === 'number') {
+            this.player.maxShield = state.maxShield;
+          }
+          if (state.isDowned && !this.player.isDowned) {
+            this.enterPlayerDownedState();
+          } else if (!state.isDowned && this.player.isDowned) {
             this.reviveLocalPlayer();
           }
+          if (typeof state.downedTimer === 'number' && this.player.isDowned) {
+            this.player.downedTimer = state.downedTimer;
+          }
+          this.updateHUD();
         } else {
-          const member = this.squadMembers.find(m => m.slot === state.slot || (state.peerId && m.peerId === state.peerId));
+          const member = this.squadMembers.find(m =>
+            (state.slot && m.slot === state.slot) ||
+            (state.id && (m.id === state.id || m.peerId === state.id)) ||
+            (state.peerId && m.peerId === state.peerId)
+          );
           if (member) {
             if (typeof state.x === 'number') member.x = state.x;
             if (typeof state.y === 'number') member.y = state.y;
             if (typeof state.angle === 'number') member.angle = state.angle;
             if (typeof state.hp === 'number') member.hp = state.hp;
+            if (typeof state.maxHp === 'number') member.maxHp = state.maxHp;
             if (typeof state.shield === 'number') member.shield = state.shield;
+            if (typeof state.maxShield === 'number') member.maxShield = state.maxShield;
             if (typeof state.isDowned === 'boolean') member.isDowned = state.isDowned;
+            if (typeof state.downedTimer === 'number') member.downedTimer = state.downedTimer;
           }
         }
       });
@@ -8507,85 +8714,217 @@ class Game {
     this.player.isDowned = true;
     this.player.downedTimer = 30;
     this.player.reviveProgress = 0;
+    this.player.redeployWaitTimer = 10;
     this.player.speed = this.player.hero.speed * 0.35; // crawl speed
 
     const downedBanner = document.getElementById('hud-downed-banner');
     if (downedBanner) downedBanner.classList.remove('hidden');
 
+    const redeployBtn = document.getElementById('btn-self-redeploy');
+    if (redeployBtn) {
+      redeployBtn.classList.remove('hidden');
+      redeployBtn.disabled = true;
+      const secSpan = document.getElementById('redeploy-timer-sec');
+      if (secSpan) secSpan.textContent = '10';
+      redeployBtn.innerHTML = '⚡ WATCH AD / AUTO-REDEPLOY (<span id="redeploy-timer-sec">10</span>s)';
+    }
+
     this.particles.addShockwave(this.player.x, this.player.y, 100, '#ff0044', 0.4);
     this.particles.addCombatText(this.player.x, this.player.y - 50, 'OPERATIVE DOWNED!', '#ff0044', true);
-    this.showNotification('OPERATIVE DOWNED! Squadmate must revive you within 30s!', 'SQUAD CRITICAL', 'red');
+    this.showNotification('OPERATIVE DOWNED! Teammates can revive in 3s, or Auto-Redeploy in 10s!', 'SQUAD CRITICAL', 'red');
 
+    this.updateHUD();
     this.updateMultiplayerSquadHUD();
+    this.broadcastHealthUpdate();
   }
 
   reviveLocalPlayer() {
     this.player.isDowned = false;
     this.player.downedTimer = 0;
     this.player.reviveProgress = 0;
-    this.player.hp = Math.round(this.player.maxHp * 0.45);
+    this.player.redeployWaitTimer = 0;
+    this.player.hp = Math.round(this.player.maxHp * 0.5);
     this.player.shield = Math.round(this.player.maxShield * 0.5);
     this.player.invulnTime = 3.0;
     this.player.speed = this.player.hero.speed;
 
     document.getElementById('hud-downed-banner')?.classList.add('hidden');
+    document.getElementById('btn-self-redeploy')?.classList.add('hidden');
+    document.getElementById('hud-revive-prompt')?.classList.add('hidden');
+
     this.audio.playLevelUp();
     this.particles.addShockwave(this.player.x, this.player.y, 160, '#00ff88', 0.4);
     this.particles.addCombatText(this.player.x, this.player.y - 50, 'REVIVED! BACK IN FIGHT!', '#00ff88', true);
-    this.showNotification('You have been revived by your squad!', 'REVIVED', 'green');
+    this.showNotification('Operative restored! 50% HP & Shield rebooted.', 'REVIVED', 'green');
+
     this.updateHUD();
     this.updateMultiplayerSquadHUD();
+    this.broadcastHealthUpdate();
+
+    const revivePacket = {
+      type: 'PLAYER_REVIVED',
+      id: this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot))),
+      slot: this.mySlot || (this.isHost ? 1 : 2)
+    };
+    if (this.isHost) {
+      this.broadcastToSquad(revivePacket);
+    } else {
+      if (this.hostConn && this.hostConn.open) {
+        try { this.hostConn.send(revivePacket); } catch (e) {}
+      }
+      if (this.localNetChannel) {
+        try { this.localNetChannel.postMessage(revivePacket); } catch (e) {}
+      }
+    }
+  }
+
+  selfRedeployPlayer() {
+    if (!this.player || !this.player.isDowned) return;
+    if (this.player.redeployWaitTimer > 0) return;
+
+    this.reviveLocalPlayer();
+    this.showNotification('⚡ AUTO-REDEPLOYED! Back in the combat zone!', 'REDEPLOYED', 'green');
+    this.audio.playLevelUp();
+    this.particles.addShockwave(this.player.x, this.player.y, 200, '#00ff88', 0.5);
   }
 
   // Revive tether mechanic across all connected real players
   handleSquadReviveTethers(dt) {
-    if (!this.player || !this.squadMembers.length) return;
+    if (!this.player || !this.isPrivateMatch) return;
 
-    // 1. If local player is downed: tick bleedout timer
+    const promptEl = document.getElementById('hud-revive-prompt');
+    const promptTitle = document.getElementById('revive-prompt-title');
+    const promptHint = document.getElementById('revive-prompt-hint');
+    const circleFill = document.getElementById('hud-revive-circle-fill');
+    const pctEl = document.getElementById('hud-revive-pct');
+
+    // 1. If local player is downed: tick bleedout timer & redeploy timer
     if (this.player.isDowned) {
-      this.player.downedTimer -= dt;
+      this.player.downedTimer = Math.max(0, this.player.downedTimer - dt);
       const timerEl = document.getElementById('hud-bleedout-timer');
       const fillEl = document.getElementById('hud-downed-fill');
       if (timerEl) timerEl.textContent = Math.max(0, Math.ceil(this.player.downedTimer));
       if (fillEl) fillEl.style.width = `${Math.max(0, (this.player.downedTimer / 30) * 100)}%`;
 
+      // Auto-redeploy countdown (10 seconds)
+      this.player.redeployWaitTimer = Math.max(0, (typeof this.player.redeployWaitTimer === 'number' ? this.player.redeployWaitTimer : 10) - dt);
+      const redeployBtn = document.getElementById('btn-self-redeploy');
+      const timerSecSpan = document.getElementById('redeploy-timer-sec');
+      if (redeployBtn) {
+        redeployBtn.classList.remove('hidden');
+        if (this.player.redeployWaitTimer > 0) {
+          redeployBtn.disabled = true;
+          if (timerSecSpan) timerSecSpan.textContent = Math.ceil(this.player.redeployWaitTimer);
+        } else {
+          redeployBtn.disabled = false;
+          redeployBtn.innerHTML = '⚡ WATCH AD / AUTO-REDEPLOY <strong>(READY)</strong>';
+        }
+      }
+
+      // Check if any alive teammate is near local player to revive them
+      const aliveTeammates = (this.squadMembers || []).filter(m => !m.isDowned && Math.hypot(this.player.x - m.x, this.player.y - m.y) <= 75);
+      if (aliveTeammates.length > 0) {
+        const reviver = aliveTeammates[0];
+        this.player.reviveProgress = Math.min(1.0, (this.player.reviveProgress || 0) + dt / 3.0); // 3 seconds
+        this.particles.addSpark(this.player.x + (Math.random() - 0.5) * 20, this.player.y + (Math.random() - 0.5) * 20, '#00ff88');
+
+        if (promptEl) promptEl.classList.remove('hidden');
+        if (promptTitle) promptTitle.textContent = 'RECEIVING REVIVE';
+        if (promptHint) promptHint.textContent = `${reviver.name.toUpperCase()} IS REVIVING YOU`;
+        const pct = Math.round(this.player.reviveProgress * 100);
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        if (circleFill) circleFill.style.strokeDashoffset = 113.1 * (1 - this.player.reviveProgress);
+
+        if (this.player.reviveProgress >= 1.0) {
+          this.reviveLocalPlayer();
+          return;
+        }
+      } else {
+        this.player.reviveProgress = Math.max(0, (this.player.reviveProgress || 0) - dt * 0.25);
+        if (this.player.reviveProgress <= 0 && promptEl && this.player.isDowned) {
+          promptEl.classList.add('hidden');
+        }
+      }
+
+      // Bleedout check: only gameOver if ALL squad members are downed
       if (this.player.downedTimer <= 0) {
-        this.gameOver();
-        return;
+        this.player.downedTimer = 0;
+        const allSquadDowned = this.squadMembers && this.squadMembers.length > 0 && this.squadMembers.every(m => m.isDowned);
+        if (allSquadDowned) {
+          if (this.isHost) this.broadcastToSquad({ type: 'SQUAD_GAME_OVER' });
+          this.gameOver();
+          return;
+        }
       }
     }
 
-    // 2. Check revives on any downed squad members near local player
-    this.squadMembers.forEach((member) => {
-      if (member.isDowned) {
-        member.downedTimer = Math.max(0, member.downedTimer - dt);
-        const dist = Math.hypot(this.player.x - member.x, this.player.y - member.y);
+    // 2. If local player is alive: check revives on any nearby downed squad members
+    if (!this.player.isDowned && this.squadMembers && this.squadMembers.length > 0) {
+      let revivingTeammate = null;
+      this.squadMembers.forEach((member) => {
+        if (member.isDowned) {
+          member.downedTimer = Math.max(0, (member.downedTimer || 30) - dt);
+          const dist = Math.hypot(this.player.x - member.x, this.player.y - member.y);
 
-        // If local player is alive and within 75px revive radius
-        if (!this.player.isDowned && dist <= 75) {
-          member.reviveProgress = Math.min(1.0, member.reviveProgress + dt * 0.35); // takes ~2.8s
-          this.particles.addSpark(member.x + (Math.random() - 0.5) * 20, member.y + (Math.random() - 0.5) * 20, '#00ff88');
+          if (dist <= 75) {
+            revivingTeammate = member;
+            member.reviveProgress = Math.min(1.0, (member.reviveProgress || 0) + dt / 3.0); // 3 seconds
+            this.particles.addSpark(member.x + (Math.random() - 0.5) * 20, member.y + (Math.random() - 0.5) * 20, '#00ff88');
 
-          if (member.reviveProgress >= 1.0) {
-            member.isDowned = false;
-            member.hp = Math.round(member.maxHp * 0.5);
-            member.shield = Math.round(member.maxShield * 0.5);
-            member.reviveProgress = 0;
-            this.showNotification(`You revived ${member.name}!`, 'REVIVE COMPLETE', 'green');
-            this.audio.playLevelUp();
+            if (promptEl) promptEl.classList.remove('hidden');
+            if (promptTitle) promptTitle.textContent = 'REVIVING TEAMMATE';
+            if (promptHint) promptHint.textContent = `STAYING CLOSE TO ${member.name.toUpperCase()} (3s)`;
+            const pct = Math.round(member.reviveProgress * 100);
+            if (pctEl) pctEl.textContent = `${pct}%`;
+            if (circleFill) circleFill.style.strokeDashoffset = 113.1 * (1 - member.reviveProgress);
 
-            const revivePacket = { type: 'REVIVE_SUCCESS', slot: member.slot, peerId: member.peerId };
-            if (this.isHost) {
-              this.broadcastToSquad(revivePacket);
-            } else if (this.hostConn && this.hostConn.open) {
-              this.hostConn.send(revivePacket);
+            if (member.reviveProgress >= 1.0) {
+              member.isDowned = false;
+              member.hp = Math.round(member.maxHp * 0.5);
+              member.shield = Math.round(member.maxShield * 0.5);
+              member.reviveProgress = 0;
+              member.downedTimer = 0;
+              this.showNotification(`You revived ${member.name}!`, 'REVIVE COMPLETE', 'green');
+              this.audio.playLevelUp();
+              if (promptEl) promptEl.classList.add('hidden');
+
+              const revivePacket = {
+                type: 'PLAYER_REVIVED',
+                id: member.id || member.peerId,
+                slot: member.slot,
+                peerId: member.peerId
+              };
+              if (this.isHost) {
+                this.broadcastToSquad(revivePacket);
+                if (this.squadPeers) {
+                  const p = this.squadPeers.get(member.peerId || member.id);
+                  if (p) {
+                    p.hp = member.hp;
+                    p.shield = member.shield;
+                    p.isDowned = false;
+                    p.downedTimer = 0;
+                  }
+                }
+              } else {
+                if (this.hostConn && this.hostConn.open) {
+                  try { this.hostConn.send(revivePacket); } catch (e) {}
+                }
+                if (this.localNetChannel) {
+                  try { this.localNetChannel.postMessage(revivePacket); } catch (e) {}
+                }
+              }
+              this.updateMultiplayerSquadHUD();
             }
+          } else {
+            member.reviveProgress = Math.max(0, (member.reviveProgress || 0) - dt * 0.25);
           }
-        } else {
-          member.reviveProgress = Math.max(0, member.reviveProgress - dt * 0.2);
         }
+      });
+
+      if (!revivingTeammate && promptEl) {
+        promptEl.classList.add('hidden');
       }
-    });
+    }
   }
 
   updateMultiplayerSquadHUD() {
@@ -9651,6 +9990,36 @@ class Game {
       ctx.fillStyle = '#ff0044';
       ctx.textAlign = 'center';
       ctx.fillText(`⚠️ DOWNED (${Math.ceil(this.player.downedTimer)}s)`, px, py - 36);
+
+      // Revive progress ring around local player
+      if (this.player.reviveProgress > 0) {
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#00ff88';
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.arc(px, py, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * this.player.reviveProgress);
+        ctx.stroke();
+      }
+
+      // If being revived by a nearby alive squadmate, render tether beam to them
+      if (this.squadMembers && this.squadMembers.length > 0) {
+        const reviver = this.squadMembers.find(m => !m.isDowned && Math.hypot(this.player.x - m.x, this.player.y - m.y) <= 75);
+        if (reviver) {
+          const rx = reviver.x - this.camera.x;
+          const ry = reviver.y - this.camera.y;
+          ctx.strokeStyle = '#00ff88';
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = '#00ff88';
+          ctx.shadowBlur = 12;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath();
+          ctx.moveTo(rx, ry);
+          ctx.lineTo(px, py);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
       ctx.restore();
     }
 
