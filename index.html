@@ -1803,7 +1803,7 @@
           <span class="avatar-modal-icon">🎭</span>
           <div>
             <h2 class="avatar-modal-title">OPERATIVE AVATAR PROTOCOL</h2>
-            <span class="avatar-modal-sub">SELECT YOUR CYBERNETIC COMBAT AVATAR IDENTIFIER</span>
+            <span class="avatar-modal-sub">SURVIVOR-STYLE COMBAT ROSTER &bull; SELECT YOUR OPERATIVE</span>
           </div>
         </div>
         <button id="btn-close-avatar-modal" class="alert-close-btn" aria-label="Close">✕</button>
@@ -1812,10 +1812,15 @@
       <div class="avatar-modal-body">
         <!-- Live Selected Preview -->
         <div class="avatar-live-preview-box">
-          <div class="avatar-preview-badge" id="avatar-preview-icon">🚀</div>
+          <div class="avatar-preview-badge" id="avatar-preview-icon">
+            <!-- Dynamically injected img with pixel-rendering -->
+          </div>
           <div class="avatar-preview-meta">
-            <div class="avatar-preview-name" id="avatar-preview-name">Vanguard Rocket</div>
-            <div class="avatar-preview-desc" id="avatar-preview-desc">High-velocity strike operative &bull; Kinetic vanguard</div>
+            <div class="avatar-preview-title-row">
+              <span class="avatar-preview-tier-pill tier-s" id="avatar-preview-tier">S-TIER</span>
+              <div class="avatar-preview-name" id="avatar-preview-name">Master Panda</div>
+            </div>
+            <div class="avatar-preview-desc" id="avatar-preview-desc">S-Tier Mystic Tank</div>
           </div>
         </div>
 
@@ -1828,6 +1833,68 @@
       <div class="avatar-modal-actions">
         <button id="btn-confirm-avatar" class="btn-avatar-confirm">✓ CONFIRM &amp; EQUIP</button>
         <button id="btn-cancel-avatar" class="btn-avatar-cancel">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operative Callsign & Direct Auth Protocol Modal (Without Google Requirement) -->
+  <div id="callsign-auth-modal" class="modal-backdrop hidden">
+    <div class="modal-card callsign-auth-card">
+      <div class="callsign-card-header">
+        <div class="callsign-header-badge">
+          <span class="callsign-header-icon">🪪</span>
+          <div>
+            <h2 class="callsign-title">OPERATIVE CALLSIGN PROTOCOL</h2>
+            <span class="callsign-sub" id="callsign-modal-subtitle">DIRECT OPERATIVE IDENTITY &bull; SQUAD COMM-LINK</span>
+          </div>
+        </div>
+        <button id="btn-close-callsign-modal" class="alert-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="callsign-card-body">
+        <div class="callsign-notice-box" id="callsign-notice-box">
+          <span class="callsign-notice-icon">⚡</span>
+          <p id="callsign-notice-text">Set your Operative Callsign to unlock the Squad Friend Network, direct 1-click squad invites, and persistent comm-links without requiring Google Sign-In.</p>
+        </div>
+
+        <!-- Form for entering/editing Callsign -->
+        <div class="callsign-input-section">
+          <label class="callsign-input-label" for="input-operative-callsign">OPERATIVE CALLSIGN / USERNAME</label>
+          <div class="callsign-input-wrap">
+            <span class="callsign-input-tag">CALLSIGN //</span>
+            <input type="text" id="input-operative-callsign" class="callsign-text-input" placeholder="e.g. Ghost_Rider, badhash" maxlength="20" autocomplete="off" spellcheck="false">
+          </div>
+          <span class="callsign-input-hint">3-20 characters &bull; Letters, numbers, and underscores allowed</span>
+        </div>
+
+        <!-- Quick Avatar Preview -->
+        <div class="callsign-avatar-preview-row">
+          <div class="callsign-avatar-wrap" id="callsign-avatar-preview">
+            <!-- Rendered dynamically -->
+          </div>
+          <div class="callsign-avatar-info">
+            <div class="callsign-avatar-name" id="callsign-avatar-name">Master Panda</div>
+            <div class="callsign-avatar-tier" id="callsign-avatar-tier">S-TIER MYSTIC TANK</div>
+            <button id="btn-switch-avatar-from-callsign" class="btn-link-sm" type="button">Change Operative Avatar ➔</button>
+          </div>
+        </div>
+
+        <!-- Authenticated Profile Status Box (Visible when signed in) -->
+        <div id="callsign-profile-active" class="callsign-profile-active hidden">
+          <div class="profile-status-badge">
+            <span class="status-dot pulsing"></span>
+            <span>AUTHENTICATED OPERATIVE LINKED</span>
+          </div>
+          <div class="profile-id-row">
+            <span class="profile-id-label">OPERATIVE ID:</span>
+            <code class="profile-id-val" id="profile-operative-id">op_123456789</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="callsign-card-actions">
+        <button id="btn-confirm-callsign" class="btn-callsign-confirm">⚡ ENTER MATRIX / CONFIRM CALLSIGN</button>
+        <button id="btn-cancel-callsign" class="btn-callsign-cancel">PLAY AS GUEST</button>
       </div>
     </div>
   </div>

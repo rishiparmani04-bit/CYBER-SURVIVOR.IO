@@ -131,19 +131,28 @@ const WEEKLY_BUNDLES = [
 ];
 
 const OPERATIVE_AVATARS = [
-  { id: 'rocket', icon: '🚀', name: 'Vanguard Rocket', desc: 'High-velocity strike operative • Kinetic vanguard' },
-  { id: 'cyborg', icon: '🤖', name: 'Cyber Cyborg', desc: 'Synthetic biomechanical enforcer • Alloy plating' },
-  { id: 'shinobi', icon: '🥷', name: 'Shadow Shinobi', desc: 'Stealth & tactical infiltration • Monoblade specialist' },
-  { id: 'volt', icon: '⚡', name: 'Volt Striker', desc: 'Overclocked kinetic specialist • Arc pulse matrix' },
-  { id: 'phantom', icon: '💀', name: 'Ghost Phantom', desc: 'Spectral recon operative • Silent execution protocol' },
-  { id: 'titan', icon: '🛡️', name: 'Aegis Titan', desc: 'Heavy defensive bulkhead • Kinetic barrier specialist' },
-  { id: 'deadeye', icon: '🎯', name: 'Deadeye', desc: 'Precision ballistic sniper • Armor-piercing expert' },
-  { id: 'glitch', icon: '👾', name: 'Glitch', desc: 'Anomalous digital disruptor • Logic bomb hacker' },
-  { id: 'commando', icon: '🪖', name: 'Commando Veteran', desc: 'Battle-hardened vanguard • Plasma rifle maestro' },
-  { id: 'psionic', icon: '🔮', name: 'Void Psionic', desc: 'Dark matter energy adept • Graviton field wielder' },
-  { id: 'valkyrie', icon: '🪽', name: 'Cyber Valkyrie', desc: 'Aerial jetpack assault ace • Dual SMG barrage' },
-  { id: 'fox', icon: '🦊', name: 'Cyber Fox', desc: 'Nimble electronic warfare scout • Rapid dash tactician' }
+  { id: 'panda', name: 'Master Panda', role: 'S-Tier Mystic Tank', icon: 'assets/avatars/avatar_panda.png', tier: 'S' },
+  { id: 'red_hood', name: 'Scarlet Operative', role: 'S-Tier High-Velocity Striker', icon: 'assets/avatars/avatar_red_hood.png', tier: 'S' },
+  { id: 'scientist', name: 'Dr. Quantum', role: 'A-Tier Tactical Alchemist', icon: 'assets/avatars/avatar_scientist.png', tier: 'A' },
+  { id: 'cyborg', name: 'Mecha Stalker', role: 'B-Tier Cyber Assassin', icon: 'assets/avatars/avatar_cyborg.png', tier: 'B' },
+  { id: 'ninja', name: 'Neon Shinobi', role: 'B-Tier Shadow Duelist', icon: 'assets/avatars/avatar_ninja.png', tier: 'B' },
+  { id: 'cat_medic', name: 'Neko Medic', role: 'C-Tier Support Field Unit', icon: 'assets/avatars/avatar_cat_medic.png', tier: 'C' },
+  { id: 'punk', name: 'Cyber Punk', role: 'C-Tier Riot Breaker', icon: 'assets/avatars/avatar_punk.png', tier: 'C' },
+  { id: 'veteran', name: 'War Commander', role: 'C-Tier Heavy Ballistics', icon: 'assets/avatars/avatar_veteran.png', tier: 'C' },
+  { id: 'scout', name: 'Aero Scout', role: 'C-Tier Recon Operative', icon: 'assets/avatars/avatar_scout.png', tier: 'C' }
 ];
+
+const AVATAR_FALLBACK_SVGS = {
+  panda: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%23ff0044" stroke-width="2.5"/><polygon points="32,8 54,26 10,26" fill="%23d97706"/><polygon points="32,10 50,25 14,25" fill="%23f59e0b"/><circle cx="18" cy="28" r="7" fill="%231e293b"/><circle cx="46" cy="28" r="7" fill="%231e293b"/><circle cx="32" cy="38" r="18" fill="%23f8fafc"/><ellipse cx="25" cy="36" rx="5" ry="6" fill="%230f172a"/><ellipse cx="39" cy="36" rx="5" ry="6" fill="%230f172a"/><circle cx="25" cy="36" r="2.5" fill="%23ff0044"/><circle cx="39" cy="36" r="2.5" fill="%23ff0044"/><ellipse cx="32" cy="44" rx="3.5" ry="2.5" fill="%230f172a"/><path d="M14 40 L19 46 M50 40 L45 46" stroke="%23ff0044" stroke-width="2" stroke-linecap="round"/></svg>',
+  red_hood: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%23ff0044" stroke-width="2.5"/><path d="M32 8 C18 8 12 24 12 42 C12 54 20 58 32 58 C44 58 52 54 52 42 C52 24 46 8 32 8 Z" fill="%23b91c1c"/><path d="M32 11 C21 11 16 25 16 40 C16 50 23 54 32 54 C41 54 48 50 48 40 C48 25 43 11 32 11 Z" fill="%23dc2626"/><ellipse cx="32" cy="36" rx="14" ry="16" fill="%230f172a"/><rect x="20" y="29" width="24" height="7" rx="3" fill="%23020617" stroke="%2300f0ff" stroke-width="1"/><rect x="22" y="31" width="20" height="3" rx="1.5" fill="%2300f0ff"/><path d="M24 40 L40 40 L37 48 L27 48 Z" fill="%231e293b" stroke="%23ff0044" stroke-width="1"/></svg>',
+  scientist: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%23ffb700" stroke-width="2.5"/><path d="M18 26 C16 16 26 8 32 12 C38 8 48 16 46 26 Z" fill="%2367e8f9"/><circle cx="32" cy="36" r="16" fill="%23fed7aa"/><circle cx="24" cy="34" r="7" fill="%23020617" stroke="%23ffb700" stroke-width="2"/><circle cx="40" cy="34" r="7" fill="%23020617" stroke="%23ffb700" stroke-width="2"/><line x1="31" y1="34" x2="33" y2="34" stroke="%23ffb700" stroke-width="2"/><circle cx="24" cy="34" r="4.5" fill="%2310b981"/><circle cx="40" cy="34" r="4.5" fill="%2310b981"/><circle cx="22" cy="32" r="1.5" fill="%23ffffff"/><circle cx="38" cy="32" r="1.5" fill="%23ffffff"/><path d="M18 52 L32 46 L46 52 L44 60 L20 60 Z" fill="%23f8fafc" stroke="%23ffb700" stroke-width="1"/></svg>',
+  cyborg: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%239d4edd" stroke-width="2.5"/><path d="M18 20 C18 12 46 12 46 20 L46 44 C46 52 38 56 32 56 C26 56 18 52 18 44 Z" fill="%23475569"/><path d="M32 14 L44 20 L44 44 C44 50 38 54 32 54 Z" fill="%2364748b"/><circle cx="24" cy="32" r="6" fill="%23020617" stroke="%239d4edd" stroke-width="1.5"/><circle cx="24" cy="32" r="3" fill="%239d4edd"/><circle cx="24" cy="32" r="1" fill="%23ffffff"/><rect x="36" y="28" width="8" height="8" rx="2" fill="%23020617"/><line x1="22" y1="46" x2="42" y2="46" stroke="%239d4edd" stroke-width="1.5"/></svg>',
+  ninja: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%239d4edd" stroke-width="2.5"/><circle cx="32" cy="34" r="18" fill="%231e1b4b"/><rect x="18" y="20" width="28" height="6" rx="2" fill="%239d4edd"/><rect x="28" y="21" width="8" height="4" rx="1" fill="%23e2e8f0"/><path d="M18 28 L46 28 L44 38 L20 38 Z" fill="%23020617"/><polygon points="22,34 30,32 29,35" fill="%2300f0ff"/><polygon points="42,34 34,32 35,35" fill="%2300f0ff"/><path d="M20 38 L44 38 L38 52 L26 52 Z" fill="%23312e81"/></svg>',
+  cat_medic: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%2300f0ff" stroke-width="2.5"/><polygon points="14,14 26,24 16,30" fill="%2300f0ff"/><polygon points="50,14 38,24 48,30" fill="%2300f0ff"/><circle cx="32" cy="36" r="17" fill="%23f8fafc"/><path d="M30 22 H34 V26 H38 V30 H34 V34 H30 V30 H26 V26 H30 Z" fill="%2300f0ff"/><ellipse cx="24" cy="38" rx="4" ry="5" fill="%23020617"/><ellipse cx="40" cy="38" rx="4" ry="5" fill="%23020617"/><circle cx="23" cy="36" r="1.5" fill="%2300f0ff"/><circle cx="39" cy="36" r="1.5" fill="%2300f0ff"/></svg>',
+  punk: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%2300f0ff" stroke-width="2.5"/><polygon points="32,6 36,22 28,22" fill="%23ec4899"/><polygon points="32,10 37,24 27,24" fill="%2300f0ff"/><circle cx="32" cy="36" r="16" fill="%23fbcfe8"/><polygon points="18,29 46,29 42,37 22,37" fill="%23020617" stroke="%2300f0ff" stroke-width="1.5"/><line x1="20" y1="33" x2="44" y2="33" stroke="%23ec4899" stroke-width="1.5"/></svg>',
+  veteran: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%2300f0ff" stroke-width="2.5"/><path d="M14 24 C14 16 38 12 48 18 C52 20 50 26 44 26 L14 24 Z" fill="%232d3748"/><circle cx="28" cy="21" r="3.5" fill="%23eab308"/><circle cx="32" cy="36" r="16" fill="%23fed7aa"/><line x1="21" y1="28" x2="27" y2="40" stroke="%23b91c1c" stroke-width="2"/><circle cx="24" cy="34" r="3" fill="%23020617"/><circle cx="40" cy="34" r="3" fill="%23020617"/></svg>',
+  scout: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%230b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="%2300f0ff" stroke-width="2.5"/><line x1="16" y1="8" x2="18" y2="24" stroke="%2394a3b8" stroke-width="2"/><circle cx="16" cy="8" r="2.5" fill="%2300f0ff"/><line x1="48" y1="8" x2="46" y2="24" stroke="%2394a3b8" stroke-width="2"/><circle cx="48" cy="8" r="2.5" fill="%2300f0ff"/><circle cx="32" cy="35" r="17" fill="%231e293b"/><path d="M18 28 Q32 23 46 28 L44 42 Q32 46 20 42 Z" fill="%2300f0ff" stroke="%230284c7" stroke-width="1.5"/></svg>'
+};
 
 const HERO_DEFS = {
   commando: {
@@ -1747,7 +1756,7 @@ class SaveManager {
       primaryWeapon: 'ak47',
       secondaryWeapon: 'ump',
       playerName: 'badhash',
-      userAvatar: '🚀',
+      userAvatar: 'panda',
       settings: {
         sfxVol: 80,
         musicVol: 65,
@@ -2277,6 +2286,7 @@ class Game {
     this.updateHeroPreview();
     this.updateLobbyLoadoutSlots();
     this.initChallengeTimer();
+    this.initAuthUser();
     this.updateUserAvatarDisplays();
     this.initPresenceSystem();
 
@@ -2809,32 +2819,58 @@ class Game {
       });
     });
 
-    // Username editing
+    // Username / Callsign editing
     const playerNameInput = document.getElementById('topbar-player-name');
     if (playerNameInput) {
-      playerNameInput.addEventListener('blur', () => {
+      const handleNameChange = () => {
         const val = playerNameInput.textContent.trim() || 'badhash';
         this.saveData.playerName = val;
+        if (this.authUser) {
+          this.authUser.username = val;
+          try { localStorage.setItem('cyber_auth_user', JSON.stringify(this.authUser)); } catch (e) {}
+        }
         SaveManager.save(this.saveData);
         this.updateHeroPreview();
+        this.updateTopbarUserProfile();
+      };
+      playerNameInput.addEventListener('blur', handleNameChange);
+      playerNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          playerNameInput.blur();
+        }
       });
     }
 
-    // Google Account & Profile Modal Events
+    // Direct Operative Account & Profile Callsign Modal
     document.getElementById('btn-profile-account')?.addEventListener('click', () => {
-      this.showGoogleAuthModalState();
-      if (window.AuthManager) window.AuthManager.renderGisButton();
-      document.getElementById('google-auth-modal')?.classList.remove('hidden');
-      this.audio.playDeflect();
+      this.openCallsignModal();
     });
 
-    document.getElementById('topbar-hero-avatar')?.parentElement?.addEventListener('click', () => {
-      this.showGoogleAuthModalState();
-      if (window.AuthManager) window.AuthManager.renderGisButton();
-      document.getElementById('google-auth-modal')?.classList.remove('hidden');
-      this.audio.playDeflect();
+    document.getElementById('btn-close-callsign-modal')?.addEventListener('click', () => {
+      this.closeCallsignModal();
+    });
+    document.getElementById('btn-cancel-callsign')?.addEventListener('click', () => {
+      this.closeCallsignModal();
+    });
+    document.getElementById('callsign-auth-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'callsign-auth-modal') this.closeCallsignModal();
+    });
+    document.getElementById('btn-confirm-callsign')?.addEventListener('click', () => {
+      this.confirmCallsignInput();
+    });
+    document.getElementById('input-operative-callsign')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.confirmCallsignInput();
+      }
+    });
+    document.getElementById('btn-switch-avatar-from-callsign')?.addEventListener('click', () => {
+      this.closeCallsignModal();
+      this.openAvatarModal();
     });
 
+    // Optional Google Account & Cloud Sync Modal Events
     document.getElementById('btn-close-google-modal')?.addEventListener('click', () => {
       document.getElementById('google-auth-modal')?.classList.add('hidden');
     });
@@ -2877,11 +2913,11 @@ class Game {
       }
     });
 
+    // Topbar Sign Out button: Operative Sign Out / Guest Mode
     document.getElementById('btn-reset-data-top')?.addEventListener('click', () => {
+      this.signOutOperative();
       if (this.saveData.googleAccount) {
         document.getElementById('btn-google-signout-action')?.click();
-      } else {
-        document.getElementById('btn-reset-data')?.click();
       }
     });
 
@@ -8114,8 +8150,8 @@ class Game {
     if (s1Name) s1Name.textContent = (this.saveData.playerName || 'OPERATIVE') + ' (YOU)';
     if (s1Hero) s1Hero.textContent = hostHero.name;
     const hostAv = this.getUserAvatar();
-    if (s1AvatarIcon) s1AvatarIcon.textContent = hostAv;
-    else if (s1Avatar) s1Avatar.textContent = hostAv;
+    if (s1AvatarIcon) s1AvatarIcon.innerHTML = this.renderAvatarHTML(hostAv, 'slot-avatar-sprite');
+    else if (s1Avatar) s1Avatar.innerHTML = this.renderAvatarHTML(hostAv, 'slot-avatar-sprite');
 
     // Slots 2, 3, 4
     const peerList = Array.from(this.squadPeers.values());
@@ -8133,7 +8169,7 @@ class Game {
         }
         if (nameEl) nameEl.textContent = peer.name;
         if (heroEl) heroEl.textContent = peer.hero?.name || 'Operative';
-        if (avatarEl) avatarEl.innerHTML = `<span>${peer.avatar || peer.hero?.icon || '👤'}</span>`;
+        if (avatarEl) avatarEl.innerHTML = this.renderAvatarHTML(peer.avatar, 'slot-avatar-sprite');
         if (statusEl) {
           statusEl.className = 'slot-status ready';
           const isAlreadyFriend = this.isFriend(peer.name, peer.peerId);
@@ -8151,6 +8187,12 @@ class Game {
           if (fBtn) {
             fBtn.onclick = (ev) => {
               ev.stopPropagation();
+              if (!this.isUserAuthenticated()) {
+                this.openCallsignModal(() => {
+                  this.sendFriendRequest(peer.peerId, peer.name, slot);
+                });
+                return;
+              }
               this.sendFriendRequest(peer.peerId, peer.name, slot);
             };
           }
@@ -8225,8 +8267,8 @@ class Game {
       }
 
       pill.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span>${p.avatar || p.heroIcon || '👤'}</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">${this.renderAvatarHTML(p.avatar || p.heroIcon || 'panda', 'preview-pill-avatar-sprite')}</span>
           <strong style="color: ${slotDef.color};">[${slotDef.title}] ${p.name}${isMe ? ' (YOU)' : ''}</strong>
           <span style="font-size: 0.7rem; color: #94a3b8;">${p.heroName || ''}</span>
         </div>
@@ -8237,6 +8279,12 @@ class Game {
       if (fBtn) {
         fBtn.onclick = (ev) => {
           ev.stopPropagation();
+          if (!this.isUserAuthenticated()) {
+            this.openCallsignModal(() => {
+              this.sendFriendRequest(p.peerId, p.name, p.slot);
+            });
+            return;
+          }
           this.sendFriendRequest(p.peerId, p.name, p.slot);
         };
       }
@@ -8246,25 +8294,67 @@ class Game {
   }
 
   // ==========================================================================
-  // OPERATIVE AVATAR PROTOCOL
+  // OPERATIVE AVATAR PROTOCOL & SPRITE SYSTEM
   // ==========================================================================
+  getAvatarDef(avatarKey) {
+    if (!avatarKey) return OPERATIVE_AVATARS[0];
+    const found = OPERATIVE_AVATARS.find(a => 
+      a.id === avatarKey || 
+      a.icon === avatarKey || 
+      a.name.toLowerCase() === String(avatarKey).toLowerCase()
+    );
+    return found || OPERATIVE_AVATARS[0];
+  }
+
+  getAvatarFallbackSrc(avatarId) {
+    return AVATAR_FALLBACK_SVGS[avatarId] || AVATAR_FALLBACK_SVGS['panda'];
+  }
+
+  renderAvatarHTML(avatarKey, className = '', extraStyle = '') {
+    const def = this.getAvatarDef(avatarKey);
+    const fallback = this.getAvatarFallbackSrc(def.id);
+    const iconSrc = def.icon || fallback;
+    return `<img src="${iconSrc}" alt="${def.name}" class="avatar-sprite-img ${className}" style="image-rendering: pixelated; object-fit: contain; ${extraStyle}" onerror="this.onerror=null; this.src='${fallback}';">`;
+  }
+
   getUserAvatar() {
     try {
       const stored = localStorage.getItem('cyber_user_avatar');
-      if (stored) return stored;
+      if (stored) {
+        const def = this.getAvatarDef(stored);
+        return def.id;
+      }
     } catch (e) {}
-    return this.saveData?.userAvatar || '🚀';
+    if (this.authUser?.avatar) {
+      return this.getAvatarDef(this.authUser.avatar).id;
+    }
+    if (this.saveData?.userAvatar) {
+      return this.getAvatarDef(this.saveData.userAvatar).id;
+    }
+    return 'panda';
   }
 
-  setUserAvatar(avatarIcon) {
-    if (!avatarIcon) return;
+  setUserAvatar(avatarId) {
+    if (!avatarId) return;
+    const def = this.getAvatarDef(avatarId);
+    const cleanId = def.id;
+
     try {
-      localStorage.setItem('cyber_user_avatar', avatarIcon);
+      localStorage.setItem('cyber_user_avatar', cleanId);
     } catch (e) {}
+
+    if (this.authUser) {
+      this.authUser.avatar = cleanId;
+      try {
+        localStorage.setItem('cyber_auth_user', JSON.stringify(this.authUser));
+      } catch (e) {}
+    }
+
     if (this.saveData) {
-      this.saveData.userAvatar = avatarIcon;
+      this.saveData.userAvatar = cleanId;
       SaveManager.save(this.saveData);
     }
+
     this.updateUserAvatarDisplays();
 
     // Sync avatar across squad if in lobby or match
@@ -8278,7 +8368,7 @@ class Game {
           slot: this.mySlot,
           id: this.peer ? this.peer.id : this.localPlayerId,
           name: this.saveData.playerName,
-          avatar: avatarIcon,
+          avatar: cleanId,
           x: this.player ? this.player.x : WORLD_WIDTH / 2,
           y: this.player ? this.player.y : WORLD_HEIGHT / 2,
           angle: this.player ? this.player.angle : 0,
@@ -8305,18 +8395,22 @@ class Game {
   updateUserAvatarDisplays() {
     const avatar = this.getUserAvatar();
     const topbarAvatar = document.getElementById('topbar-hero-avatar');
-    if (topbarAvatar) topbarAvatar.textContent = avatar;
+    if (topbarAvatar) {
+      topbarAvatar.innerHTML = this.renderAvatarHTML(avatar, 'topbar-avatar-sprite');
+    }
 
     const hudIcon = document.getElementById('hud-hero-icon');
-    if (hudIcon) hudIcon.textContent = avatar;
+    if (hudIcon) {
+      hudIcon.innerHTML = this.renderAvatarHTML(avatar, 'hud-avatar-sprite');
+    }
 
     const s1AvatarIcon = document.getElementById('slot-1-avatar-icon');
     if (s1AvatarIcon) {
-      s1AvatarIcon.textContent = avatar;
+      s1AvatarIcon.innerHTML = this.renderAvatarHTML(avatar, 'slot-avatar-sprite');
     } else {
       const s1 = document.getElementById('slot-1-avatar');
       if (s1 && !s1.querySelector('.slot-avatar-edit-tag')) {
-        s1.textContent = avatar;
+        s1.innerHTML = this.renderAvatarHTML(avatar, 'slot-avatar-sprite');
       }
     }
   }
@@ -8339,31 +8433,45 @@ class Game {
     const currentAvatar = this.getUserAvatar();
     this.tempSelectedAvatar = currentAvatar;
 
-    const found = OPERATIVE_AVATARS.find(a => a.icon === currentAvatar) || OPERATIVE_AVATARS[0];
+    const found = this.getAvatarDef(currentAvatar);
     const previewIcon = document.getElementById('avatar-preview-icon');
+    const previewTier = document.getElementById('avatar-preview-tier');
     const previewName = document.getElementById('avatar-preview-name');
     const previewDesc = document.getElementById('avatar-preview-desc');
-    if (previewIcon) previewIcon.textContent = found.icon;
-    if (previewName) previewName.textContent = found.name;
-    if (previewDesc) previewDesc.textContent = found.desc;
+
+    const updatePreviewBanner = (avDef) => {
+      if (previewIcon) {
+        previewIcon.innerHTML = this.renderAvatarHTML(avDef.id, 'preview-large-avatar');
+      }
+      if (previewTier) {
+        previewTier.textContent = `${avDef.tier}-TIER`;
+        previewTier.className = `avatar-preview-tier-pill tier-${avDef.tier.toLowerCase()}`;
+      }
+      if (previewName) previewName.textContent = avDef.name;
+      if (previewDesc) previewDesc.textContent = avDef.role;
+    };
+
+    updatePreviewBanner(found);
 
     grid.innerHTML = '';
     OPERATIVE_AVATARS.forEach((av) => {
+      const isSelected = (av.id === this.tempSelectedAvatar);
       const card = document.createElement('div');
-      card.className = `avatar-card ${av.icon === this.tempSelectedAvatar ? 'selected' : ''}`;
-      card.dataset.icon = av.icon;
+      card.className = `avatar-card ${isSelected ? 'selected' : ''}`;
+      card.dataset.id = av.id;
+
+      const fallbackSrc = this.getAvatarFallbackSrc(av.id);
       card.innerHTML = `
-        <span class="avatar-card-icon">${av.icon}</span>
+        <span class="avatar-tier-badge tier-${av.tier.toLowerCase()}">${av.tier}</span>
+        <img src="${av.icon}" alt="${av.name}" class="avatar-sprite-img" style="image-rendering: pixelated; width: 44px; height: 44px; object-fit: contain;" onerror="this.onerror=null; this.src='${fallbackSrc}';">
         <span class="avatar-card-name">${av.name}</span>
       `;
+
       card.onclick = () => {
-        this.tempSelectedAvatar = av.icon;
+        this.tempSelectedAvatar = av.id;
         grid.querySelectorAll('.avatar-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
-
-        if (previewIcon) previewIcon.textContent = av.icon;
-        if (previewName) previewName.textContent = av.name;
-        if (previewDesc) previewDesc.textContent = av.desc;
+        updatePreviewBanner(av);
         this.audio.playDeflect();
       };
       grid.appendChild(card);
@@ -8373,11 +8481,221 @@ class Game {
   confirmEquipAvatar() {
     if (this.tempSelectedAvatar) {
       this.setUserAvatar(this.tempSelectedAvatar);
-      const avDef = OPERATIVE_AVATARS.find(a => a.icon === this.tempSelectedAvatar);
+      const avDef = this.getAvatarDef(this.tempSelectedAvatar);
       this.showNotification(`Equipped ${avDef ? avDef.name : 'Operative Avatar'}!`, 'AVATAR EQUIPPED', 'green');
       this.audio.playLevelUp();
     }
     this.closeAvatarModal();
+  }
+
+  // ==========================================================================
+  // DIRECT OPERATIVE AUTHENTICATION (WITHOUT GOOGLE REQUIREMENT)
+  // ==========================================================================
+  initAuthUser() {
+    try {
+      const raw = localStorage.getItem('cyber_auth_user');
+      if (raw) {
+        this.authUser = JSON.parse(raw);
+      }
+    } catch (e) {
+      this.authUser = null;
+    }
+
+    // If no direct auth user stored, check if player previously had a custom callsign
+    if (!this.authUser) {
+      const existingName = this.saveData?.playerName;
+      if (existingName && existingName !== 'badhash' && existingName !== 'Guest Operative') {
+        const user = {
+          id: 'op_' + Date.now(),
+          username: existingName,
+          avatar: this.getUserAvatar() || 'panda',
+          authenticated: true,
+          createdAt: Date.now()
+        };
+        this.authUser = user;
+        try {
+          localStorage.setItem('cyber_auth_user', JSON.stringify(user));
+        } catch (e) {}
+      }
+    }
+
+    if (this.authUser?.username) {
+      this.saveData.playerName = this.authUser.username;
+      if (this.authUser.avatar) this.saveData.userAvatar = this.authUser.avatar;
+    }
+
+    this.updateTopbarUserProfile();
+  }
+
+  getAuthUser() {
+    if (this.authUser && this.authUser.username) return this.authUser;
+    try {
+      const raw = localStorage.getItem('cyber_auth_user');
+      if (raw) {
+        this.authUser = JSON.parse(raw);
+        return this.authUser;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  isUserAuthenticated() {
+    const user = this.getAuthUser();
+    return Boolean(user && user.authenticated && user.username && !user.isGuest);
+  }
+
+  loginOperativeCallsign(callsign, avatarId) {
+    if (!callsign || !callsign.trim()) {
+      this.showNotification('Please enter a valid callsign (3-20 characters).', 'CALLSIGN REQUIRED', 'red');
+      return false;
+    }
+    const cleanCallsign = callsign.trim();
+    if (cleanCallsign.length < 3 || cleanCallsign.length > 20) {
+      this.showNotification('Callsign must be 3 to 20 characters.', 'INVALID CALLSIGN', 'red');
+      return false;
+    }
+
+    const existing = this.getAuthUser();
+    const user = {
+      id: existing?.id || ('op_' + Date.now()),
+      username: cleanCallsign,
+      avatar: avatarId || this.getUserAvatar() || 'panda',
+      authenticated: true,
+      updatedAt: Date.now()
+    };
+
+    this.authUser = user;
+    try {
+      localStorage.setItem('cyber_auth_user', JSON.stringify(user));
+    } catch (e) {}
+
+    this.saveData.playerName = cleanCallsign;
+    this.saveData.userAvatar = user.avatar;
+    SaveManager.save(this.saveData);
+
+    // Migrate friends list to user-specific key
+    const userFriendsKey = `cyber_friends_${user.id}`;
+    try {
+      const existingUserFriends = localStorage.getItem(userFriendsKey);
+      if (!existingUserFriends) {
+        const legacy = localStorage.getItem('cyber_friends_list');
+        if (legacy) {
+          localStorage.setItem(userFriendsKey, legacy);
+        }
+      }
+    } catch (e) {}
+
+    this.updateTopbarUserProfile();
+    this.updateUserAvatarDisplays();
+    this.renderFriendsDrawer();
+
+    if (this.isPrivateMatch) {
+      this.broadcastSquadRoster();
+      this.updateSquadLobbyUI();
+    }
+
+    this.showNotification(`Operative authenticated: ${cleanCallsign} [${user.id.slice(0, 8)}]`, 'CALLSIGN REGISTERED', 'green');
+    this.audio.playLevelUp();
+
+    this.closeCallsignModal();
+
+    // If there was a pending friend request waiting for auth, trigger it now!
+    if (typeof this.pendingFriendAction === 'function') {
+      const action = this.pendingFriendAction;
+      this.pendingFriendAction = null;
+      action();
+    }
+
+    return true;
+  }
+
+  signOutOperative() {
+    this.authUser = null;
+    try {
+      localStorage.removeItem('cyber_auth_user');
+    } catch (e) {}
+
+    this.saveData.playerName = 'Guest Operative';
+    SaveManager.save(this.saveData);
+
+    this.updateTopbarUserProfile();
+    this.renderFriendsDrawer();
+    this.showNotification('Signed out. Operating in Guest Mode.', 'GUEST ACTIVE', 'amber');
+    this.audio.playDeflect();
+  }
+
+  updateTopbarUserProfile() {
+    const user = this.getAuthUser();
+    const nameEl = document.getElementById('topbar-player-name');
+    if (nameEl) {
+      nameEl.textContent = user?.username || this.saveData.playerName || 'Operative';
+    }
+    const stageName = document.getElementById('stage-player-name');
+    if (stageName) {
+      stageName.textContent = user?.username || this.saveData.playerName || 'Operative';
+    }
+  }
+
+  openCallsignModal(pendingAction = null) {
+    this.pendingFriendAction = pendingAction;
+    const modal = document.getElementById('callsign-auth-modal');
+    if (!modal) return;
+
+    const user = this.getAuthUser();
+    const input = document.getElementById('input-operative-callsign');
+    const avatarPreview = document.getElementById('callsign-avatar-preview');
+    const avatarName = document.getElementById('callsign-avatar-name');
+    const avatarTier = document.getElementById('callsign-avatar-tier');
+    const profileActive = document.getElementById('callsign-profile-active');
+    const profileId = document.getElementById('profile-operative-id');
+    const confirmBtn = document.getElementById('btn-confirm-callsign');
+    const subtitle = document.getElementById('callsign-modal-subtitle');
+
+    const currentAvatar = this.getUserAvatar();
+    const avDef = this.getAvatarDef(currentAvatar);
+
+    if (input) {
+      input.value = user?.username || (this.saveData.playerName !== 'Guest Operative' ? this.saveData.playerName : '') || '';
+    }
+
+    if (avatarPreview) {
+      avatarPreview.innerHTML = this.renderAvatarHTML(currentAvatar, 'callsign-preview-avatar');
+    }
+    if (avatarName) avatarName.textContent = avDef.name;
+    if (avatarTier) {
+      avatarTier.textContent = `${avDef.tier}-TIER ${avDef.role.toUpperCase()}`;
+      avatarTier.style.color = (avDef.tier === 'S' ? '#ff0044' : avDef.tier === 'A' ? '#ffb700' : avDef.tier === 'B' ? '#9d4edd' : '#00f0ff');
+    }
+
+    if (this.isUserAuthenticated()) {
+      if (profileActive) profileActive.classList.remove('hidden');
+      if (profileId) profileId.textContent = user.id;
+      if (confirmBtn) confirmBtn.textContent = '✓ UPDATE CALLSIGN';
+      if (subtitle) subtitle.textContent = 'OPERATIVE CALLSIGN LINKED & ACTIVE';
+    } else {
+      if (profileActive) profileActive.classList.add('hidden');
+      if (confirmBtn) confirmBtn.textContent = '⚡ ENTER MATRIX / CONFIRM CALLSIGN';
+      if (subtitle) subtitle.textContent = pendingAction ? 'SET CALLSIGN TO ENABLE FRIEND NETWORK' : 'DIRECT OPERATIVE IDENTITY • SQUAD COMM-LINK';
+    }
+
+    modal.classList.remove('hidden');
+    this.audio.playDeflect();
+    if (input) setTimeout(() => input.focus(), 150);
+  }
+
+  closeCallsignModal() {
+    document.getElementById('callsign-auth-modal')?.classList.add('hidden');
+    this.pendingFriendAction = null;
+  }
+
+  confirmCallsignInput() {
+    const input = document.getElementById('input-operative-callsign');
+    const val = input?.value?.trim();
+    if (!val) {
+      this.showNotification('Please enter a callsign.', 'INPUT REQUIRED', 'red');
+      return;
+    }
+    this.loginOperativeCallsign(val);
   }
 
   // ==========================================================================
@@ -8631,9 +8949,22 @@ class Game {
   // ==========================================================================
   // SQUAD FRIEND REQUEST & CYBER CONTACT SYSTEM
   // ==========================================================================
+  getFriendsStorageKey() {
+    const user = this.getAuthUser();
+    return (user && user.id) ? `cyber_friends_${user.id}` : 'cyber_friends_list';
+  }
+
   getFriendsList() {
+    const key = this.getFriendsStorageKey();
     try {
-      const raw = localStorage.getItem('cyber_friends_list');
+      let raw = localStorage.getItem(key);
+      if (!raw) {
+        const legacy = localStorage.getItem('cyber_friends_list');
+        if (legacy) {
+          raw = legacy;
+          localStorage.setItem(key, legacy);
+        }
+      }
       return raw ? JSON.parse(raw) : [];
     } catch (e) {
       return [];
@@ -8653,10 +8984,12 @@ class Game {
         name: name || 'Cyber Operative',
         peerId: peerId || '',
         presenceId: presenceId || '',
-        avatar: avatar || '🚀',
+        avatar: avatar || 'panda',
         addedAt: new Date().toLocaleDateString()
       });
+      const key = this.getFriendsStorageKey();
       try {
+        localStorage.setItem(key, JSON.stringify(list));
         localStorage.setItem('cyber_friends_list', JSON.stringify(list));
       } catch (e) {}
     }
@@ -8674,7 +9007,9 @@ class Game {
     if (!peerIdOrName) return;
     let list = this.getFriendsList();
     list = list.filter(f => f.peerId !== peerIdOrName && f.name !== peerIdOrName);
+    const key = this.getFriendsStorageKey();
     try {
+      localStorage.setItem(key, JSON.stringify(list));
       localStorage.setItem('cyber_friends_list', JSON.stringify(list));
     } catch (e) {}
     this.updateSquadFriendsCount();
@@ -8710,13 +9045,15 @@ class Game {
       const presenceKey = f.presenceId || f.peerId || f.name.toLowerCase();
       const pres = this.friendsPresence?.get(presenceKey) || this.friendsPresence?.get(f.name.toLowerCase());
       const isOnline = Boolean(pres && pres.online);
-      const friendAvatar = pres?.avatar || f.avatar || '🚀';
+      const friendAvatar = pres?.avatar || f.avatar || 'panda';
 
       const row = document.createElement('div');
       row.className = 'friend-item-row';
       row.innerHTML = `
         <div class="friend-item-info">
-          <span style="font-size: 1.4rem; line-height: 1;">${friendAvatar}</span>
+          <div class="friend-item-avatar" style="width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(5,8,17,0.85); border: 1px solid rgba(0,240,255,0.35); border-radius: 8px; overflow: hidden; padding: 2px;">
+            ${this.renderAvatarHTML(friendAvatar, 'friend-avatar-sprite')}
+          </div>
           <div>
             <div class="friend-item-name">${f.name}</div>
             <div class="friend-item-presence">
@@ -8755,6 +9092,13 @@ class Game {
   }
 
   sendFriendRequest(targetPeerId, targetName, targetSlot) {
+    if (!this.isUserAuthenticated()) {
+      this.openCallsignModal(() => {
+        this.sendFriendRequest(targetPeerId, targetName, targetSlot);
+      });
+      return;
+    }
+
     if (this.isFriend(targetName, targetPeerId)) {
       this.showNotification(`You and ${targetName} are already cyber friends!`, 'ALREADY LINKED', 'cyan');
       return;
@@ -8763,11 +9107,13 @@ class Game {
     if (targetPeerId) this.sentFriendRequests.add(targetPeerId);
     if (targetName) this.sentFriendRequests.add(targetName);
 
+    const user = this.getAuthUser();
     const reqPacket = {
       type: 'FRIEND_REQUEST',
-      from: this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
+      from: user?.username || this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
       fromPeerId: this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot))),
       fromPresenceId: this.userPresenceId,
+      fromAuthId: user?.id,
       avatar: this.getUserAvatar(),
       fromSlot: this.mySlot || (this.isHost ? 1 : 2),
       targetPeerId: targetPeerId,
@@ -8814,7 +9160,9 @@ class Game {
     toast.className = 'cyber-friend-toast';
     toast.innerHTML = `
       <div class="friend-toast-header">
-        <span class="friend-toast-icon">${avatar || '⚡'}</span>
+        <div class="friend-toast-icon" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: rgba(5,8,17,0.8); border-radius: 6px; padding: 2px;">
+          ${this.renderAvatarHTML(avatar || 'panda', 'toast-avatar-sprite')}
+        </div>
         <span class="friend-toast-title">INCOMING SQUAD FRIEND LINK</span>
       </div>
       <div class="friend-toast-body">
@@ -8861,13 +9209,22 @@ class Game {
   }
 
   acceptFriendRequest(fromName, fromPeerId, fromSlot, avatar, presenceId) {
+    if (!this.isUserAuthenticated()) {
+      this.openCallsignModal(() => {
+        this.acceptFriendRequest(fromName, fromPeerId, fromSlot, avatar, presenceId);
+      });
+      return;
+    }
+
     this.addFriend(fromName, fromPeerId, avatar, presenceId);
 
+    const user = this.getAuthUser();
     const acceptPacket = {
       type: 'FRIEND_ACCEPT',
-      from: this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
+      from: user?.username || this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
       fromPeerId: this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot))),
       fromPresenceId: this.userPresenceId,
+      fromAuthId: user?.id,
       avatar: this.getUserAvatar(),
       fromSlot: this.mySlot || (this.isHost ? 1 : 2),
       targetPeerId: fromPeerId,
@@ -9443,7 +9800,7 @@ class Game {
           : 'ACTIVE';
 
       card.innerHTML = `
-        <div class="hud-squad-avatar">${m.avatar || m.hero?.icon || '👤'}</div>
+        <div class="hud-squad-avatar">${this.renderAvatarHTML(m.avatar || 'panda', 'hud-squad-avatar-sprite')}</div>
         <div class="hud-squad-info">
           <div class="hud-squad-name-row">
             <span class="hud-squad-name" style="color: ${slotDef.color};">[P${m.slot}] ${m.name}</span>
@@ -9642,7 +9999,9 @@ class Game {
     ctx.stroke();
 
     ctx.fillStyle = m.isDowned ? '#ff3366' : '#ffffff';
-    ctx.fillText(`${m.avatar ? m.avatar + ' ' : ''}[P${m.slot}] ${m.name}`, tx, plateY + 2);
+    const avDef = this.getAvatarDef(m.avatar);
+    const tierTag = avDef ? `[${avDef.tier}] ` : '';
+    ctx.fillText(`${tierTag}[P${m.slot}] ${m.name}`, tx, plateY + 2);
 
     if (!m.isDowned) {
       const barW = 60;

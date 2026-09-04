@@ -7117,6 +7117,369 @@ body.hide-touch-controls .touch-controls-layer {
 
 .btn-avatar-cancel:hover {
   color: #f1f5f9;
+.avatar-sprite-img {
+  image-rendering: pixelated;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  display: block;
+}
+
+.avatar-tier-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.62rem;
+  font-weight: 900;
+  font-family: var(--font-title);
+  padding: 1px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.avatar-tier-badge.tier-s {
+  color: #ff0044;
+  background: rgba(255, 0, 68, 0.2);
+  border: 1px solid rgba(255, 0, 68, 0.65);
+  box-shadow: 0 0 8px rgba(255, 0, 68, 0.4);
+}
+
+.avatar-tier-badge.tier-a {
+  color: #ffb700;
+  background: rgba(255, 183, 0, 0.2);
+  border: 1px solid rgba(255, 183, 0, 0.65);
+  box-shadow: 0 0 8px rgba(255, 183, 0, 0.4);
+}
+
+.avatar-tier-badge.tier-b {
+  color: #9d4edd;
+  background: rgba(157, 78, 221, 0.2);
+  border: 1px solid rgba(157, 78, 221, 0.65);
+  box-shadow: 0 0 8px rgba(157, 78, 221, 0.4);
+}
+
+.avatar-tier-badge.tier-c {
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.2);
+  border: 1px solid rgba(0, 240, 255, 0.65);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.avatar-preview-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-preview-tier-pill {
+  font-size: 0.65rem;
+  font-weight: 900;
+  font-family: var(--font-title);
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.avatar-preview-badge .avatar-sprite-img {
+  width: 50px;
+  height: 50px;
+}
+
+/* Scaling avatars in topbar, HUD, lobby */
+.topbar-avatar-sprite,
+.slot-avatar-sprite,
+.hud-avatar-sprite,
+.preview-pill-avatar-sprite,
+.hud-squad-avatar-sprite,
+.friend-avatar-sprite,
+.toast-avatar-sprite {
+  image-rendering: pixelated;
+  width: 100%;
+  height: 100%;
+  max-width: 44px;
+  max-height: 44px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+/* ==========================================================================
+   OPERATIVE CALLSIGN & INDEPENDENT AUTH PROTOCOL
+   ========================================================================== */
+.callsign-auth-card {
+  width: 90%;
+  max-width: 480px;
+  background: rgba(10, 14, 24, 0.98);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.25), inset 0 0 20px rgba(0, 240, 255, 0.05);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.callsign-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  padding-bottom: 12px;
+}
+
+.callsign-header-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.callsign-header-icon {
+  font-size: 1.8rem;
+}
+
+.callsign-title {
+  font-family: var(--font-cyber);
+  font-size: 1.15rem;
+  color: #00f0ff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+  margin: 0;
+}
+
+.callsign-sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+.callsign-notice-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(0, 240, 255, 0.06);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+  font-family: var(--font-mono);
+}
+
+.callsign-notice-icon {
+  font-size: 1.1rem;
+  color: #00f0ff;
+  flex-shrink: 0;
+}
+
+.callsign-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.callsign-input-label {
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #00f0ff;
+  letter-spacing: 1px;
+}
+
+.callsign-input-wrap {
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  border-radius: 6px;
+  padding: 2px 8px;
+  transition: all 0.2s ease;
+}
+
+.callsign-input-wrap:focus-within {
+  border-color: #00f0ff;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+.callsign-input-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+  margin-right: 6px;
+}
+
+.callsign-text-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 8px 4px;
+}
+
+.callsign-input-hint {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+.callsign-avatar-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.callsign-avatar-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  background: rgba(5, 8, 17, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+}
+
+.callsign-avatar-wrap .avatar-sprite-img {
+  width: 40px;
+  height: 40px;
+}
+
+.callsign-avatar-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.callsign-avatar-name {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #f1f5f9;
+}
+
+.callsign-avatar-tier {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #ff0044;
+  font-weight: 700;
+}
+
+.btn-link-sm {
+  background: transparent;
+  border: none;
+  color: #00f0ff;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  margin-top: 3px;
+  transition: color 0.2s ease;
+}
+
+.btn-link-sm:hover {
+  color: #00ff88;
+  text-decoration: underline;
+}
+
+.callsign-profile-active {
+  background: rgba(0, 255, 136, 0.08);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #00ff88;
+}
+
+.profile-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+}
+
+.profile-id-label {
+  color: #94a3b8;
+  font-family: var(--font-title);
+}
+
+.profile-id-val {
+  color: #00f0ff;
+  font-family: var(--font-mono);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.callsign-card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.btn-callsign-confirm {
+  flex: 1;
+  background: linear-gradient(135deg, #00f0ff, #0088ff);
+  color: #020617;
+  font-family: var(--font-cyber);
+  font-size: 0.82rem;
+  font-weight: 900;
+  padding: 11px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 1px;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+.btn-callsign-confirm:hover {
+  box-shadow: 0 0 28px rgba(0, 240, 255, 0.85);
+  transform: translateY(-1px);
+}
+
+.btn-callsign-cancel {
+  background: transparent;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 11px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-callsign-cancel:hover {
+  color: #f8fafc;
   border-color: rgba(255, 255, 255, 0.4);
 }
 
