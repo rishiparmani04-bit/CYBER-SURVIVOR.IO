@@ -2369,7 +2369,21 @@ class Game {
     // Keyboard
     window.addEventListener('keydown', (e) => {
       this.audio.init();
+
+      // Ensure gameplay takes focus and active input boxes do not capture game keys
+      if (this.state === 'PLAYING') {
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+          document.activeElement.blur();
+          window.focus();
+        }
+      }
+
       this.keys[e.code] = true;
+      if (e.key) {
+        this.keys[e.key] = true;
+        this.keys[e.key.toLowerCase()] = true;
+        this.keys[e.key.toUpperCase()] = true;
+      }
 
       if (e.code === 'KeyP' || e.code === 'Escape') {
         if (this.state === 'PLAYING') this.pauseGame();
@@ -2384,7 +2398,7 @@ class Game {
           e.preventDefault();
           this.switchWeapon(2);
         }
-        if (e.code === 'KeyR') {
+        if (e.code === 'KeyR' || e.key === 'r' || e.key === 'R') {
           e.preventDefault();
           this.reloadWeapon();
         }
@@ -2392,15 +2406,15 @@ class Game {
           e.preventDefault();
           this.triggerDash();
         }
-        if (e.code === 'KeyQ') {
+        if (e.code === 'KeyQ' || e.key === 'q' || e.key === 'Q') {
           e.preventDefault();
           this.triggerSpecialSkill();
         }
-        if (e.code === 'KeyE') {
+        if (e.code === 'KeyE' || e.key === 'e' || e.key === 'E') {
           e.preventDefault();
           this.triggerUltimate();
         }
-        if (e.code === 'KeyF') {
+        if (e.code === 'KeyF' || e.key === 'f' || e.key === 'F') {
           e.preventDefault();
           this.keys['KeyF'] = true;
         }
@@ -2416,6 +2430,11 @@ class Game {
 
     window.addEventListener('keyup', (e) => {
       this.keys[e.code] = false;
+      if (e.key) {
+        this.keys[e.key] = false;
+        this.keys[e.key.toLowerCase()] = false;
+        this.keys[e.key.toUpperCase()] = false;
+      }
     });
 
     // Mouse
@@ -5126,12 +5145,21 @@ class Game {
     this.audio.startMusic();
 
     // Hide menus & modals
-    document.getElementById('menu-screen').classList.remove('active');
-    document.getElementById('pause-modal').classList.add('hidden');
-    document.getElementById('gameover-modal').classList.add('hidden');
-    document.getElementById('victory-modal').classList.add('hidden');
-    document.getElementById('levelup-modal').classList.add('hidden');
-    document.getElementById('game-hud').classList.remove('hud-hidden');
+    document.getElementById('menu-screen')?.classList.remove('active');
+    document.getElementById('pause-modal')?.classList.add('hidden');
+    document.getElementById('gameover-modal')?.classList.add('hidden');
+    document.getElementById('victory-modal')?.classList.add('hidden');
+    document.getElementById('levelup-modal')?.classList.add('hidden');
+    document.getElementById('squad-lobby-modal')?.classList.add('hidden');
+    document.getElementById('game-hud')?.classList.remove('hud-hidden');
+
+    // Ensure keyboard and mouse focus are on the game window, clearing any leftover input focus
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    window.focus();
+    this.keys = {};
+    this.mouse.isDown = false;
 
     // Reset Run Variables
     this.wave = this.gameMode === 'bossrush' ? 5 : 1;
@@ -6303,11 +6331,11 @@ class Game {
 
     // 1. Player Movement & Physics
     let mx = 0, my = 0;
-    if (this.keys['KeyW'] || this.keys['ArrowUp']) my -= 1;
-    if (this.keys['KeyS'] || this.keys['ArrowDown']) my += 1;
-    if (this.keys['KeyA'] || this.keys['ArrowLeft']) mx -= 1;
-    if (this.keys['KeyD'] || this.keys['ArrowRight']) mx += 1;
-    if (this.touchJoystick.active) {
+    if (this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) my -= 1;
+    if (this.keys['KeyS'] || this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) my += 1;
+    if (this.keys['KeyA'] || this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) mx -= 1;
+    if (this.keys['KeyD'] || this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) mx += 1;
+    if (this.touchJoystick && this.touchJoystick.active) {
       mx = this.touchJoystick.dx;
       my = this.touchJoystick.dy;
     }
@@ -7158,15 +7186,22 @@ class Game {
   }
 
   handleHostIncomingConnection(conn) {
-    conn.on('open', () => {
-      console.log('[Squad Host] New peer connected:', conn.peer);
-    });
+    const handleOpen = () => {
+      console.log('[Squad Host] New peer connected and channel OPEN:', conn.peer);
+    };
+    if (conn.open) {
+      handleOpen();
+    } else {
+      conn.on('open', handleOpen);
+    }
 
     conn.on('data', (data) => {
+      console.log('Received peer update:', data);
       this.handleHostNetworkPacket(data, conn);
     });
 
     conn.on('close', () => {
+      console.log('[Squad Host] Data channel closed:', conn.peer);
       this.removeSquadPeer(conn.peer);
     });
 
@@ -7179,21 +7214,34 @@ class Game {
   setupClientConnection(conn) {
     this.hostConn = conn;
 
-    conn.on('open', () => {
+    const handleOpen = () => {
+      console.log('[Squad Client] Connected and data channel OPEN to host:', conn.peer);
       this.updateJoinStatus('🤝 LINKING...', 'Connected to host! Sending operative credentials...', false);
-      conn.send({
+      const joinReq = {
         type: 'JOIN_REQ',
+        id: this.localPlayerId || this.peer?.id,
         name: this.saveData.playerName || 'Operative',
         heroId: this.selectedHero || 'commando',
         weaponId: this.saveData.primaryWeapon || 'ak47'
-      });
-    });
+      };
+      if (conn && conn.open) {
+        conn.send(joinReq);
+      }
+    };
+
+    if (conn.open) {
+      handleOpen();
+    } else {
+      conn.on('open', handleOpen);
+    }
 
     conn.on('data', (data) => {
+      console.log('Received peer update:', data);
       this.handleClientNetworkPacket(data);
     });
 
     conn.on('close', () => {
+      console.log('[Squad Client] Data channel to host closed.');
       this.updateJoinStatus('🔌 DISCONNECTED', 'Host closed connection or session ended.', true);
       document.getElementById('client-squad-preview')?.classList.add('hidden');
     });
@@ -7212,21 +7260,123 @@ class Game {
       this.broadcastSquadRoster();
       this.updateSquadLobbyUI();
       if (this.state === 'PLAYING') {
-        this.squadMembers = this.squadMembers.filter(m => m.peerId !== peerId);
+        this.squadMembers = this.squadMembers.filter(m => m.peerId !== peerId && m.id !== peerId);
         this.updateMultiplayerSquadHUD();
       }
     }
   }
 
+  // Unified real-time PLAYER_UPDATE handler for both Host and Client
+  handlePlayerUpdate(data) {
+    if (!data) return;
+
+    // Ignore self updates
+    const myId = this.peer ? this.peer.id : this.localPlayerId;
+    if (data.id && (data.id === myId || data.id === this.localPlayerId)) {
+      return;
+    }
+    if (data.slot && data.slot === this.mySlot) {
+      return;
+    }
+
+    // Locate remote player instance in this.squadMembers
+    let remotePlayer = this.squadMembers.find((m) =>
+      (data.id && (m.id === data.id || m.peerId === data.id)) ||
+      (data.slot && m.slot === data.slot)
+    );
+
+    // If not found in squadMembers yet (e.g. joined during match or packet arrived before roster rebuild), create it dynamically
+    if (!remotePlayer && data.slot && data.slot !== this.mySlot) {
+      const slotDef = SQUAD_SLOT_DEFS[(data.slot || 1) - 1] || SQUAD_SLOT_DEFS[0];
+      remotePlayer = {
+        id: data.id || ('slot_' + data.slot),
+        peerId: data.id || ('slot_' + data.slot),
+        slot: data.slot,
+        name: data.name || (data.slot === 1 ? 'Host Operative' : `Operative_P${data.slot}`),
+        hero: HERO_DEFS[data.heroId] || HERO_DEFS.commando,
+        heroId: data.heroId || 'commando',
+        color: slotDef.color,
+        weapon: WEAPON_DEFS[data.weaponId] || WEAPON_DEFS.ak47,
+        currentWeapon: WEAPON_DEFS[data.weaponId] || WEAPON_DEFS.ak47,
+        x: typeof data.x === 'number' ? data.x : WORLD_WIDTH / 2,
+        y: typeof data.y === 'number' ? data.y : WORLD_HEIGHT / 2,
+        angle: typeof data.angle === 'number' ? data.angle : 0,
+        hp: typeof data.hp === 'number' ? data.hp : 150,
+        maxHp: typeof data.maxHp === 'number' ? data.maxHp : 150,
+        shield: typeof data.shield === 'number' ? data.shield : 50,
+        maxShield: typeof data.maxShield === 'number' ? data.maxShield : 50,
+        isDowned: Boolean(data.isDowned),
+        downedTimer: typeof data.downedTimer === 'number' ? data.downedTimer : 0,
+        reviveProgress: 0,
+        shooting: Boolean(data.shooting),
+        walkTimer: 0,
+        isHuman: true
+      };
+      this.squadMembers.push(remotePlayer);
+    }
+
+    if (remotePlayer) {
+      // Direct coordinate updates: no broken interpolation, no division by zero
+      if (typeof data.x === 'number' && !isNaN(data.x)) remotePlayer.x = data.x;
+      if (typeof data.y === 'number' && !isNaN(data.y)) remotePlayer.y = data.y;
+      if (typeof data.angle === 'number' && !isNaN(data.angle)) remotePlayer.angle = data.angle;
+      if (typeof data.hp === 'number' && !isNaN(data.hp)) remotePlayer.hp = data.hp;
+      if (typeof data.maxHp === 'number' && !isNaN(data.maxHp)) remotePlayer.maxHp = data.maxHp;
+      if (typeof data.shield === 'number' && !isNaN(data.shield)) remotePlayer.shield = data.shield;
+      if (typeof data.maxShield === 'number' && !isNaN(data.maxShield)) remotePlayer.maxShield = data.maxShield;
+      if (typeof data.isDowned === 'boolean') remotePlayer.isDowned = data.isDowned;
+      if (typeof data.downedTimer === 'number') remotePlayer.downedTimer = data.downedTimer;
+      if (data.weaponId && WEAPON_DEFS[data.weaponId]) {
+        remotePlayer.weapon = WEAPON_DEFS[data.weaponId];
+        remotePlayer.currentWeapon = WEAPON_DEFS[data.weaponId];
+      }
+
+      remotePlayer.shooting = Boolean(data.shooting);
+      if (remotePlayer.shooting && !remotePlayer.isDowned) {
+        this.fireSquadPeerBullet(remotePlayer, remotePlayer.angle);
+      }
+    }
+
+    // If host: update squadPeers and relay to all other peers so P2, P3, P4 can see each other
+    if (this.isHost) {
+      if (this.squadPeers && data.id) {
+        const peerObj = this.squadPeers.get(data.id);
+        if (peerObj) {
+          peerObj.x = data.x;
+          peerObj.y = data.y;
+          peerObj.angle = data.angle;
+          peerObj.hp = data.hp;
+          peerObj.shield = data.shield;
+          peerObj.isDowned = data.isDowned;
+        }
+      }
+
+      if (this.squadPeers) {
+        this.squadPeers.forEach((p, peerId) => {
+          if (peerId !== data.id && p.conn && p.conn.open) {
+            try { p.conn.send(data); } catch (e) {}
+          }
+        });
+      }
+    }
+
+    this.updateMultiplayerSquadHUD();
+  }
+
   handleHostNetworkPacket(data, conn) {
     if (!data) return;
 
+    if (data.type === 'PLAYER_UPDATE' || data.type === 'CLIENT_INPUT') {
+      this.handlePlayerUpdate(data);
+      return;
+    }
+
     if (data.type === 'JOIN_REQ') {
-      const peerId = (conn ? conn.peer : data.clientId) || ('peer_' + Math.random().toString(36).substring(2, 7));
+      const peerId = (conn ? conn.peer : data.id || data.clientId) || ('peer_' + Math.random().toString(36).substring(2, 7));
 
       // Check if room is full (Host + 3 teammates = 4 max)
       if (this.squadPeers.size >= 3) {
-        if (conn) conn.send({ type: 'JOIN_REJECT', reason: 'Squad is full (4/4 players).' });
+        if (conn && conn.open) conn.send({ type: 'JOIN_REJECT', reason: 'Squad is full (4/4 players).' });
         return;
       }
 
@@ -7246,6 +7396,7 @@ class Game {
       const slotDef = SQUAD_SLOT_DEFS[assignedSlot - 1];
 
       const newPeer = {
+        id: peerId,
         peerId: peerId,
         conn: conn,
         slot: assignedSlot,
@@ -7255,6 +7406,7 @@ class Game {
         color: slotDef.color,
         weaponId: data.weaponId || 'ak47',
         currentWeapon: peerWeap,
+        weapon: peerWeap,
         x: WORLD_WIDTH / 2 + (assignedSlot === 2 ? 80 : assignedSlot === 3 ? -80 : 0),
         y: WORLD_HEIGHT / 2 + (assignedSlot === 4 ? 80 : -60),
         angle: 0,
@@ -7266,11 +7418,19 @@ class Game {
         downedTimer: 0,
         reviveProgress: 0,
         isShooting: false,
+        shooting: false,
         walkTimer: 0,
         isHuman: true
       };
 
       this.squadPeers.set(peerId, newPeer);
+
+      // If match is currently in progress, add to squadMembers immediately
+      if (this.state === 'PLAYING') {
+        if (!this.squadMembers.some(m => m.id === peerId || m.slot === assignedSlot)) {
+          this.squadMembers.push(newPeer);
+        }
+      }
 
       // Send ACK back to the new player
       const ackPacket = {
@@ -7279,7 +7439,7 @@ class Game {
         roomCode: this.roomCode,
         squadRoster: this.getSquadRosterSnapshot()
       };
-      if (conn) conn.send(ackPacket);
+      if (conn && conn.open) conn.send(ackPacket);
       if (this.localNetChannel) this.localNetChannel.postMessage(ackPacket);
 
       // Broadcast updated squad roster to all peers
@@ -7287,26 +7447,6 @@ class Game {
       this.showNotification(`${newPeer.name} connected to squad (P${assignedSlot})!`, 'OPERATIVE JOINED', 'green');
       this.audio.playLevelUp();
       this.updateSquadLobbyUI();
-    } else if (data.type === 'CLIENT_INPUT') {
-      const peer = this.squadPeers.get(data.peerId);
-      if (peer) {
-        peer.x = data.x;
-        peer.y = data.y;
-        peer.angle = data.angle;
-        peer.hp = data.hp;
-        peer.maxHp = data.maxHp;
-        peer.shield = data.shield;
-        peer.maxShield = data.maxShield;
-        peer.isDowned = data.isDowned;
-        peer.downedTimer = data.downedTimer;
-        peer.isShooting = data.shooting;
-        if (data.weaponId && WEAPON_DEFS[data.weaponId]) {
-          peer.currentWeapon = WEAPON_DEFS[data.weaponId];
-        }
-        if (data.shooting) {
-          this.fireSquadPeerBullet(peer, data.angle);
-        }
-      }
     } else if (data.type === 'REVIVE_SYNC') {
       const targetPeer = this.squadPeers.get(data.targetPeerId);
       if (targetPeer) {
@@ -7326,6 +7466,11 @@ class Game {
   handleClientNetworkPacket(data) {
     if (!data) return;
 
+    if (data.type === 'PLAYER_UPDATE' || data.type === 'CLIENT_INPUT') {
+      this.handlePlayerUpdate(data);
+      return;
+    }
+
     if (data.type === 'JOIN_ACK') {
       this.mySlot = data.assignedSlot;
       this.roomCode = data.roomCode;
@@ -7338,10 +7483,15 @@ class Game {
     } else if (data.type === 'SQUAD_UPDATE') {
       this.renderClientSquadPreview(data.squadRoster);
     } else if (data.type === 'MATCH_START') {
-      this.buildSquadMembersListFromRoster(data.squadRoster);
-      document.getElementById('squad-lobby-modal')?.classList.add('hidden');
-      this.showNotification('Host launched the squad match! Deploying...', 'MATCH COMMENCED', 'green');
-      this.startRun();
+      try {
+        console.log('[Squad Client] Received MATCH_START:', data);
+        this.buildSquadMembersListFromRoster(data.squadRoster);
+        document.getElementById('squad-lobby-modal')?.classList.add('hidden');
+        this.showNotification('Host launched the squad match! Deploying...', 'MATCH COMMENCED', 'green');
+        this.startRun();
+      } catch (err) {
+        console.error('[Squad Client] Error starting run on MATCH_START:', err);
+      }
     } else if (data.type === 'HOST_SYNC') {
       this.applyHostSync(data);
     } else if (data.type === 'REVIVE_SUCCESS') {
@@ -7508,6 +7658,7 @@ class Game {
 
     this.squadPeers.forEach((p) => {
       this.squadMembers.push({
+        id: p.peerId || ('slot_' + p.slot),
         slot: p.slot,
         isHost: false,
         isLocal: false,
@@ -7517,6 +7668,7 @@ class Game {
         heroId: p.heroId,
         color: p.color,
         weapon: p.currentWeapon,
+        currentWeapon: p.currentWeapon,
         x: p.x,
         y: p.y,
         angle: p.angle,
@@ -7527,6 +7679,7 @@ class Game {
         isDowned: p.isDowned,
         downedTimer: p.downedTimer,
         reviveProgress: p.reviveProgress,
+        shooting: false,
         walkTimer: 0,
         isHuman: true
       });
@@ -7543,6 +7696,7 @@ class Game {
         const weap = WEAPON_DEFS[p.weaponId] || WEAPON_DEFS.ak47;
         const slotDef = SQUAD_SLOT_DEFS[p.slot - 1] || SQUAD_SLOT_DEFS[0];
         this.squadMembers.push({
+          id: p.peerId || ('slot_' + p.slot),
           slot: p.slot,
           isHost: p.isHost,
           isLocal: false,
@@ -7552,6 +7706,7 @@ class Game {
           heroId: p.heroId,
           color: slotDef.color,
           weapon: weap,
+          currentWeapon: weap,
           x: WORLD_WIDTH / 2 + (p.slot === 2 ? 80 : p.slot === 3 ? -80 : 0),
           y: WORLD_HEIGHT / 2 + (p.slot === 4 ? 80 : -60),
           angle: 0,
@@ -7562,6 +7717,7 @@ class Game {
           isDowned: false,
           downedTimer: 0,
           reviveProgress: 0,
+          shooting: false,
           walkTimer: 0,
           isHuman: true
         });
@@ -7593,118 +7749,108 @@ class Game {
 
   // 30-60 Hz Client Input & Authoritative Host Broadcast Loop
   syncSquadNetworkState(dt) {
+    if (!this.player) return;
+
     this.networkSyncTimer = (this.networkSyncTimer || 0) + dt;
-    if (this.networkSyncTimer < 0.033) return; // ~30 Hz tick
+    if (this.networkSyncTimer < 0.033) return; // ~30 Hz interval
     this.networkSyncTimer = 0;
 
+    const localPlayerId = this.peer ? this.peer.id : (this.localPlayerId || (this.isHost ? 'host_p1' : ('p_' + this.mySlot)));
+    this.localPlayerId = localPlayerId;
+    this.player.isShooting = (this.mouse?.isDown || this.isTouchFiring) && !this.player.isDowned;
+
+    // Realtime coordinate payload
+    const payload = {
+      type: 'PLAYER_UPDATE',
+      id: localPlayerId,
+      slot: this.mySlot || (this.isHost ? 1 : 2),
+      name: this.saveData.playerName || (this.isHost ? 'Host Operative' : `Operative_P${this.mySlot}`),
+      heroId: this.selectedHero || 'commando',
+      x: this.player.x,
+      y: this.player.y,
+      angle: this.player.angle,
+      shooting: Boolean(this.player.isShooting),
+      hp: this.player.hp,
+      maxHp: this.player.maxHp,
+      shield: this.player.shield,
+      maxShield: this.player.maxShield,
+      isDowned: Boolean(this.player.isDowned),
+      downedTimer: this.player.downedTimer,
+      weaponId: this.player.currentWeapon?.id
+    };
+
     if (this.isHost) {
-      // Host Authoritative Sync Broadcast
-      const squadState = [
-        {
-          slot: 1,
-          x: this.player.x,
-          y: this.player.y,
-          angle: this.player.angle,
-          hp: this.player.hp,
-          maxHp: this.player.maxHp,
-          shield: this.player.shield,
-          maxShield: this.player.maxShield,
-          isDowned: this.player.isDowned,
-          downedTimer: this.player.downedTimer,
-          weaponId: this.player.currentWeapon?.id
-        }
-      ];
-
-      this.squadPeers.forEach((p) => {
-        squadState.push({
-          slot: p.slot,
-          peerId: p.peerId,
-          x: p.x,
-          y: p.y,
-          angle: p.angle,
-          hp: p.hp,
-          maxHp: p.maxHp,
-          shield: p.shield,
-          maxShield: p.maxShield,
-          isDowned: p.isDowned,
-          downedTimer: p.downedTimer,
-          weaponId: p.currentWeapon?.id
+      // Host broadcasts local player state to all peers
+      if (this.squadPeers) {
+        this.squadPeers.forEach((p) => {
+          if (p.conn && p.conn.open) {
+            try { p.conn.send(payload); } catch (e) {}
+          }
         });
-      });
+      }
+      if (this.localNetChannel) {
+        try { this.localNetChannel.postMessage(payload); } catch (e) {}
+      }
 
+      // Host also broadcasts authoritative wave progression
       const hostSyncPacket = {
         type: 'HOST_SYNC',
-        squad: squadState,
         wave: this.wave,
         waveTimer: this.waveTimer
       };
-
       this.broadcastToSquad(hostSyncPacket);
       this.updateMultiplayerSquadHUD();
     } else {
-      // Client Input Transmission to Host
-      if (!this.player) return;
-      const inputPacket = {
-        type: 'CLIENT_INPUT',
-        peerId: this.peer?.id,
-        slot: this.mySlot,
-        x: this.player.x,
-        y: this.player.y,
-        angle: this.player.angle,
-        shooting: this.mouse?.isDown || false,
-        weaponId: this.player.currentWeapon?.id,
-        hp: this.player.hp,
-        maxHp: this.player.maxHp,
-        shield: this.player.shield,
-        maxShield: this.player.maxShield,
-        isDowned: this.player.isDowned,
-        downedTimer: this.player.downedTimer
-      };
-
+      // Client transmits local player state to Host
       if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send(inputPacket);
+        try { this.hostConn.send(payload); } catch (e) {}
       }
       if (this.localNetChannel) {
-        this.localNetChannel.postMessage(inputPacket);
+        try { this.localNetChannel.postMessage(payload); } catch (e) {}
       }
       this.updateMultiplayerSquadHUD();
     }
   }
 
   applyHostSync(data) {
-    if (!data || !data.squad) return;
+    if (!data) return;
 
-    data.squad.forEach((state) => {
-      if (state.slot === this.mySlot) {
-        // Sync authoritatively if host revives us
-        if (!state.isDowned && this.player.isDowned) {
-          this.reviveLocalPlayer();
-        }
-      } else {
-        const member = this.squadMembers.find(m => m.slot === state.slot);
-        if (member) {
-          member.x = state.x;
-          member.y = state.y;
-          member.angle = state.angle;
-          member.hp = state.hp;
-          member.maxHp = state.maxHp;
-          member.shield = state.shield;
-          member.maxShield = state.maxShield;
-          member.isDowned = state.isDowned;
-          member.downedTimer = state.downedTimer;
-          if (state.weaponId && WEAPON_DEFS[state.weaponId]) {
-            member.weapon = WEAPON_DEFS[state.weaponId];
+    if (typeof data.wave === 'number') this.wave = data.wave;
+    if (typeof data.waveTimer === 'number') this.waveTimer = data.waveTimer;
+
+    if (data.squad && Array.isArray(data.squad)) {
+      data.squad.forEach((state) => {
+        if (state.slot === this.mySlot) {
+          if (!state.isDowned && this.player.isDowned) {
+            this.reviveLocalPlayer();
+          }
+        } else {
+          const member = this.squadMembers.find(m => m.slot === state.slot || (state.peerId && m.peerId === state.peerId));
+          if (member) {
+            if (typeof state.x === 'number') member.x = state.x;
+            if (typeof state.y === 'number') member.y = state.y;
+            if (typeof state.angle === 'number') member.angle = state.angle;
+            if (typeof state.hp === 'number') member.hp = state.hp;
+            if (typeof state.shield === 'number') member.shield = state.shield;
+            if (typeof state.isDowned === 'boolean') member.isDowned = state.isDowned;
           }
         }
-      }
-    });
+      });
+    }
 
     this.updateMultiplayerSquadHUD();
   }
 
   fireSquadPeerBullet(peer, angle) {
-    if (!peer || !peer.currentWeapon) return;
-    const weap = peer.currentWeapon;
+    if (!peer) return;
+    const now = performance.now();
+    const weap = peer.currentWeapon || peer.weapon || WEAPON_DEFS.ak47;
+    const cooldownMs = 1000 / (weap.fireRate || 7);
+    if (peer.lastFireTime && (now - peer.lastFireTime) < cooldownMs) {
+      return;
+    }
+    peer.lastFireTime = now;
+
     const bulletSpeed = (weap.speed || 800) * 0.9;
     const bx = peer.x + Math.cos(angle) * 20;
     const by = peer.y + Math.sin(angle) * 20;
@@ -7721,7 +7867,7 @@ class Game {
       pierce: weap.pierce || 1,
       isPlayerBullet: true
     });
-    this.particles.addMuzzleFlash(bx, by, angle, peer.color);
+    this.particles.addMuzzleFlash(bx, by, angle, peer.color || '#00ff88');
   }
 
   enterPlayerDownedState() {
