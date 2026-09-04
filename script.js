@@ -5336,7 +5336,9 @@ class Game {
       ultMaxCd: heroDef.ultCooldown,
       cooldownMult: 1.0,
       angle: 0,
-      invulnTime: 0
+      invulnTime: 0,
+      isInvulnerable: false,
+      hullIntegrity: heroDef.hp + bonusHp
     };
 
     // Update HUD Icons
@@ -6536,7 +6538,16 @@ class Game {
     if (this.player.dashCooldown > 0) this.player.dashCooldown -= dt;
     if (this.player.specialCooldown > 0) this.player.specialCooldown -= dt;
     if (this.player.ultCooldown > 0) this.player.ultCooldown -= dt;
-    if (this.player.invulnTime > 0) this.player.invulnTime -= dt;
+    if (this.player.invulnTime > 0) {
+      this.player.invulnTime -= dt;
+      if (this.player.invulnTime <= 0) {
+        this.player.invulnTime = 0;
+        this.player.isInvulnerable = false;
+      }
+    } else {
+      this.player.invulnTime = 0;
+      this.player.isInvulnerable = false;
+    }
     if (this.player.muzzleFlash > 0) this.player.muzzleFlash -= dt;
     if (this.player.recoil > 0) this.player.recoil = Math.max(0, this.player.recoil - dt * 25);
 
@@ -7082,46 +7093,45 @@ class Game {
         }
       }
 
-      // Collide with local player if not already targeted, guaranteeing no invincibility
+      // Collide with local player if not already targeted
       if (targetMember && !this.player.isDowned) {
         const distToLocal = Math.hypot(this.player.x - e.x, this.player.y - e.y);
         if (distToLocal < e.radius + this.player.radius) {
-          this.damagePlayer(Math.round(e.damage * 0.7));
+          this.takeDamage(Math.round((e.damage || 10) * 0.7));
         }
       }
     }
 
-    // 5.5 Universal Squad Damage Collision (Host Authoritative & Client Local)
-    if (this.isPrivateMatch) {
-      if (this.isHost && this.squadMembers && this.squadMembers.length > 0) {
-        // Host Authoritatively computes enemy collision against ALL squad members
-        this.squadMembers.forEach((member) => {
-          if (member.isDowned) return;
-          if (member.invulnTime > 0) member.invulnTime = Math.max(0, member.invulnTime - dt);
-
-          this.enemies.forEach((enemy) => {
-            if (enemy.dead) return;
-            const dist = Math.hypot(member.x - enemy.x, member.y - enemy.y);
-            const mRadius = member.radius || 16;
-            const eRadius = enemy.radius || 16;
-            if (dist < mRadius + eRadius) {
-              this.applySquadMemberDamage(member, enemy.damage || 15);
-            }
-          });
-        });
+    // 5.5 Universal Enemy-to-Player Collision Check (Runs EVERY FRAME in Solo, Normal, and Multiplayer modes)
+    if (this.player && !this.player.isDowned) {
+      const pRadius = this.player.radius || 18;
+      for (let j = 0; j < this.enemies.length; j++) {
+        const enemy = this.enemies[j];
+        if (!enemy || enemy.dead) continue;
+        const eRadius = enemy.radius || 16;
+        const dist = Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y);
+        if (dist < pRadius + eRadius) {
+          this.takeDamage(enemy.damage || 10);
+        }
       }
+    }
 
-      // Both Host and Client compute collision against local player
-      if (!this.player.isDowned) {
+    // Host authoritative squad member collision (multiplayer co-op only)
+    if (this.isPrivateMatch && this.isHost && this.squadMembers && this.squadMembers.length > 0) {
+      this.squadMembers.forEach((member) => {
+        if (member.isDowned) return;
+        if (member.invulnTime > 0) member.invulnTime = Math.max(0, member.invulnTime - dt);
+
         this.enemies.forEach((enemy) => {
-          if (enemy.dead) return;
-          const dist = Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y);
+          if (!enemy || enemy.dead) return;
+          const dist = Math.hypot(member.x - enemy.x, member.y - enemy.y);
+          const mRadius = member.radius || 16;
           const eRadius = enemy.radius || 16;
-          if (dist < this.player.radius + eRadius) {
-            this.damagePlayer(enemy.damage || 15);
+          if (dist < mRadius + eRadius) {
+            this.applySquadMemberDamage(member, enemy.damage || 15);
           }
         });
-      }
+      });
     }
 
     // 6. Pickups Magnet & Collection
@@ -7191,43 +7201,91 @@ class Game {
     }
   }
 
-  damagePlayer(amount) {
-    if (this.player.invulnTime > 0) return;
-    this.player.invulnTime = 0.3;
-    this.addScreenShake(0.45);
-    this.audio.playHit(false);
+  takeDamage(amount) {
+    if (!this.player || this.player.isDowned) return;
 
-    // Damage shield first
-    if (this.player.shield > 0) {
-      const shieldDmg = Math.min(this.player.shield, amount);
-      this.player.shield -= shieldDmg;
-      amount -= shieldDmg;
-      this.particles.addSpark(this.player.x, this.player.y, '#00f0ff', 8);
+    // Verify invulnerability / hit cooldown flag is not active
+    if (this.player.isInvulnerable || (this.player.invulnTime && this.player.invulnTime > 0)) {
+      return;
     }
 
-    // Remaining damage to HP
-    if (amount > 0) {
-      this.player.hp -= amount;
-      this.particles.addBlood(this.player.x, this.player.y, '#ff0055', 10);
+    const dmgAmount = (typeof amount === 'number' && amount > 0) ? amount : 10;
+
+    // Set a short invulnerability window (200ms) after a hit and ensure it resets back to false
+    this.player.invulnTime = 0.20;
+    this.player.isInvulnerable = true;
+    setTimeout(() => {
+      if (this.player && this.player.invulnTime <= 0.05) {
+        this.player.isInvulnerable = false;
+        this.player.invulnTime = 0;
+      }
+    }, 250);
+
+    this.addScreenShake(0.45);
+    if (this.audio && typeof this.audio.playHit === 'function') {
+      this.audio.playHit(false);
+    }
+
+    let remainingDmg = dmgAmount;
+
+    // Ensure damage first drains player.shield
+    if (this.player.shield > 0) {
+      const shieldDmg = Math.min(this.player.shield, remainingDmg);
+      this.player.shield = Math.max(0, this.player.shield - shieldDmg);
+      remainingDmg -= shieldDmg;
+      if (this.particles && typeof this.particles.addSpark === 'function') {
+        this.particles.addSpark(this.player.x, this.player.y, '#00f0ff', 8);
+      }
+    }
+
+    // Any leftover amount directly subtracts from player.hp (player.hullIntegrity)
+    if (remainingDmg > 0) {
+      this.player.hp = Math.max(0, this.player.hp - remainingDmg);
+      this.player.hullIntegrity = this.player.hp;
+      if (this.particles && typeof this.particles.addBlood === 'function') {
+        this.particles.addBlood(this.player.x, this.player.y, '#ff0055', 10);
+      }
+    } else {
+      this.player.hullIntegrity = this.player.hp;
     }
 
     // Reactive Armor Perk on damage
-    if (this.player.reactiveArmor) {
+    if (this.player.reactiveArmor && this.particles && this.enemies) {
       this.particles.addShockwave(this.player.x, this.player.y, 160, '#ffaa00', 0.3);
       this.enemies.forEach((e) => {
         if (Math.hypot(e.x - this.player.x, e.y - this.player.y) < 160) {
-          e.hp -= 40 * this.player.damageMult;
+          e.hp -= 40 * (this.player.damageMult || 1);
         }
       });
     }
 
+    // HUD Health Bar Updates: Immediately update DOM elements for Shield and Hull Integrity bars and text values on screen
+    this.updateHUD();
+    const maxHp = Math.max(1, this.player.maxHp || 100);
+    const maxShield = Math.max(1, this.player.maxShield || 50);
+    const hpPct = Math.max(0, Math.min(100, (this.player.hp / maxHp) * 100));
+    const shieldPct = Math.max(0, Math.min(100, (this.player.shield / maxShield) * 100));
+    const hpFill = document.getElementById('hud-hp-fill');
+    const shieldFill = document.getElementById('hud-shield-fill');
+    const hpVal = document.getElementById('hud-hp-val');
+    const shieldVal = document.getElementById('hud-shield-val');
+    if (hpFill) hpFill.style.width = `${hpPct}%`;
+    if (shieldFill) shieldFill.style.width = `${shieldPct}%`;
+    if (hpVal) hpVal.textContent = `${Math.ceil(this.player.hp)}/${this.player.maxHp}`;
+    if (shieldVal) shieldVal.textContent = `${Math.ceil(this.player.shield)}/${this.player.maxShield}`;
+
+    // If player.hp <= 0, trigger gameOver() in solo mode (or triggerDownedState() only when in multiplayer co-op)
     if (this.player.hp <= 0) {
       this.player.hp = 0;
-      if (this.isPrivateMatch) {
-        this.enterPlayerDownedState();
-        const allSquadDowned = this.squadMembers.length > 0 && this.squadMembers.every(m => m.isDowned);
+      this.player.hullIntegrity = 0;
+      const isCoop = Boolean(this.isPrivateMatch || this.isMultiplayer);
+      if (isCoop) {
+        this.triggerDownedState();
+        const allSquadDowned = this.squadMembers && this.squadMembers.length > 0 && this.squadMembers.every(m => m.isDowned);
         if (allSquadDowned) {
-          if (this.isHost) this.broadcastToSquad({ type: 'SQUAD_GAME_OVER' });
+          if (this.isHost && typeof this.broadcastToSquad === 'function') {
+            this.broadcastToSquad({ type: 'SQUAD_GAME_OVER' });
+          }
           this.gameOver();
         }
       } else {
@@ -7235,9 +7293,17 @@ class Game {
       }
     }
 
-    if (this.isPrivateMatch) {
+    if (this.isPrivateMatch && typeof this.broadcastHealthUpdate === 'function') {
       this.broadcastHealthUpdate();
     }
+  }
+
+  damagePlayer(amount) {
+    this.takeDamage(amount);
+  }
+
+  triggerDownedState() {
+    this.enterPlayerDownedState();
   }
 
   broadcastHealthUpdate() {
@@ -10031,9 +10097,11 @@ class Game {
     if (!this.player) return;
 
     // Health & Shield Bars
-    const hpPct = Math.max(0, (this.player.hp / this.player.maxHp) * 100);
-    const shieldPct = Math.max(0, (this.player.shield / this.player.maxShield) * 100);
-    const xpPct = Math.max(0, (this.player.xp / this.player.nextLevelXp) * 100);
+    const maxHp = Math.max(1, this.player.maxHp || 100);
+    const maxShield = Math.max(1, this.player.maxShield || 50);
+    const hpPct = Math.max(0, Math.min(100, (this.player.hp / maxHp) * 100));
+    const shieldPct = Math.max(0, Math.min(100, (this.player.shield / maxShield) * 100));
+    const xpPct = Math.max(0, (this.player.xp / Math.max(1, this.player.nextLevelXp || 1)) * 100);
 
     const hpFill = document.getElementById('hud-hp-fill');
     const shieldFill = document.getElementById('hud-shield-fill');
