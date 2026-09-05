@@ -6633,7 +6633,11 @@ class Game {
       this.updateWeaponHUD();
     }
 
-    if (this.player.shield < this.player.maxShield && this.player.hp > 0 && !this.player.isDowned && !this.isGameOver) {
+    if (this.player.shieldCooldown > 0) {
+      this.player.shieldCooldown = Math.max(0, this.player.shieldCooldown - dt);
+    }
+
+    if (this.player.shieldCooldown <= 0 && this.player.shield < this.player.maxShield && this.player.hp > 0 && !this.player.isDowned && !this.isGameOver) {
       this.player.shield = Math.min(this.player.maxShield, this.player.shield + this.player.shieldRegenRate * dt);
     }
 
@@ -7300,6 +7304,9 @@ class Game {
       }
     }, 250);
 
+    // Pause shield regeneration for 2.5 seconds upon taking combat damage
+    this.player.shieldCooldown = 2.5;
+
     this.addScreenShake(0.45);
     if (this.audio && typeof this.audio.playHit === 'function') {
       this.audio.playHit(false);
@@ -7315,6 +7322,9 @@ class Game {
       if (this.particles && typeof this.particles.addSpark === 'function') {
         this.particles.addSpark(this.player.x, this.player.y, '#00f0ff', 8);
       }
+      if (this.particles && typeof this.particles.addCombatText === 'function') {
+        this.particles.addCombatText(this.player.x, this.player.y - 20, `-${Math.round(shieldDmg)} SHIELD`, '#00f0ff');
+      }
     }
 
     // Any leftover amount directly subtracts from player.hp (player.hullIntegrity)
@@ -7323,6 +7333,9 @@ class Game {
       this.player.hullIntegrity = this.player.hp;
       if (this.particles && typeof this.particles.addBlood === 'function') {
         this.particles.addBlood(this.player.x, this.player.y, '#ff0055', 10);
+      }
+      if (this.particles && typeof this.particles.addCombatText === 'function') {
+        this.particles.addCombatText(this.player.x, this.player.y - 35, `-${Math.round(remainingDmg)} HULL`, '#ff0055', true);
       }
     } else {
       this.player.hullIntegrity = this.player.hp;
@@ -10307,6 +10320,10 @@ class Game {
   // ==========================================================================
   updateHUD() {
     if (!this.player) return;
+
+    if (typeof this.player.hp === 'number') {
+      this.player.hullIntegrity = this.player.hp;
+    }
 
     // Health & Shield Bars
     const maxHp = Math.max(1, this.player.maxHp || 100);
