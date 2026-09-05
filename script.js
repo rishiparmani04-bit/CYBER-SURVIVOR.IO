@@ -6477,6 +6477,13 @@ class Game {
     if (bossNameEl) bossNameEl.textContent = boss.name;
   }
 
+  addScreenShake(amount = 0.5) {
+    if (this.camera) {
+      const trauma = (typeof amount === 'number' && !isNaN(amount)) ? amount : 0.5;
+      this.camera.shakeTrauma = Math.min(1.0, (this.camera.shakeTrauma || 0) + trauma);
+    }
+  }
+
   // ==========================================================================
   // MAIN UPDATE & RENDER LOOP
   // ==========================================================================
@@ -7307,10 +7314,19 @@ class Game {
     // Pause shield regeneration for 2.5 seconds upon taking combat damage
     this.player.shieldCooldown = 2.5;
 
-    this.addScreenShake(0.45);
-    if (this.audio && typeof this.audio.playHit === 'function') {
-      this.audio.playHit(false);
-    }
+    try {
+      if (typeof this.addScreenShake === 'function') {
+        this.addScreenShake(0.45);
+      } else if (this.camera) {
+        this.camera.shakeTrauma = Math.min(1.0, (this.camera.shakeTrauma || 0) + 0.45);
+      }
+    } catch (e) {}
+
+    try {
+      if (this.audio && typeof this.audio.playHit === 'function') {
+        this.audio.playHit(false);
+      }
+    } catch (e) {}
 
     let remainingDmg = dmgAmount;
 
