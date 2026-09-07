@@ -196,8 +196,14 @@ window.openAvatarModal = openAvatarModal;
 window.openAuthModal = function() {
   const m = document.getElementById('authModal');
   if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  if (m) { m.style.zIndex = '99999'; }
   const inner = document.getElementById('callsign-auth-modal');
   if (inner && inner !== m) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+  if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+    try { window.AuthManager.renderGisButton(); } catch (e) {}
+  }
+  const input = document.getElementById('input-operative-callsign');
+  if (input) setTimeout(() => input.focus(), 100);
   if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
     try { window.gameInstance.openAuthModal(); } catch (e) {}
   }
@@ -231,8 +237,14 @@ function bindHeaderClickHandlers() {
       const modal = document.getElementById('authModal');
       if (modal) modal.style.display = 'flex';
       if (modal) modal.classList.remove('hidden');
+      if (modal) modal.style.zIndex = '99999';
       const inner = document.getElementById('callsign-auth-modal');
       if (inner && inner !== modal) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+      if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+        try { window.AuthManager.renderGisButton(); } catch (e) {}
+      }
+      const input = document.getElementById('input-operative-callsign');
+      if (input) setTimeout(() => input.focus(), 100);
       if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
         try { window.gameInstance.openAuthModal(); } catch (e) {}
       }
@@ -9213,6 +9225,10 @@ class Game {
   }
 
   openAuthModal() {
+    if (this.isUserAuthenticated()) {
+      this.openProfileModal();
+      return;
+    }
     const backdrop = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
     if (backdrop) {
       backdrop.style.zIndex = '99999';
@@ -12051,8 +12067,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const modal = document.getElementById('authModal');
       if (modal) modal.style.display = 'flex';
       if (modal) modal.classList.remove('hidden');
+      if (modal) modal.style.zIndex = '99999';
       const inner = document.getElementById('callsign-auth-modal');
       if (inner && inner !== modal) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+      if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+        try { window.AuthManager.renderGisButton(); } catch (e) {}
+      }
+      const input = document.getElementById('input-operative-callsign');
+      if (input) setTimeout(() => input.focus(), 100);
       if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
         try { window.gameInstance.openAuthModal(); } catch (e) {}
       }

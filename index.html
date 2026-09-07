@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css?v=6.5">
+  <link rel="stylesheet" href="style.css?v=6.6">
 
   <!-- Google H5 Games Ads SDK -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous" data-adbreak-test="on"></script>
@@ -22,6 +22,109 @@
 
   <!-- Google Identity Services (GIS) OAuth SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Immediate Early Trigger Handlers for Header Buttons & Modals -->
+  <script>
+    window.openAuthModal = function() {
+      var m = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+      if (m) {
+        m.classList.remove('hidden');
+        m.style.display = 'flex';
+        m.style.zIndex = '99999';
+        m.style.visibility = 'visible';
+        m.style.opacity = '1';
+        m.style.pointerEvents = 'auto';
+      }
+      var c = document.getElementById('callsign-auth-modal');
+      if (c && c !== m) {
+        c.classList.remove('hidden');
+        c.style.display = 'flex';
+        c.style.visibility = 'visible';
+        c.style.opacity = '1';
+        c.style.pointerEvents = 'auto';
+      }
+      if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+        try { window.AuthManager.renderGisButton(); } catch (e) {}
+      }
+      var inp = document.getElementById('input-operative-callsign');
+      if (inp) {
+        try { inp.focus(); } catch (e) {}
+      }
+      if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
+        try { window.gameInstance.openAuthModal(); } catch (e) {}
+      }
+    };
+
+    window.closeAuthModal = function() {
+      var m = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+      if (m) {
+        m.classList.add('hidden');
+        m.style.display = 'none';
+      }
+      if (window.gameInstance && typeof window.gameInstance.closeCallsignModal === 'function') {
+        try { window.gameInstance.closeCallsignModal(); } catch (e) {}
+      }
+    };
+
+    window.openCallsignModal = function() {
+      var m = document.getElementById('callsignModal') || document.getElementById('profileModal');
+      if (m) {
+        m.classList.remove('hidden');
+        m.style.display = 'flex';
+        m.style.zIndex = '99999';
+        m.style.visibility = 'visible';
+        m.style.opacity = '1';
+      }
+      var c = document.getElementById('profile-setup-modal');
+      if (c && c !== m) {
+        c.classList.remove('hidden');
+        c.style.display = 'flex';
+      }
+      if (window.gameInstance && typeof window.gameInstance.openCallsignModal === 'function') {
+        try { window.gameInstance.openCallsignModal(); } catch (e) {}
+      }
+    };
+
+    window.closeCallsignModal = function() {
+      var m = document.getElementById('callsignModal') || document.getElementById('profileModal');
+      if (m) {
+        m.classList.add('hidden');
+        m.style.display = 'none';
+      }
+      if (window.gameInstance && typeof window.gameInstance.closeProfileModal === 'function') {
+        try { window.gameInstance.closeProfileModal(); } catch (e) {}
+      }
+    };
+
+    window.openStoreModal = function() {
+      var m = document.getElementById('storeModal') || document.getElementById('shopModal');
+      if (m) {
+        m.classList.remove('hidden');
+        m.style.display = 'flex';
+        m.style.zIndex = '99999';
+      }
+      var c = document.getElementById('earn-diamonds-modal');
+      if (c && c !== m) {
+        c.classList.remove('hidden');
+        c.style.display = 'flex';
+      }
+      if (window.gameInstance && typeof window.gameInstance.openStoreModal === 'function') {
+        try { window.gameInstance.openStoreModal(); } catch (e) {}
+      }
+    };
+
+    window.openAvatarModal = function() {
+      var m = document.getElementById('avatarModal');
+      if (m) {
+        m.classList.remove('hidden');
+        m.style.display = 'flex';
+        m.style.zIndex = '99999';
+      }
+      if (window.gameInstance && typeof window.gameInstance.openAvatarModal === 'function') {
+        try { window.gameInstance.openAvatarModal(); } catch (e) {}
+      }
+    };
+  </script>
 
   <!-- Anti-Cheat & DevTools Protection Guard -->
   <script>
@@ -1855,7 +1958,7 @@
             <span class="callsign-sub" id="callsign-modal-subtitle">AUTHENTICATION PROTOCOL</span>
           </div>
         </div>
-        <button id="btn-close-callsign-modal" class="alert-close-btn" aria-label="Close">✕</button>
+        <button id="btn-close-callsign-modal" class="alert-close-btn" onclick="window.closeAuthModal()" aria-label="Close">✕</button>
       </div>
 
       <div class="callsign-card-body">
@@ -1982,6 +2085,6 @@
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="ads.js?v=1.0"></script>
   <script src="auth.js?v=1.1"></script>
-  <script src="script.js?v=6.5"></script>
+  <script src="script.js?v=6.6"></script>
 </body>
 </html>

@@ -364,12 +364,18 @@ header {
 .modal-backdrop[style*="display: flex"] {
   display: flex !important;
   z-index: 99999 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 #authModal:not(.hidden) .callsign-auth-card,
 #authModal[style*="display: flex"] .callsign-auth-card,
 #callsign-auth-modal.modal-card {
   display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .deadshot-topbar,
