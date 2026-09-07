@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css?v=6.2">
+  <link rel="stylesheet" href="style.css?v=6.3">
 
   <!-- Google H5 Games Ads SDK -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous" data-adbreak-test="on"></script>
@@ -314,7 +314,7 @@
     <div class="menu-particles" id="menu-particles"></div>
 
     <!-- DEADSHOT.io Top Navigation Header Bar -->
-    <header class="deadshot-topbar">
+    <header class="deadshot-topbar header-container">
       <div class="topbar-left">
         <div class="deadshot-logo-container">
           <h1 class="deadshot-logo">CYBER<span class="logo-gun-crosshair">🎯</span>SURVIVOR<span class="logo-io">.io</span></h1>
@@ -325,22 +325,24 @@
       </div>
 
       <div class="topbar-right">
-        <div class="user-profile-badge">
+        <div class="user-profile-badge profile-bar">
           <div class="user-avatar-frame" id="headerAvatar" title="Click to customize Operative Avatar">
             <span id="topbar-hero-avatar">🚀</span>
             <span class="avatar-edit-badge" id="editAvatarBtn" title="Customize Avatar">✏️ EDIT</span>
           </div>
           <div class="user-meta">
-            <div class="user-handle user-name" id="headerUsername" spellcheck="false" title="Click to change your callsign">badhash</div>
+            <div class="user-handle user-name" id="playerCallsignHeader" spellcheck="false" title="Click to change your callsign">
+              <span id="headerUsername">badhash</span>
+            </div>
             <div class="user-wallet" id="topbar-user-wallet">
-              <span class="wallet-coins coins-pill add-currency-btn" id="btn-buy-coins" title="Coins (Click to replenish currency)"><strong id="topbar-credits">700</strong> <span class="coin-dot">🪙</span> <span class="wallet-plus add-currency-btn">+</span></span>
-              <span class="wallet-gems gems-pill add-currency-btn" id="btn-buy-gems" title="Diamonds (Click to replenish currency)"><strong id="topbar-gems">50</strong> <span class="gem-dot">💎</span> <span class="wallet-plus add-currency-btn">+</span></span>
+              <span class="wallet-coins coins-pill currency-pill currency-badge add-currency-btn" id="coinDisplayBtn" title="Coins (Click to replenish currency)"><strong id="topbar-credits">700</strong> <span class="coin-dot">🪙</span> <span class="wallet-plus add-currency-btn" id="btn-buy-coins">+</span></span>
+              <span class="wallet-gems gems-pill currency-pill currency-badge add-currency-btn" id="gemDisplayBtn" title="Diamonds (Click to replenish currency)"><strong id="topbar-gems">50</strong> <span class="gem-dot">💎</span> <span class="wallet-plus add-currency-btn" id="btn-buy-gems">+</span></span>
             </div>
           </div>
         </div>
         <div class="topbar-auth-row">
-          <button id="signInBtn" class="btn-auth-sm">Sign In</button>
-          <button id="btn-reset-data-top" class="btn-auth-sm btn-signout">Sign Out</button>
+          <button id="signInBtn" class="btn-auth-sm" type="button">Sign In</button>
+          <button id="btn-reset-data-top" class="btn-auth-sm btn-signout" type="button">Sign Out</button>
         </div>
       </div>
     </header>
@@ -1976,6 +1978,6 @@
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="ads.js?v=1.0"></script>
   <script src="auth.js?v=1.1"></script>
-  <script src="script.js?v=6.2"></script>
+  <script src="script.js?v=6.3"></script>
 </body>
 </html>

@@ -164,6 +164,80 @@ window.handleAvatarImgError = function(img, avatarId) {
   }
 };
 
+// ============================================================================
+// GLOBAL MODAL ACTION HELPERS (DIRECT TOPBAR & EXTERNAL ACCESS)
+// ============================================================================
+function openAuthModal() {
+  if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
+    return window.gameInstance.openAuthModal();
+  }
+  const modal = document.getElementById('callsign-auth-modal') || document.getElementById('profile-setup-modal');
+  if (modal) {
+    modal.style.zIndex = '99999';
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    const input = document.getElementById('input-operative-callsign');
+    if (input) setTimeout(() => input.focus(), 150);
+  }
+}
+
+function openCallsignModal(pendingAction = null) {
+  if (window.gameInstance && typeof window.gameInstance.openCallsignModal === 'function') {
+    return window.gameInstance.openCallsignModal(pendingAction);
+  }
+  const modal = document.getElementById('callsign-auth-modal');
+  if (modal) {
+    modal.style.zIndex = '99999';
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    const input = document.getElementById('input-operative-callsign');
+    if (input) setTimeout(() => input.focus(), 150);
+  }
+}
+
+function openStoreModal() {
+  if (window.gameInstance && typeof window.gameInstance.openStoreModal === 'function') {
+    return window.gameInstance.openStoreModal();
+  }
+  const modal = document.getElementById('earn-diamonds-modal');
+  if (modal) {
+    modal.style.zIndex = '99999';
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+  }
+  const tabStore = document.getElementById('nav-tab-store') || document.querySelector('.nav-tab[data-tab="tab-store"]');
+  if (tabStore) tabStore.click();
+}
+
+function openAvatarModal() {
+  if (window.gameInstance && typeof window.gameInstance.openAvatarModal === 'function') {
+    return window.gameInstance.openAvatarModal();
+  }
+  const modal = document.getElementById('avatarModal');
+  if (modal) {
+    modal.style.zIndex = '99999';
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+  }
+}
+
+window.openAuthModal = openAuthModal;
+window.openCallsignModal = openCallsignModal;
+window.openStoreModal = openStoreModal;
+window.openAvatarModal = openAvatarModal;
+
+function bindHeaderClickHandlers() {
+  document.getElementById('signInBtn')?.addEventListener('click', () => openAuthModal());
+  document.getElementById('headerUsername')?.addEventListener('click', () => openCallsignModal());
+  document.getElementById('playerCallsignHeader')?.addEventListener('click', () => openCallsignModal());
+  document.getElementById('headerAvatar')?.addEventListener('click', () => openAvatarModal());
+  document.getElementById('editAvatarBtn')?.addEventListener('click', () => openAvatarModal());
+  document.querySelectorAll('.currency-badge, .currency-pill, .add-currency-btn, #coinDisplayBtn, #gemDisplayBtn, #btn-buy-coins, #btn-buy-gems').forEach(el => {
+    el.addEventListener('click', () => openStoreModal());
+  });
+}
+window.bindHeaderClickHandlers = bindHeaderClickHandlers;
+
 const HERO_DEFS = {
   commando: {
     id: 'commando',
@@ -2602,9 +2676,10 @@ class Game {
       e?.stopPropagation();
       this.openStoreModal();
     };
-    document.getElementById('btn-buy-coins')?.addEventListener('click', handleStoreReplenish);
-    document.getElementById('btn-buy-gems')?.addEventListener('click', handleStoreReplenish);
-    document.querySelectorAll('.coins-pill, .gems-pill, .add-currency-btn, .wallet-coins, .wallet-gems').forEach(el => {
+    ['btn-buy-coins', 'btn-buy-gems', 'coinDisplayBtn', 'gemDisplayBtn'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', handleStoreReplenish);
+    });
+    document.querySelectorAll('.currency-badge, .currency-pill, .coins-pill, .gems-pill, .add-currency-btn, .wallet-coins, .wallet-gems').forEach(el => {
       el.addEventListener('click', handleStoreReplenish);
     });
 
@@ -2814,8 +2889,9 @@ class Game {
       e?.stopPropagation();
       this.openCallsignModal();
     };
-    document.getElementById('headerUsername')?.addEventListener('click', handleUsernameClick);
-    document.getElementById('topbar-player-name')?.addEventListener('click', handleUsernameClick);
+    ['headerUsername', 'playerCallsignHeader', 'topbar-player-name'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', handleUsernameClick);
+    });
     document.querySelectorAll('.user-name, .user-handle').forEach(el => {
       el.addEventListener('click', handleUsernameClick);
     });
@@ -2826,8 +2902,9 @@ class Game {
       e?.stopPropagation();
       this.openAuthModal();
     };
-    document.getElementById('signInBtn')?.addEventListener('click', handleSignInClick);
-    document.getElementById('btn-profile-account')?.addEventListener('click', handleSignInClick);
+    ['signInBtn', 'btn-profile-account'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', handleSignInClick);
+    });
 
     document.getElementById('btn-close-callsign-modal')?.addEventListener('click', () => {
       this.closeCallsignModal();
@@ -11861,6 +11938,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // Game instance and all core variables (diamonds, coins, score, stats)
   // are scoped safely within this closure and cannot be modified via window.
   const gameInstance = new Game();
+  window.gameInstance = gameInstance;
+  bindHeaderClickHandlers();
   window.game = {
     instance: gameInstance,
     openAvatarModal: () => gameInstance.openAvatarModal(),
@@ -11876,5 +11955,9 @@ window.addEventListener('DOMContentLoaded', () => {
   window.openStoreModal = () => gameInstance.openStoreModal();
   window.openAuthModal = () => gameInstance.openAuthModal();
 });
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  bindHeaderClickHandlers();
+}
 
 })();
