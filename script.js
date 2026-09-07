@@ -2596,14 +2596,16 @@ class Game {
       });
     });
 
-    // Topbar Currency Quick-Buy Buttons
-    document.getElementById('btn-buy-coins')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.switchTab('tab-store');
-    });
-    document.getElementById('btn-buy-gems')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.openEarnDiamondsHub();
+    // Topbar Currency Quick-Buy / Replenishment Buttons
+    const handleStoreReplenish = (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
+      this.openStoreModal();
+    };
+    document.getElementById('btn-buy-coins')?.addEventListener('click', handleStoreReplenish);
+    document.getElementById('btn-buy-gems')?.addEventListener('click', handleStoreReplenish);
+    document.querySelectorAll('.coins-pill, .gems-pill, .add-currency-btn, .wallet-coins, .wallet-gems').forEach(el => {
+      el.addEventListener('click', handleStoreReplenish);
     });
 
     // In-Game Bank Store Pack Purchases (Coins & Diamonds)
@@ -2806,37 +2808,26 @@ class Game {
       });
     });
 
-    // Username / Callsign editing
-    const playerNameInput = document.getElementById('topbar-player-name');
-    if (playerNameInput) {
-      const handleNameChange = () => {
-        const val = playerNameInput.textContent.trim() || 'badhash';
-        this.saveData.playerName = val;
-        if (this.authUser) {
-          this.authUser.username = val;
-          try { localStorage.setItem('cyber_auth_user', JSON.stringify(this.authUser)); } catch (e) {}
-        }
-        SaveManager.save(this.saveData);
-        this.updateHeroPreview();
-        this.updateTopbarUserProfile();
-      };
-      playerNameInput.addEventListener('blur', handleNameChange);
-      playerNameInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          playerNameInput.blur();
-        }
-      });
-    }
-
-    // Direct Operative Account & Profile Callsign Modal (Step 1 & Step 2)
-    document.getElementById('btn-profile-account')?.addEventListener('click', () => {
-      if (this.isUserAuthenticated()) {
-        this.openProfileModal();
-      } else {
-        this.openCallsignModal();
-      }
+    // Callsign / Username Click: Opens the rename callsign prompt/modal (openCallsignModal())
+    const handleUsernameClick = (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
+      this.openCallsignModal();
+    };
+    document.getElementById('headerUsername')?.addEventListener('click', handleUsernameClick);
+    document.getElementById('topbar-player-name')?.addEventListener('click', handleUsernameClick);
+    document.querySelectorAll('.user-name, .user-handle').forEach(el => {
+      el.addEventListener('click', handleUsernameClick);
     });
+
+    // Sign In Button Click: Fix the listener so clicking #signInBtn triggers openAuthModal() with highest z-index visibility
+    const handleSignInClick = (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
+      this.openAuthModal();
+    };
+    document.getElementById('signInBtn')?.addEventListener('click', handleSignInClick);
+    document.getElementById('btn-profile-account')?.addEventListener('click', handleSignInClick);
 
     document.getElementById('btn-close-callsign-modal')?.addEventListener('click', () => {
       this.closeCallsignModal();
@@ -3008,13 +2999,20 @@ class Game {
     });
 
     // Operative Avatar & Profile Setup Listeners
-    document.getElementById('topbar-avatar-frame')?.addEventListener('click', () => {
-      if (this.isUserAuthenticated()) {
-        this.openProfileModal();
-      } else {
-        this.openCallsignModal();
-      }
+    // Avatar / EDIT Badge Click: Opens the operative sprite selection modal (openAvatarModal())
+    const handleAvatarModalOpen = (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
+      this.openAvatarModal();
+    };
+    document.getElementById('headerAvatar')?.addEventListener('click', handleAvatarModalOpen);
+    document.getElementById('topbar-avatar-frame')?.addEventListener('click', handleAvatarModalOpen);
+    document.getElementById('topbar-hero-avatar')?.addEventListener('click', handleAvatarModalOpen);
+    document.getElementById('editAvatarBtn')?.addEventListener('click', handleAvatarModalOpen);
+    document.querySelectorAll('.avatar-edit-badge, .user-avatar-frame').forEach(el => {
+      el.addEventListener('click', handleAvatarModalOpen);
     });
+
     document.getElementById('slot-1-avatar')?.addEventListener('click', () => {
       if (this.isUserAuthenticated()) {
         this.openProfileModal();
@@ -3652,7 +3650,7 @@ class Game {
     const pName = this.saveData.playerName || 'badhash';
 
     // Topbar & Stage Sync
-    const topName = document.getElementById('topbar-player-name');
+    const topName = document.getElementById('headerUsername') || document.getElementById('topbar-player-name');
     const stageName = document.getElementById('stage-player-name');
     const stageClass = document.getElementById('stage-hero-class');
     const topAvatar = document.getElementById('topbar-hero-avatar');
@@ -8632,12 +8630,18 @@ class Game {
     const modal = document.getElementById('avatarModal');
     if (!modal) return;
     this.renderAvatarModal();
+    modal.style.zIndex = '99999';
+    modal.style.display = 'flex';
     modal.classList.remove('hidden');
-    this.audio.playDeflect();
+    if (this.audio) this.audio.playDeflect();
   }
 
   closeAvatarModal() {
-    document.getElementById('avatarModal')?.classList.add('hidden');
+    const modal = document.getElementById('avatarModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
   }
 
   renderAvatarModal() {
@@ -8951,8 +8955,8 @@ class Game {
   updateTopbarUserProfile() {
     const user = this.getAuthUser();
     const isAuth = this.isUserAuthenticated();
-    const nameEl = document.getElementById('topbar-player-name');
-    const authBtn = document.getElementById('btn-profile-account');
+    const nameEl = document.getElementById('headerUsername') || document.getElementById('topbar-player-name');
+    const authBtn = document.getElementById('signInBtn') || document.getElementById('btn-profile-account');
     const signOutBtn = document.getElementById('btn-reset-data-top');
 
     if (nameEl) {
@@ -8985,6 +8989,7 @@ class Game {
 
     const modal = document.getElementById('callsign-auth-modal');
     if (!modal) return;
+    modal.style.zIndex = '99999';
     modal.style.display = 'flex';
 
     if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
@@ -9018,6 +9023,29 @@ class Game {
     this.pendingFriendAction = null;
   }
 
+  openStoreModal() {
+    this.openEarnDiamondsHub();
+    const modal = document.getElementById('earn-diamonds-modal');
+    if (modal) {
+      modal.style.zIndex = '99999';
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+    }
+    if (typeof this.switchTab === 'function') {
+      this.switchTab('tab-store');
+    }
+  }
+
+  openAuthModal() {
+    this.openCallsignModal();
+    const modal = document.getElementById('callsign-auth-modal') || document.getElementById('profile-setup-modal');
+    if (modal) {
+      modal.style.zIndex = '99999';
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+    }
+  }
+
   confirmCallsignInput() {
     const input = document.getElementById('input-operative-callsign');
     let val = input?.value?.trim();
@@ -9033,6 +9061,8 @@ class Game {
   openProfileModal() {
     const modal = document.getElementById('profile-setup-modal');
     if (!modal) return;
+    modal.style.zIndex = '99999';
+    modal.style.display = 'flex';
 
     const user = this.getAuthUser();
     const input = document.getElementById('input-profile-callsign');
@@ -9069,7 +9099,11 @@ class Game {
   }
 
   closeProfileModal() {
-    document.getElementById('profile-setup-modal')?.classList.add('hidden');
+    const modal = document.getElementById('profile-setup-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
   }
 
   updateProfileCallsign() {
@@ -11828,10 +11862,19 @@ window.addEventListener('DOMContentLoaded', () => {
   // are scoped safely within this closure and cannot be modified via window.
   const gameInstance = new Game();
   window.game = {
+    instance: gameInstance,
+    openAvatarModal: () => gameInstance.openAvatarModal(),
+    openCallsignModal: (arg) => gameInstance.openCallsignModal(arg),
+    openStoreModal: () => gameInstance.openStoreModal(),
+    openAuthModal: () => gameInstance.openAuthModal(),
     removeFriend: (peerIdOrName) => gameInstance.removeFriend(peerIdOrName),
     sendFriendRequest: (...args) => gameInstance.sendFriendRequest(...args),
     acceptFriendRequest: (...args) => gameInstance.acceptFriendRequest(...args)
   };
+  window.openAvatarModal = () => gameInstance.openAvatarModal();
+  window.openCallsignModal = (arg) => gameInstance.openCallsignModal(arg);
+  window.openStoreModal = () => gameInstance.openStoreModal();
+  window.openAuthModal = () => gameInstance.openAuthModal();
 });
 
 })();
