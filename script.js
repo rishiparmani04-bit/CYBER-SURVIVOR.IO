@@ -154,6 +154,16 @@ const AVATAR_FALLBACK_SVGS = {
   scout: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1120"/><circle cx="32" cy="32" r="30" fill="none" stroke="#00f0ff" stroke-width="2.5"/><line x1="16" y1="8" x2="18" y2="24" stroke="#94a3b8" stroke-width="2"/><circle cx="16" cy="8" r="2.5" fill="#00f0ff"/><line x1="48" y1="8" x2="46" y2="24" stroke="#94a3b8" stroke-width="2"/><circle cx="48" cy="8" r="2.5" fill="#00f0ff"/><circle cx="32" cy="35" r="17" fill="#1e293b"/><path d="M18 28 Q32 23 46 28 L44 42 Q32 46 20 42 Z" fill="#00f0ff" stroke="#0284c7" stroke-width="1.5"/></svg>')
 };
 
+window.handleAvatarImgError = function(img, avatarId) {
+  if (!img || img.dataset.hasFailed) return;
+  img.dataset.hasFailed = 'true';
+  img.onerror = null;
+  const svg = AVATAR_FALLBACK_SVGS[avatarId] || AVATAR_FALLBACK_SVGS['panda'];
+  if (svg) {
+    img.src = svg;
+  }
+};
+
 const HERO_DEFS = {
   commando: {
     id: 'commando',
@@ -3651,13 +3661,7 @@ class Game {
     if (stageName) stageName.textContent = pName;
     if (stageClass) stageClass.textContent = def.name.toUpperCase();
     if (topAvatar) {
-      if (this.saveData.googleAccount?.picture) {
-        topAvatar.innerHTML = `<img src="${this.saveData.googleAccount.picture}" class="topbar-avatar-img" alt="Google Avatar" referrerpolicy="no-referrer">`;
-      } else if (this.saveData.googleAccount?.avatar) {
-        topAvatar.textContent = this.saveData.googleAccount.avatar;
-      } else {
-        topAvatar.textContent = def.icon;
-      }
+      topAvatar.innerHTML = this.renderAvatarHTML(this.getUserAvatar(), 'topbar-avatar-sprite');
     }
 
     this.updateAllCurrencyDisplays();
@@ -8523,7 +8527,7 @@ class Game {
     const def = this.getAvatarDef(avatarKey);
     const iconSrc = def.icon || 'assets/avatars/avatar_panda.png';
     const fallback = this.getAvatarFallbackSrc(def.id);
-    return `<img src="${iconSrc}" alt="${def.name}" class="avatar-sprite-img ${className}" style="image-rendering: pixelated; object-fit: contain; ${extraStyle}" onerror="this.onerror=null; this.src='${fallback}';">`;
+    return `<img src="${iconSrc}" alt="${def.name}" class="avatar-sprite-img ${className}" style="image-rendering: pixelated; object-fit: contain; ${extraStyle}" onerror="window.handleAvatarImgError && window.handleAvatarImgError(this, '${def.id}')">`;
   }
 
   getUserAvatar() {
@@ -8671,7 +8675,7 @@ class Game {
 
       card.innerHTML = `
         <span class="avatar-tier-badge tier-${av.tier.toLowerCase()}">${av.tier}</span>
-        <img src="${av.icon}" alt="${av.name}" class="avatar-sprite-img" style="image-rendering: pixelated; width: 44px; height: 44px; object-fit: contain;" onerror="this.onerror=null; this.src='assets/avatars/avatar_panda.png';">
+        <img src="${av.icon}" alt="${av.name}" class="avatar-sprite-img" style="image-rendering: pixelated; width: 44px; height: 44px; object-fit: contain;" onerror="window.handleAvatarImgError && window.handleAvatarImgError(this, '${av.id}')">
         <span class="avatar-card-name">${av.name}</span>
       `;
 
@@ -8838,9 +8842,6 @@ class Game {
       const action = this.pendingFriendAction;
       this.pendingFriendAction = null;
       action();
-    } else {
-      // Reveal Step 2 Profile Setup
-      this.openProfileModal();
     }
 
     return true;
@@ -8918,9 +8919,6 @@ class Game {
       const action = this.pendingFriendAction;
       this.pendingFriendAction = null;
       action();
-    } else {
-      // Reveal Step 2 Profile Setup
-      this.openProfileModal();
     }
 
     return true;
@@ -8987,6 +8985,7 @@ class Game {
 
     const modal = document.getElementById('callsign-auth-modal');
     if (!modal) return;
+    modal.style.display = 'flex';
 
     if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
       try {
@@ -9011,7 +9010,11 @@ class Game {
   }
 
   closeCallsignModal() {
-    document.getElementById('callsign-auth-modal')?.classList.add('hidden');
+    const modal = document.getElementById('callsign-auth-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
     this.pendingFriendAction = null;
   }
 

@@ -4382,25 +4382,28 @@ body.hide-touch-controls .touch-controls-layer {
 .google-action-btn {
   width: 100%;
   height: 48px;
-  background: #ffffff;
-  color: #3c4043;
-  border: 1px solid #dadce0;
+  background: rgba(10, 20, 35, 0.85);
+  color: #00ffee;
+  border: 1px solid #00ffee;
   border-radius: 6px;
-  font-family: 'Roboto', -apple-system, sans-serif;
+  font-family: var(--font-cyber), 'Roboto', sans-serif;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 12px rgba(0, 255, 238, 0.25);
   transition: all 0.2s ease;
+  letter-spacing: 1px;
 }
 
 .google-action-btn:hover {
-  background: #f8f9fa;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: rgba(0, 255, 238, 0.25);
+  border-color: #00ffee;
+  box-shadow: 0 0 20px rgba(0, 255, 238, 0.75), 0 0 8px #00ffee;
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
@@ -4543,17 +4546,17 @@ body.hide-touch-controls .touch-controls-layer {
 .google-input-wrap {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(10, 20, 35, 0.85);
+  border: 1px solid #00ffee;
   border-radius: 6px;
   padding: 0 0.8rem;
   transition: all 0.2s ease;
 }
 
 .google-input-wrap:focus-within {
-  border-color: #4285f4;
-  box-shadow: 0 0 12px rgba(66, 133, 244, 0.4);
-  background: rgba(255, 255, 255, 0.1);
+  border-color: #00ffee;
+  box-shadow: 0 0 12px rgba(0, 255, 238, 0.5);
+  background: rgba(10, 20, 35, 0.95);
 }
 
 .google-input-icon {
