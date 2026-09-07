@@ -57,10 +57,16 @@
     };
 
     window.closeAuthModal = function() {
-      var m = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+      var m = document.getElementById('authModal') || document.querySelector('.auth-modal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
       if (m) {
         m.classList.add('hidden');
+        m.classList.add('modal-hidden');
         m.style.display = 'none';
+        m.style.pointerEvents = 'none';
+      }
+      var c = document.getElementById('callsign-auth-modal');
+      if (c && c !== m) {
+        c.style.display = 'none';
       }
       if (window.gameInstance && typeof window.gameInstance.closeCallsignModal === 'function') {
         try { window.gameInstance.closeCallsignModal(); } catch (e) {}
@@ -173,17 +179,6 @@
           }
         }
       }, { capture: true });
-
-      // 3. Lightweight Debugger Trap (pauses execution if DevTools is opened)
-      var devToolsCheck = function() {
-        var start = performance.now();
-        debugger;
-        var diff = performance.now() - start;
-        if (diff > 150) {
-          // Execution halted by developer tools breakpoint
-        }
-      };
-      setInterval(devToolsCheck, 1500);
     })();
   </script>
 </head>
@@ -1948,7 +1943,7 @@
   </div>
 
   <!-- STEP 1: Operative Sign-In Modal (Auth First - Clean Prompt) -->
-  <div id="authModal" class="modal-backdrop auth-modal hidden" data-alias="loginModal callsign-auth-modal">
+  <div id="authModal" class="modal-backdrop auth-modal hidden" data-alias="loginModal callsign-auth-modal" onclick="if(event.target===this){window.closeAuthModal();}">
     <div id="loginModal" class="hidden" style="display:none;" aria-hidden="true"></div>
     <div id="callsign-auth-modal" class="modal-card callsign-auth-card">
       <div class="callsign-card-header">

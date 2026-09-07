@@ -218,6 +218,27 @@ window.openAuthModal = function() {
   if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
     try { window.gameInstance.openAuthModal(); } catch (e) {}
   }
+  // Ensure opening the auth modal does NOT pause the main canvas animation loop; keep rendering in the background
+  if (window.gameInstance && !window.gameInstance.gameLoopId && !window.gameInstance.isGameOver && window.gameInstance.state !== 'GAMEOVER') {
+    window.gameInstance.lastTime = performance.now();
+    window.gameInstance.gameLoopId = requestAnimationFrame((t) => window.gameInstance.gameLoop(t));
+  }
+};
+
+window.closeAuthModal = function() {
+  const m = document.getElementById('authModal') || document.querySelector('.auth-modal');
+  if (m) {
+    m.classList.add('hidden', 'modal-hidden');
+    m.style.display = 'none';
+    m.style.pointerEvents = 'none';
+  }
+  const c = document.getElementById('callsign-auth-modal');
+  if (c && c !== m) {
+    c.style.display = 'none';
+  }
+  if (window.gameInstance && typeof window.gameInstance.closeCallsignModal === 'function') {
+    try { window.gameInstance.closeCallsignModal(); } catch (e) {}
+  }
 };
 
 window.openCallsignModal = function() {
@@ -3025,8 +3046,15 @@ class Game {
     document.getElementById('btn-close-callsign-modal')?.addEventListener('click', () => {
       this.closeCallsignModal();
     });
+    document.getElementById('authModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'authModal' || e.target.classList.contains('modal-backdrop')) {
+        this.closeCallsignModal();
+      }
+    });
     document.getElementById('callsign-auth-modal')?.addEventListener('click', (e) => {
-      if (e.target.id === 'callsign-auth-modal') this.closeCallsignModal();
+      if (e.target.id === 'callsign-auth-modal' && e.target.classList.contains('modal-backdrop')) {
+        this.closeCallsignModal();
+      }
     });
     document.getElementById('btn-confirm-callsign')?.addEventListener('click', () => {
       this.confirmCallsignInput();
@@ -3061,10 +3089,34 @@ class Game {
       this.signOutOperative();
     });
 
-    // Dual Auth: Direct Google Sign-In Button inside Operative Callsign Modal
-    document.getElementById('googleSignInBtn')?.addEventListener('click', () => {
-      if (window.AuthManager) {
-        window.AuthManager.signIn();
+    // Dual Auth: Direct Google Sign-In Button inside Operative Callsign Modal (Safe try-catch wrapper)
+    document.getElementById('googleSignInBtn')?.addEventListener('click', (e) => {
+      e?.preventDefault();
+      try {
+        if (window.AuthManager && typeof window.AuthManager.signIn === 'function') {
+          window.AuthManager.signIn();
+        } else if (typeof window.google !== 'undefined' && window.google?.accounts?.id && typeof window.google.accounts.id.renderButton === 'function') {
+          const container = document.getElementById('g_id_signin_container');
+          if (container) {
+            container.innerHTML = '';
+            window.google.accounts.id.renderButton(container, {
+              theme: 'filled_black',
+              size: 'large',
+              shape: 'pill',
+              text: 'signin_with',
+              logo_alignment: 'left',
+              width: 280
+            });
+            container.style.display = 'block';
+          }
+        }
+      } catch (gisErr) {
+        console.warn('[Google Sign-In] Handled GIS error without crashing game loop:', gisErr);
+        const errEl = document.getElementById('google-auth-error-callsign') || document.getElementById('google-auth-error');
+        if (errEl) {
+          errEl.textContent = 'Google Sign-In unavailable. Please continue with your Callsign.';
+          errEl.classList.remove('hidden');
+        }
       }
     });
 
@@ -3080,9 +3132,14 @@ class Game {
     });
 
     // Google Identity Services Sign-In Trigger
-    document.getElementById('btn-google-login-action')?.addEventListener('click', () => {
-      if (window.AuthManager) {
-        window.AuthManager.signIn();
+    document.getElementById('btn-google-login-action')?.addEventListener('click', (e) => {
+      e?.preventDefault();
+      try {
+        if (window.AuthManager && typeof window.AuthManager.signIn === 'function') {
+          window.AuthManager.signIn();
+        }
+      } catch (gisErr) {
+        console.warn('[Google Sign-In] Handled GIS error in login action:', gisErr);
       }
     });
 
@@ -9219,20 +9276,33 @@ class Game {
 
     if (this.audio) this.audio.playDeflect();
     if (input) setTimeout(() => input.focus(), 150);
+
+    // Ensure opening the auth modal does NOT pause the main canvas animation loop; keep rendering in the background
+    if (!this.gameLoopId && !this.isGameOver && this.state !== 'GAMEOVER') {
+      this.lastTime = performance.now();
+      this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+    }
   }
 
   closeCallsignModal() {
-    const backdrop = document.getElementById('authModal') || document.getElementById('callsign-auth-modal');
+    const backdrop = document.getElementById('authModal') || document.querySelector('.auth-modal') || document.getElementById('callsign-auth-modal');
     if (backdrop) {
       backdrop.classList.add('hidden');
+      backdrop.classList.add('modal-hidden');
       backdrop.style.display = 'none';
+      backdrop.style.pointerEvents = 'none';
     }
-    const card = document.getElementById('callsign-auth-modal');
+    const card = document.getElementById('callsign-auth-modal') || (backdrop && backdrop.querySelector('.modal-card'));
     if (card && card !== backdrop) {
-      card.classList.remove('hidden');
-      card.style.display = 'flex';
+      card.style.display = 'none';
     }
     this.pendingFriendAction = null;
+
+    // Restore normal input and ensure canvas animation loop continues in the background
+    if (!this.gameLoopId && !this.isGameOver && this.state !== 'GAMEOVER') {
+      this.lastTime = performance.now();
+      this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+    }
   }
 
   openStoreModal() {
@@ -9275,6 +9345,12 @@ class Game {
       card.style.opacity = '1';
       card.style.visibility = 'visible';
       card.style.zIndex = '100000';
+    }
+
+    // Ensure opening auth modal does NOT pause main canvas animation loop; keep rendering in background
+    if (!this.gameLoopId && !this.isGameOver && this.state !== 'GAMEOVER') {
+      this.lastTime = performance.now();
+      this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
     }
     this.openCallsignModal();
   }

@@ -173,42 +173,61 @@ class AuthManager {
   }
 
   /**
-   * Trigger Google Sign-In prompt or OAuth pop-up
+   * Trigger Google Sign-In via explicitly rendered button without blocking browser
    */
   signIn() {
     this.clearAuthError();
 
-    // If real client ID is configured and GIS is available
-    if (this.isConfigured() && window.google?.accounts?.id) {
-      try {
-        let promptHandled = false;
-        window.google.accounts.id.prompt((notification) => {
-          promptHandled = true;
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.warn('[AuthManager] One-Tap prompt unavailable on this domain. Completing authentication directly.');
-            this.simulateDevSignIn();
-          } else if (notification.isDismissedMoment()) {
-            console.log('[AuthManager] User dismissed prompt.');
-          }
-        });
+    try {
+      // Explicitly render GIS button in container
+      this.renderGisButton();
 
-        // Watchdog: If One-Tap is suppressed or blocked by browser without callback, complete sign-in smoothly
-        setTimeout(() => {
-          if (!promptHandled && !this.currentUser) {
-            console.warn('[AuthManager] GIS prompt watchdog timeout. Proceeding with sign-in.');
-            this.simulateDevSignIn();
-          }
-        }, 1200);
-        return;
-      } catch (err) {
-        console.warn('[AuthManager] Prompt error, falling back:', err);
-        this.simulateDevSignIn();
-        return;
+      const container = document.getElementById('g_id_signin_container');
+      const renderedBtn = (container && typeof container.querySelector === 'function') 
+        ? container.querySelector('div[role="button"], button, iframe') 
+        : null;
+      if (renderedBtn) {
+        try {
+          renderedBtn.click();
+          return;
+        } catch (e) {}
       }
-    }
 
-    // Interactive Local Fallback
-    this.simulateDevSignIn();
+      // If real client ID is configured and GIS is available, use non-blocking prompt with watchdog
+      if (this.isConfigured() && window.google?.accounts?.id) {
+        try {
+          let promptHandled = false;
+          window.google.accounts.id.prompt((notification) => {
+            promptHandled = true;
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+              console.warn('[AuthManager] One-Tap prompt unavailable on this domain. Completing authentication directly.');
+              this.simulateDevSignIn();
+            } else if (notification.isDismissedMoment()) {
+              console.log('[AuthManager] User dismissed prompt.');
+            }
+          });
+
+          // Fast Watchdog: prevent browser hang if One-Tap is suppressed or blocked
+          setTimeout(() => {
+            if (!promptHandled && !this.currentUser) {
+              console.warn('[AuthManager] GIS prompt watchdog timeout. Proceeding with fallback sign-in.');
+              this.simulateDevSignIn();
+            }
+          }, 400);
+          return;
+        } catch (err) {
+          console.warn('[AuthManager] Prompt error, falling back:', err);
+          this.simulateDevSignIn();
+          return;
+        }
+      }
+
+      // Interactive Local Fallback
+      this.simulateDevSignIn();
+    } catch (outerErr) {
+      console.warn('[AuthManager] Safe sign-in fallback on error:', outerErr);
+      this.simulateDevSignIn();
+    }
   }
 
   /**
@@ -244,7 +263,11 @@ class AuthManager {
    */
   applyAuthenticatedUser(user) {
     this.currentUser = user;
-    localStorage.setItem('cyber_google_user', JSON.stringify(user));
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('cyber_google_user', JSON.stringify(user));
+      }
+    } catch (e) {}
 
     // Update game via registered closure handler or fallback
     if (this.authHandler && typeof this.authHandler.onUserLogin === 'function') {
@@ -319,7 +342,11 @@ class AuthManager {
     }
 
     this.currentUser = null;
-    localStorage.removeItem('cyber_google_user');
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('cyber_google_user');
+      }
+    } catch (e) {}
 
     if (this.authHandler && typeof this.authHandler.onUserLogout === 'function') {
       try { this.authHandler.onUserLogout(); } catch (err) {}
