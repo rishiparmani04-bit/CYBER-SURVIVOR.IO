@@ -366,6 +366,12 @@ header {
   z-index: 99999 !important;
 }
 
+#authModal:not(.hidden) .callsign-auth-card,
+#authModal[style*="display: flex"] .callsign-auth-card,
+#callsign-auth-modal.modal-card {
+  display: flex !important;
+}
+
 .deadshot-topbar,
 header.deadshot-topbar {
   width: 100%;
@@ -599,11 +605,16 @@ header.deadshot-topbar * {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  position: relative !important;
+  z-index: 1002 !important;
+  pointer-events: auto !important;
 }
 
 .btn-auth-sm,
 #signInBtn,
 #btn-profile-account {
+  position: relative !important;
+  z-index: 1002 !important;
   background: rgba(10, 20, 35, 0.85);
   border: 1px solid #00ffee;
   color: #00ffee;

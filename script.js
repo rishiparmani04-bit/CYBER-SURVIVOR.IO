@@ -196,16 +196,31 @@ window.openAvatarModal = openAvatarModal;
 window.openAuthModal = function() {
   const m = document.getElementById('authModal');
   if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  const inner = document.getElementById('callsign-auth-modal');
+  if (inner && inner !== m) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+  if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
+    try { window.gameInstance.openAuthModal(); } catch (e) {}
+  }
 };
 
 window.openCallsignModal = function() {
   const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
   if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  const inner = document.getElementById('profile-setup-modal');
+  if (inner && inner !== m) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+  if (window.gameInstance && typeof window.gameInstance.openCallsignModal === 'function') {
+    try { window.gameInstance.openCallsignModal(); } catch (e) {}
+  }
 };
 
 window.openStoreModal = function() {
   const m = document.getElementById('storeModal') || document.getElementById('shopModal');
   if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  const inner = document.getElementById('earn-diamonds-modal');
+  if (inner && inner !== m) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+  if (window.gameInstance && typeof window.gameInstance.openStoreModal === 'function') {
+    try { window.gameInstance.openStoreModal(); } catch (e) {}
+  }
 };
 
 function bindHeaderClickHandlers() {
@@ -215,6 +230,12 @@ function bindHeaderClickHandlers() {
       console.log('Sign in clicked');
       const modal = document.getElementById('authModal');
       if (modal) modal.style.display = 'flex';
+      if (modal) modal.classList.remove('hidden');
+      const inner = document.getElementById('callsign-auth-modal');
+      if (inner && inner !== modal) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+      if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
+        try { window.gameInstance.openAuthModal(); } catch (e) {}
+      }
     };
   }
 
@@ -9125,10 +9146,18 @@ class Game {
       return;
     }
 
-    const modal = document.getElementById('callsign-auth-modal');
-    if (!modal) return;
-    modal.style.zIndex = '99999';
-    modal.style.display = 'flex';
+    const backdrop = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+    if (backdrop) {
+      backdrop.style.zIndex = '99999';
+      backdrop.style.display = 'flex';
+      backdrop.classList.remove('hidden');
+    }
+
+    const card = document.getElementById('callsign-auth-modal');
+    if (card && card !== backdrop) {
+      card.style.display = 'flex';
+      card.classList.remove('hidden');
+    }
 
     if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
       try {
@@ -9147,27 +9176,36 @@ class Game {
       subtitle.textContent = pendingAction ? 'AUTHENTICATE TO ACCESS FRIEND NETWORK' : 'AUTHENTICATION PROTOCOL';
     }
 
-    modal.classList.remove('hidden');
     if (this.audio) this.audio.playDeflect();
     if (input) setTimeout(() => input.focus(), 150);
   }
 
   closeCallsignModal() {
-    const modal = document.getElementById('callsign-auth-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
+    const backdrop = document.getElementById('authModal') || document.getElementById('callsign-auth-modal');
+    if (backdrop) {
+      backdrop.classList.add('hidden');
+      backdrop.style.display = 'none';
+    }
+    const card = document.getElementById('callsign-auth-modal');
+    if (card && card !== backdrop) {
+      card.classList.remove('hidden');
+      card.style.display = 'flex';
     }
     this.pendingFriendAction = null;
   }
 
   openStoreModal() {
     this.openEarnDiamondsHub();
-    const modal = document.getElementById('earn-diamonds-modal');
-    if (modal) {
-      modal.style.zIndex = '99999';
-      modal.style.display = 'flex';
-      modal.classList.remove('hidden');
+    const backdrop = document.getElementById('storeModal') || document.getElementById('shopModal') || document.getElementById('earn-diamonds-modal');
+    if (backdrop) {
+      backdrop.style.zIndex = '99999';
+      backdrop.style.display = 'flex';
+      backdrop.classList.remove('hidden');
+    }
+    const card = document.getElementById('earn-diamonds-modal');
+    if (card && card !== backdrop) {
+      card.style.display = 'flex';
+      card.classList.remove('hidden');
     }
     if (typeof this.switchTab === 'function') {
       this.switchTab('tab-store');
@@ -9175,13 +9213,18 @@ class Game {
   }
 
   openAuthModal() {
-    this.openCallsignModal();
-    const modal = document.getElementById('callsign-auth-modal') || document.getElementById('profile-setup-modal');
-    if (modal) {
-      modal.style.zIndex = '99999';
-      modal.style.display = 'flex';
-      modal.classList.remove('hidden');
+    const backdrop = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+    if (backdrop) {
+      backdrop.style.zIndex = '99999';
+      backdrop.style.display = 'flex';
+      backdrop.classList.remove('hidden');
     }
+    const card = document.getElementById('callsign-auth-modal');
+    if (card && card !== backdrop) {
+      card.style.display = 'flex';
+      card.classList.remove('hidden');
+    }
+    this.openCallsignModal();
   }
 
   confirmCallsignInput() {
@@ -12007,6 +12050,12 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('Sign in clicked');
       const modal = document.getElementById('authModal');
       if (modal) modal.style.display = 'flex';
+      if (modal) modal.classList.remove('hidden');
+      const inner = document.getElementById('callsign-auth-modal');
+      if (inner && inner !== modal) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+      if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
+        try { window.gameInstance.openAuthModal(); } catch (e) {}
+      }
     };
   }
 
