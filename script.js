@@ -168,63 +168,45 @@ window.handleAvatarImgError = function(img, avatarId) {
 // GLOBAL MODAL ACTION HELPERS (DIRECT TOPBAR & EXTERNAL ACCESS)
 // ============================================================================
 function openAuthModal() {
-  if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
-    return window.gameInstance.openAuthModal();
-  }
-  const modal = document.getElementById('callsign-auth-modal') || document.getElementById('profile-setup-modal');
-  if (modal) {
-    modal.style.zIndex = '99999';
-    modal.style.display = 'flex';
-    modal.classList.remove('hidden');
-    const input = document.getElementById('input-operative-callsign');
-    if (input) setTimeout(() => input.focus(), 150);
-  }
+  const m = document.getElementById('authModal');
+  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
 }
 
 function openCallsignModal(pendingAction = null) {
-  if (window.gameInstance && typeof window.gameInstance.openCallsignModal === 'function') {
-    return window.gameInstance.openCallsignModal(pendingAction);
-  }
-  const modal = document.getElementById('callsign-auth-modal');
-  if (modal) {
-    modal.style.zIndex = '99999';
-    modal.style.display = 'flex';
-    modal.classList.remove('hidden');
-    const input = document.getElementById('input-operative-callsign');
-    if (input) setTimeout(() => input.focus(), 150);
-  }
+  const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
+  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
 }
 
 function openStoreModal() {
-  if (window.gameInstance && typeof window.gameInstance.openStoreModal === 'function') {
-    return window.gameInstance.openStoreModal();
-  }
-  const modal = document.getElementById('earn-diamonds-modal');
-  if (modal) {
-    modal.style.zIndex = '99999';
-    modal.style.display = 'flex';
-    modal.classList.remove('hidden');
-  }
-  const tabStore = document.getElementById('nav-tab-store') || document.querySelector('.nav-tab[data-tab="tab-store"]');
-  if (tabStore) tabStore.click();
+  const m = document.getElementById('storeModal') || document.getElementById('shopModal');
+  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
 }
 
 function openAvatarModal() {
-  if (window.gameInstance && typeof window.gameInstance.openAvatarModal === 'function') {
-    return window.gameInstance.openAvatarModal();
-  }
-  const modal = document.getElementById('avatarModal');
-  if (modal) {
-    modal.style.zIndex = '99999';
-    modal.style.display = 'flex';
-    modal.classList.remove('hidden');
-  }
+  const m = document.getElementById('avatarModal');
+  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
 }
 
 window.openAuthModal = openAuthModal;
 window.openCallsignModal = openCallsignModal;
 window.openStoreModal = openStoreModal;
 window.openAvatarModal = openAvatarModal;
+
+// Attach modal display functions directly to window and force styles so hidden classes cannot override them:
+window.openAuthModal = function() {
+  const m = document.getElementById('authModal');
+  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+};
+
+window.openCallsignModal = function() {
+  const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
+  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+};
+
+window.openStoreModal = function() {
+  const m = document.getElementById('storeModal') || document.getElementById('shopModal');
+  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+};
 
 function bindHeaderClickHandlers() {
   document.getElementById('signInBtn')?.addEventListener('click', () => openAuthModal());
@@ -234,6 +216,36 @@ function bindHeaderClickHandlers() {
   document.getElementById('editAvatarBtn')?.addEventListener('click', () => openAvatarModal());
   document.querySelectorAll('.currency-badge, .currency-pill, .add-currency-btn, #coinDisplayBtn, #gemDisplayBtn, #btn-buy-coins, #btn-buy-gems').forEach(el => {
     el.addEventListener('click', () => openStoreModal());
+  });
+
+  ['authModal', 'callsignModal', 'profileModal', 'storeModal', 'shopModal', 'avatarModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.dismissBound) {
+      el.dataset.dismissBound = 'true';
+      el.addEventListener('click', (e) => {
+        if (e.target === el) {
+          el.classList.add('hidden');
+          el.style.display = 'none';
+        }
+      });
+    }
+  });
+
+  document.getElementById('btn-close-callsign-modal')?.addEventListener('click', () => {
+    const m = document.getElementById('authModal') || document.getElementById('callsign-auth-modal');
+    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+  });
+  document.getElementById('btn-close-profile-modal')?.addEventListener('click', () => {
+    const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
+    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+  });
+  document.getElementById('btn-close-profile-setup')?.addEventListener('click', () => {
+    const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
+    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+  });
+  document.getElementById('btn-close-earn-modal')?.addEventListener('click', () => {
+    const m = document.getElementById('storeModal') || document.getElementById('shopModal');
+    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
   });
 }
 window.bindHeaderClickHandlers = bindHeaderClickHandlers;
@@ -11942,18 +11954,14 @@ window.addEventListener('DOMContentLoaded', () => {
   bindHeaderClickHandlers();
   window.game = {
     instance: gameInstance,
-    openAvatarModal: () => gameInstance.openAvatarModal(),
-    openCallsignModal: (arg) => gameInstance.openCallsignModal(arg),
-    openStoreModal: () => gameInstance.openStoreModal(),
-    openAuthModal: () => gameInstance.openAuthModal(),
+    openAvatarModal: () => window.openAvatarModal(),
+    openCallsignModal: (arg) => window.openCallsignModal(arg),
+    openStoreModal: () => window.openStoreModal(),
+    openAuthModal: () => window.openAuthModal(),
     removeFriend: (peerIdOrName) => gameInstance.removeFriend(peerIdOrName),
     sendFriendRequest: (...args) => gameInstance.sendFriendRequest(...args),
     acceptFriendRequest: (...args) => gameInstance.acceptFriendRequest(...args)
   };
-  window.openAvatarModal = () => gameInstance.openAvatarModal();
-  window.openCallsignModal = (arg) => gameInstance.openCallsignModal(arg);
-  window.openStoreModal = () => gameInstance.openStoreModal();
-  window.openAuthModal = () => gameInstance.openAuthModal();
 });
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {

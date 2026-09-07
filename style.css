@@ -279,13 +279,53 @@ body.playing .hud-btn {
 }
 
 /* TOPBAR HEADER (TIER 1) */
+#topBar,
+#header,
+.deadshot-topbar,
 .header-container,
 .profile-bar,
-.deadshot-topbar,
-header.deadshot-topbar {
+header.deadshot-topbar,
+header {
   position: relative !important;
   z-index: 1000 !important;
   pointer-events: auto !important;
+}
+
+#topBar,
+#header,
+.header-container {
+  position: relative;
+  z-index: 999;
+  pointer-events: auto;
+}
+
+/* Cyberpunk Pointer Cursors & Interaction Fix */
+#signInBtn,
+#playerCallsignHeader,
+#headerUsername,
+.user-name,
+.user-handle,
+#coinDisplayBtn,
+#gemDisplayBtn,
+.currency-pill,
+.currency-badge,
+.coins-pill,
+.gems-pill,
+.add-currency-btn,
+.user-wallet,
+.wallet-coins,
+.wallet-gems {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+#authModal:not(.hidden),
+#callsignModal:not(.hidden),
+#profileModal:not(.hidden),
+#storeModal:not(.hidden),
+#shopModal:not(.hidden) {
+  display: flex !important;
+  z-index: 99999 !important;
 }
 
 .deadshot-topbar,

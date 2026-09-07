@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css?v=6.3">
+  <link rel="stylesheet" href="style.css?v=6.4">
 
   <!-- Google H5 Games Ads SDK -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous" data-adbreak-test="on"></script>
@@ -314,7 +314,7 @@
     <div class="menu-particles" id="menu-particles"></div>
 
     <!-- DEADSHOT.io Top Navigation Header Bar -->
-    <header class="deadshot-topbar header-container">
+    <header id="topBar" class="deadshot-topbar header-container">
       <div class="topbar-left">
         <div class="deadshot-logo-container">
           <h1 class="deadshot-logo">CYBER<span class="logo-gun-crosshair">🎯</span>SURVIVOR<span class="logo-io">.io</span></h1>
@@ -326,22 +326,22 @@
 
       <div class="topbar-right">
         <div class="user-profile-badge profile-bar">
-          <div class="user-avatar-frame" id="headerAvatar" title="Click to customize Operative Avatar">
+          <div class="user-avatar-frame" id="headerAvatar" onclick="window.openAvatarModal()" title="Click to customize Operative Avatar">
             <span id="topbar-hero-avatar">🚀</span>
-            <span class="avatar-edit-badge" id="editAvatarBtn" title="Customize Avatar">✏️ EDIT</span>
+            <span class="avatar-edit-badge" id="editAvatarBtn" onclick="window.openAvatarModal()" title="Customize Avatar">✏️ EDIT</span>
           </div>
           <div class="user-meta">
-            <div class="user-handle user-name" id="playerCallsignHeader" spellcheck="false" title="Click to change your callsign">
-              <span id="headerUsername">badhash</span>
+            <div class="user-handle user-name" id="playerCallsignHeader" onclick="window.openCallsignModal()" spellcheck="false" title="Click to change your callsign">
+              <span id="headerUsername" onclick="window.openCallsignModal()">badhash</span>
             </div>
             <div class="user-wallet" id="topbar-user-wallet">
-              <span class="wallet-coins coins-pill currency-pill currency-badge add-currency-btn" id="coinDisplayBtn" title="Coins (Click to replenish currency)"><strong id="topbar-credits">700</strong> <span class="coin-dot">🪙</span> <span class="wallet-plus add-currency-btn" id="btn-buy-coins">+</span></span>
-              <span class="wallet-gems gems-pill currency-pill currency-badge add-currency-btn" id="gemDisplayBtn" title="Diamonds (Click to replenish currency)"><strong id="topbar-gems">50</strong> <span class="gem-dot">💎</span> <span class="wallet-plus add-currency-btn" id="btn-buy-gems">+</span></span>
+              <span class="wallet-coins coins-pill currency-pill currency-badge add-currency-btn" id="coinDisplayBtn" onclick="window.openStoreModal()" title="Coins (Click to replenish currency)"><strong id="topbar-credits">700</strong> <span class="coin-dot">🪙</span> <span class="wallet-plus add-currency-btn" id="btn-buy-coins" onclick="window.openStoreModal()">+</span></span>
+              <span class="wallet-gems gems-pill currency-pill currency-badge add-currency-btn" id="gemDisplayBtn" onclick="window.openStoreModal()" title="Diamonds (Click to replenish currency)"><strong id="topbar-gems">50</strong> <span class="gem-dot">💎</span> <span class="wallet-plus add-currency-btn" id="btn-buy-gems" onclick="window.openStoreModal()">+</span></span>
             </div>
           </div>
         </div>
         <div class="topbar-auth-row">
-          <button id="signInBtn" class="btn-auth-sm" type="button">Sign In</button>
+          <button id="signInBtn" class="btn-auth-sm" type="button" onclick="window.openAuthModal()">Sign In</button>
           <button id="btn-reset-data-top" class="btn-auth-sm btn-signout" type="button">Sign Out</button>
         </div>
       </div>
@@ -1683,9 +1683,10 @@
     </div>
   </div>
 
-  <!-- Earn Free Diamonds Hub Modal -->
-  <div id="earn-diamonds-modal" class="modal-backdrop hidden">
-    <div class="earn-diamonds-card">
+  <!-- Earn Free Diamonds Hub Modal / In-Game Store -->
+  <div id="storeModal" class="modal-backdrop hidden" data-alias="shopModal earn-diamonds-modal">
+    <div id="shopModal" class="hidden" style="display:none;" aria-hidden="true"></div>
+    <div id="earn-diamonds-modal" class="earn-diamonds-card">
       <div class="earn-diamonds-header">
         <div class="ed-header-left">
           <span class="ed-modal-gem">💎</span>
@@ -1842,8 +1843,8 @@
   </div>
 
   <!-- STEP 1: Operative Sign-In Modal (Auth First - Clean Prompt) -->
-  <div id="callsign-auth-modal" class="modal-backdrop hidden">
-    <div class="modal-card callsign-auth-card">
+  <div id="authModal" class="modal-backdrop hidden" data-alias="callsign-auth-modal">
+    <div id="callsign-auth-modal" class="modal-card callsign-auth-card">
       <div class="callsign-card-header">
         <div class="callsign-header-badge">
           <span class="callsign-header-icon">⚡</span>
@@ -1896,8 +1897,9 @@
   </div>
 
   <!-- STEP 2: Operative Profile Setup & Customization Modal (Profile Second) -->
-  <div id="profile-setup-modal" class="modal-backdrop hidden">
-    <div class="modal-card profile-setup-card">
+  <div id="callsignModal" class="modal-backdrop hidden" data-alias="profileModal profile-setup-modal">
+    <div id="profileModal" class="hidden" style="display:none;" aria-hidden="true"></div>
+    <div id="profile-setup-modal" class="modal-card profile-setup-card">
       <div class="profile-card-header">
         <div class="profile-header-badge">
           <span class="profile-header-icon">🪪</span>
@@ -1978,6 +1980,6 @@
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="ads.js?v=1.0"></script>
   <script src="auth.js?v=1.1"></script>
-  <script src="script.js?v=6.3"></script>
+  <script src="script.js?v=6.4"></script>
 </body>
 </html>
