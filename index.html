@@ -445,7 +445,7 @@
           </div>
         </div>
         <div class="topbar-auth-row">
-          <button id="signInBtn" class="btn-auth-sm" type="button" onclick="window.openAuthModal()">Sign In</button>
+          <button type="button" id="signInBtn" onclick="const m = document.getElementById('authModal') || document.querySelector('.auth-modal'); if(m){ m.classList.remove('hidden'); m.style.display='flex'; m.style.zIndex='99999'; }" style="cursor: pointer; pointer-events: auto; position: relative; z-index: 1000;">Sign In</button>
           <button id="btn-reset-data-top" class="btn-auth-sm btn-signout" type="button">Sign Out</button>
         </div>
       </div>
@@ -1947,7 +1947,7 @@
   </div>
 
   <!-- STEP 1: Operative Sign-In Modal (Auth First - Clean Prompt) -->
-  <div id="authModal" class="modal-backdrop hidden" data-alias="loginModal callsign-auth-modal">
+  <div id="authModal" class="modal-backdrop auth-modal hidden" data-alias="loginModal callsign-auth-modal">
     <div id="loginModal" class="hidden" style="display:none;" aria-hidden="true"></div>
     <div id="callsign-auth-modal" class="modal-card callsign-auth-card">
       <div class="callsign-card-header">
