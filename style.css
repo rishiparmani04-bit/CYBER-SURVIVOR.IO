@@ -350,12 +350,16 @@ header {
 }
 
 #authModal:not(.hidden),
+#authModal:not(.modal-hidden),
+.auth-modal:not(.hidden),
+.auth-modal:not(.modal-hidden),
 #loginModal:not(.hidden),
 #callsignModal:not(.hidden),
 #profileModal:not(.hidden),
 #storeModal:not(.hidden),
 #shopModal:not(.hidden),
 #authModal[style*="display: flex"],
+.auth-modal[style*="display: flex"],
 #loginModal[style*="display: flex"],
 #callsignModal[style*="display: flex"],
 #profileModal[style*="display: flex"],
@@ -371,10 +375,16 @@ header {
 
 #authModal:not(.hidden) .callsign-auth-card,
 #authModal[style*="display: flex"] .callsign-auth-card,
-#callsign-auth-modal.modal-card {
-  display: flex !important;
-  visibility: visible !important;
+#authModal:not(.hidden) #callsign-auth-modal,
+#authModal[style*="display: flex"] #callsign-auth-modal,
+.auth-modal:not(.hidden) .callsign-auth-card,
+.auth-modal[style*="display: flex"] .callsign-auth-card,
+#callsign-auth-modal.modal-card,
+#callsign-auth-modal {
+  display: block !important;
   opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 100000 !important;
   pointer-events: auto !important;
 }
 

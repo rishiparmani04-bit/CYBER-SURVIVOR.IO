@@ -196,9 +196,20 @@ window.openAvatarModal = openAvatarModal;
 window.openAuthModal = function() {
   const m = document.getElementById('authModal');
   if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
-  if (m) { m.style.zIndex = '99999'; }
-  const inner = document.getElementById('callsign-auth-modal');
-  if (inner && inner !== m) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+  if (m) {
+    m.classList.remove('modal-hidden');
+    m.style.pointerEvents = 'auto';
+    m.style.zIndex = '99999';
+  }
+  const inner = document.getElementById('callsign-auth-modal') || (m && m.querySelector('.modal-card'));
+  if (inner && inner !== m) {
+    inner.classList.remove('hidden', 'modal-hidden');
+    inner.style.pointerEvents = 'auto';
+    inner.style.display = 'block';
+    inner.style.opacity = '1';
+    inner.style.visibility = 'visible';
+    inner.style.zIndex = '100000';
+  }
   if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
     try { window.AuthManager.renderGisButton(); } catch (e) {}
   }
@@ -236,10 +247,21 @@ function bindHeaderClickHandlers() {
       console.log('Sign in clicked');
       const modal = document.getElementById('authModal');
       if (modal) modal.style.display = 'flex';
-      if (modal) modal.classList.remove('hidden');
-      if (modal) modal.style.zIndex = '99999';
-      const inner = document.getElementById('callsign-auth-modal');
-      if (inner && inner !== modal) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.remove('modal-hidden');
+        modal.style.pointerEvents = 'auto';
+        modal.style.zIndex = '99999';
+      }
+      const inner = document.getElementById('callsign-auth-modal') || (modal && modal.querySelector('.modal-card'));
+      if (inner && inner !== modal) {
+        inner.classList.remove('hidden', 'modal-hidden');
+        inner.style.pointerEvents = 'auto';
+        inner.style.display = 'block';
+        inner.style.opacity = '1';
+        inner.style.visibility = 'visible';
+        inner.style.zIndex = '100000';
+      }
       if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
         try { window.AuthManager.renderGisButton(); } catch (e) {}
       }
@@ -9158,17 +9180,24 @@ class Game {
       return;
     }
 
-    const backdrop = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+    const backdrop = document.getElementById('authModal') || document.querySelector('.auth-modal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
     if (backdrop) {
+      backdrop.classList.remove('hidden', 'modal-hidden');
+      backdrop.style.pointerEvents = 'auto';
       backdrop.style.zIndex = '99999';
       backdrop.style.display = 'flex';
-      backdrop.classList.remove('hidden');
+      backdrop.style.visibility = 'visible';
+      backdrop.style.opacity = '1';
     }
 
-    const card = document.getElementById('callsign-auth-modal');
+    const card = document.getElementById('callsign-auth-modal') || (backdrop && backdrop.querySelector('.modal-card'));
     if (card && card !== backdrop) {
-      card.style.display = 'flex';
-      card.classList.remove('hidden');
+      card.classList.remove('hidden', 'modal-hidden');
+      card.style.pointerEvents = 'auto';
+      card.style.display = 'block';
+      card.style.opacity = '1';
+      card.style.visibility = 'visible';
+      card.style.zIndex = '100000';
     }
 
     if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
@@ -9229,16 +9258,23 @@ class Game {
       this.openProfileModal();
       return;
     }
-    const backdrop = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+    const backdrop = document.getElementById('authModal') || document.querySelector('.auth-modal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
     if (backdrop) {
+      backdrop.classList.remove('hidden', 'modal-hidden');
+      backdrop.style.pointerEvents = 'auto';
       backdrop.style.zIndex = '99999';
       backdrop.style.display = 'flex';
-      backdrop.classList.remove('hidden');
+      backdrop.style.visibility = 'visible';
+      backdrop.style.opacity = '1';
     }
-    const card = document.getElementById('callsign-auth-modal');
+    const card = document.getElementById('callsign-auth-modal') || (backdrop && backdrop.querySelector('.modal-card'));
     if (card && card !== backdrop) {
-      card.style.display = 'flex';
-      card.classList.remove('hidden');
+      card.classList.remove('hidden', 'modal-hidden');
+      card.style.pointerEvents = 'auto';
+      card.style.display = 'block';
+      card.style.opacity = '1';
+      card.style.visibility = 'visible';
+      card.style.zIndex = '100000';
     }
     this.openCallsignModal();
   }
@@ -12066,10 +12102,21 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('Sign in clicked');
       const modal = document.getElementById('authModal');
       if (modal) modal.style.display = 'flex';
-      if (modal) modal.classList.remove('hidden');
-      if (modal) modal.style.zIndex = '99999';
-      const inner = document.getElementById('callsign-auth-modal');
-      if (inner && inner !== modal) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.remove('modal-hidden');
+        modal.style.pointerEvents = 'auto';
+        modal.style.zIndex = '99999';
+      }
+      const inner = document.getElementById('callsign-auth-modal') || (modal && modal.querySelector('.modal-card'));
+      if (inner && inner !== modal) {
+        inner.classList.remove('hidden', 'modal-hidden');
+        inner.style.pointerEvents = 'auto';
+        inner.style.display = 'block';
+        inner.style.opacity = '1';
+        inner.style.visibility = 'visible';
+        inner.style.zIndex = '100000';
+      }
       if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
         try { window.AuthManager.renderGisButton(); } catch (e) {}
       }

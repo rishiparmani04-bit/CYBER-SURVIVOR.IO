@@ -26,21 +26,22 @@
   <!-- Immediate Early Trigger Handlers for Header Buttons & Modals -->
   <script>
     window.openAuthModal = function() {
-      var m = document.getElementById('authModal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+      var m = document.getElementById('authModal') || document.querySelector('.auth-modal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
       if (m) {
-        m.classList.remove('hidden');
+        m.classList.remove('hidden', 'modal-hidden');
         m.style.display = 'flex';
         m.style.zIndex = '99999';
         m.style.visibility = 'visible';
         m.style.opacity = '1';
         m.style.pointerEvents = 'auto';
       }
-      var c = document.getElementById('callsign-auth-modal');
+      var c = document.getElementById('callsign-auth-modal') || (m && m.querySelector('.modal-card'));
       if (c && c !== m) {
-        c.classList.remove('hidden');
-        c.style.display = 'flex';
-        c.style.visibility = 'visible';
+        c.classList.remove('hidden', 'modal-hidden');
+        c.style.display = 'block';
         c.style.opacity = '1';
+        c.style.visibility = 'visible';
+        c.style.zIndex = '100000';
         c.style.pointerEvents = 'auto';
       }
       if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
@@ -445,7 +446,7 @@
           </div>
         </div>
         <div class="topbar-auth-row">
-          <button type="button" id="signInBtn" onclick="const m = document.getElementById('authModal') || document.querySelector('.auth-modal'); if(m){ m.classList.remove('hidden'); m.style.display='flex'; m.style.zIndex='99999'; }" style="cursor: pointer; pointer-events: auto; position: relative; z-index: 1000;">Sign In</button>
+          <button type="button" id="signInBtn" onclick="const m = document.getElementById('authModal') || document.querySelector('.auth-modal'); if(m){ m.classList.remove('hidden', 'modal-hidden'); m.style.pointerEvents='auto'; m.style.display='flex'; m.style.zIndex='99999'; const c = document.getElementById('callsign-auth-modal') || m.querySelector('.modal-card'); if(c){ c.classList.remove('hidden', 'modal-hidden'); c.style.pointerEvents='auto'; c.style.display='block'; c.style.opacity='1'; c.style.visibility='visible'; c.style.zIndex='100000'; } }" style="cursor: pointer; pointer-events: auto; position: relative; z-index: 1000;">Sign In</button>
           <button id="btn-reset-data-top" class="btn-auth-sm btn-signout" type="button">Sign Out</button>
         </div>
       </div>
