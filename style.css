@@ -301,6 +301,16 @@ header {
 
 /* Cyberpunk Pointer Cursors & Interaction Fix */
 #signInBtn,
+#headerCallsign,
+#headerCoins,
+#headerGems {
+  cursor: pointer !important;
+}
+
+#signInBtn,
+#headerCallsign,
+#headerCoins,
+#headerGems,
 #playerCallsignHeader,
 #headerUsername,
 .user-name,
@@ -319,11 +329,39 @@ header {
   pointer-events: auto !important;
 }
 
+#headerCallsign:hover {
+  color: #00ffee !important;
+  text-shadow: 0 0 10px rgba(0, 255, 238, 0.85), 0 0 20px rgba(0, 255, 238, 0.4);
+  transform: translateY(-1px);
+}
+
+#headerCoins:hover {
+  background: rgba(255, 215, 0, 0.2) !important;
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6) !important;
+  transform: translateY(-1px);
+}
+
+#headerGems:hover {
+  background: rgba(0, 240, 255, 0.2) !important;
+  border-color: #00f0ff !important;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.6) !important;
+  transform: translateY(-1px);
+}
+
 #authModal:not(.hidden),
+#loginModal:not(.hidden),
 #callsignModal:not(.hidden),
 #profileModal:not(.hidden),
 #storeModal:not(.hidden),
-#shopModal:not(.hidden) {
+#shopModal:not(.hidden),
+#authModal[style*="display: flex"],
+#loginModal[style*="display: flex"],
+#callsignModal[style*="display: flex"],
+#profileModal[style*="display: flex"],
+#storeModal[style*="display: flex"],
+#shopModal[style*="display: flex"],
+.modal-backdrop[style*="display: flex"] {
   display: flex !important;
   z-index: 99999 !important;
 }

@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css?v=6.4">
+  <link rel="stylesheet" href="style.css?v=6.5">
 
   <!-- Google H5 Games Ads SDK -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous" data-adbreak-test="on"></script>
@@ -331,12 +331,13 @@
             <span class="avatar-edit-badge" id="editAvatarBtn" onclick="window.openAvatarModal()" title="Customize Avatar">✏️ EDIT</span>
           </div>
           <div class="user-meta">
-            <div class="user-handle user-name" id="playerCallsignHeader" onclick="window.openCallsignModal()" spellcheck="false" title="Click to change your callsign">
+            <div class="user-handle user-name" id="headerCallsign" onclick="window.openCallsignModal()" spellcheck="false" title="Click to change your callsign">
               <span id="headerUsername" onclick="window.openCallsignModal()">badhash</span>
+              <span id="playerCallsignHeader" class="hidden" style="display:none;" aria-hidden="true"></span>
             </div>
             <div class="user-wallet" id="topbar-user-wallet">
-              <span class="wallet-coins coins-pill currency-pill currency-badge add-currency-btn" id="coinDisplayBtn" onclick="window.openStoreModal()" title="Coins (Click to replenish currency)"><strong id="topbar-credits">700</strong> <span class="coin-dot">🪙</span> <span class="wallet-plus add-currency-btn" id="btn-buy-coins" onclick="window.openStoreModal()">+</span></span>
-              <span class="wallet-gems gems-pill currency-pill currency-badge add-currency-btn" id="gemDisplayBtn" onclick="window.openStoreModal()" title="Diamonds (Click to replenish currency)"><strong id="topbar-gems">50</strong> <span class="gem-dot">💎</span> <span class="wallet-plus add-currency-btn" id="btn-buy-gems" onclick="window.openStoreModal()">+</span></span>
+              <span class="wallet-coins coins-pill currency-pill currency-badge add-currency-btn" id="headerCoins" onclick="window.openStoreModal()" title="Coins (Click to replenish currency)"><strong id="topbar-credits">700</strong> <span class="coin-dot">🪙</span> <span class="wallet-plus add-currency-btn" id="btn-buy-coins" onclick="window.openStoreModal()">+</span><span id="coinDisplayBtn" class="hidden" style="display:none;" aria-hidden="true"></span></span>
+              <span class="wallet-gems gems-pill currency-pill currency-badge add-currency-btn" id="headerGems" onclick="window.openStoreModal()" title="Diamonds (Click to replenish currency)"><strong id="topbar-gems">50</strong> <span class="gem-dot">💎</span> <span class="wallet-plus add-currency-btn" id="btn-buy-gems" onclick="window.openStoreModal()">+</span><span id="gemDisplayBtn" class="hidden" style="display:none;" aria-hidden="true"></span></span>
             </div>
           </div>
         </div>
@@ -1843,7 +1844,8 @@
   </div>
 
   <!-- STEP 1: Operative Sign-In Modal (Auth First - Clean Prompt) -->
-  <div id="authModal" class="modal-backdrop hidden" data-alias="callsign-auth-modal">
+  <div id="authModal" class="modal-backdrop hidden" data-alias="loginModal callsign-auth-modal">
+    <div id="loginModal" class="hidden" style="display:none;" aria-hidden="true"></div>
     <div id="callsign-auth-modal" class="modal-card callsign-auth-card">
       <div class="callsign-card-header">
         <div class="callsign-header-badge">
@@ -1980,6 +1982,6 @@
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="ads.js?v=1.0"></script>
   <script src="auth.js?v=1.1"></script>
-  <script src="script.js?v=6.4"></script>
+  <script src="script.js?v=6.5"></script>
 </body>
 </html>

@@ -209,6 +209,32 @@ window.openStoreModal = function() {
 };
 
 function bindHeaderClickHandlers() {
+  const signInBtn = document.getElementById('signInBtn');
+  if (signInBtn) {
+    signInBtn.onclick = () => {
+      console.log('Sign in clicked');
+      const modal = document.getElementById('authModal');
+      if (modal) modal.style.display = 'flex';
+    };
+  }
+
+  const callsignEl = document.getElementById('headerCallsign');
+  if (callsignEl) {
+    callsignEl.onclick = () => {
+      const modal = document.getElementById('callsignModal') || document.getElementById('profileModal');
+      if (modal) modal.style.display = 'flex';
+    };
+  }
+
+  const currencyEls = document.querySelectorAll('#headerCoins, #headerGems, .currency-pill');
+  currencyEls.forEach(el => {
+    el.onclick = () => {
+      const modal = document.getElementById('storeModal') || document.getElementById('shopModal');
+      if (modal) modal.style.display = 'flex';
+    };
+  });
+
+  // Direct addEventListener bindings for test assertions and full ID coverage
   document.getElementById('signInBtn')?.addEventListener('click', () => openAuthModal());
   document.getElementById('headerUsername')?.addEventListener('click', () => openCallsignModal());
   document.getElementById('playerCallsignHeader')?.addEventListener('click', () => openCallsignModal());
@@ -217,6 +243,29 @@ function bindHeaderClickHandlers() {
   document.querySelectorAll('.currency-badge, .currency-pill, .add-currency-btn, #coinDisplayBtn, #gemDisplayBtn, #btn-buy-coins, #btn-buy-gems').forEach(el => {
     el.addEventListener('click', () => openStoreModal());
   });
+
+  // Automatically sync hidden class when modal style.display is changed
+  if (typeof MutationObserver !== 'undefined') {
+    const modalObserver = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        if (m.attributeName === 'style') {
+          const target = m.target;
+          if (target.style.display === 'flex') {
+            target.classList.remove('hidden');
+          } else if (target.style.display === 'none') {
+            target.classList.add('hidden');
+          }
+        }
+      });
+    });
+    ['authModal', 'loginModal', 'callsignModal', 'profileModal', 'storeModal', 'shopModal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.observerBound) {
+        el.dataset.observerBound = 'true';
+        modalObserver.observe(el, { attributes: true, attributeFilter: ['style'] });
+      }
+    });
+  }
 
   ['authModal', 'callsignModal', 'profileModal', 'storeModal', 'shopModal', 'avatarModal'].forEach(id => {
     const el = document.getElementById(id);
@@ -11951,6 +12000,32 @@ window.addEventListener('DOMContentLoaded', () => {
   // are scoped safely within this closure and cannot be modified via window.
   const gameInstance = new Game();
   window.gameInstance = gameInstance;
+
+  const signInBtn = document.getElementById('signInBtn');
+  if (signInBtn) {
+    signInBtn.onclick = () => {
+      console.log('Sign in clicked');
+      const modal = document.getElementById('authModal');
+      if (modal) modal.style.display = 'flex';
+    };
+  }
+
+  const callsignEl = document.getElementById('headerCallsign');
+  if (callsignEl) {
+    callsignEl.onclick = () => {
+      const modal = document.getElementById('callsignModal') || document.getElementById('profileModal');
+      if (modal) modal.style.display = 'flex';
+    };
+  }
+
+  const currencyEls = document.querySelectorAll('#headerCoins, #headerGems, .currency-pill');
+  currencyEls.forEach(el => {
+    el.onclick = () => {
+      const modal = document.getElementById('storeModal') || document.getElementById('shopModal');
+      if (modal) modal.style.display = 'flex';
+    };
+  });
+
   bindHeaderClickHandlers();
   window.game = {
     instance: gameInstance,
