@@ -8145,6 +8145,30 @@ select:focus {
   box-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
 }
 
+.btn-squad-invite.pending {
+  border-color: #f59e0b !important;
+  color: #fbbf24 !important;
+  background: rgba(245, 158, 11, 0.2) !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.5) !important;
+  cursor: wait !important;
+  opacity: 0.9 !important;
+  animation: pendingPulse 1.2s infinite alternate;
+}
+
+@keyframes pendingPulse {
+  from { opacity: 0.75; transform: scale(0.99); }
+  to { opacity: 1; transform: scale(1.01); }
+}
+
+.btn-squad-invite.in-squad {
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+  background: rgba(16, 185, 129, 0.2) !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4) !important;
+  cursor: default !important;
+  opacity: 0.9 !important;
+}
+
 /* Squad Comm-Link Invitation Modal */
 .squad-invite-card {
   width: 90%;
@@ -8294,4 +8318,129 @@ select:focus {
   box-shadow: 0 0 18px rgba(255, 0, 85, 0.8), 0 0 8px #ff0055;
   transform: translateY(-1px);
 }
+
+/* Incoming Squad Invite Alert Banner */
+.squad-invite-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999999;
+  width: 92%;
+  max-width: 620px;
+  background: rgba(8, 16, 32, 0.95);
+  border: 1.5px solid #00f0ff;
+  border-radius: 10px;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.4), inset 0 0 15px rgba(0, 240, 255, 0.15);
+  backdrop-filter: blur(12px);
+  padding: 12px 18px;
+  animation: bannerSlideDown 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  pointer-events: auto;
+}
+
+.squad-invite-banner.hidden {
+  display: none !important;
+}
+
+@keyframes bannerSlideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -30px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.squad-invite-banner-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.invite-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.invite-banner-icon {
+  font-size: 1.8rem;
+  animation: alertPulse 1.2s infinite alternate;
+}
+
+.invite-banner-title {
+  font-family: var(--font-cyber, 'Courier New', monospace);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #00f0ff;
+  letter-spacing: 1px;
+}
+
+.invite-banner-desc {
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  margin-top: 2px;
+}
+
+.invite-banner-desc .room-pill {
+  background: rgba(0, 240, 255, 0.2);
+  border: 1px solid #00f0ff;
+  color: #ffffff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.invite-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-invite-accept-banner {
+  background: #10b981;
+  color: #ffffff;
+  border: 1px solid #34d399;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-family: var(--font-cyber, 'Courier New', monospace);
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.btn-invite-accept-banner:hover {
+  background: #059669;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.8);
+  transform: translateY(-1px);
+}
+
+.btn-invite-decline-banner {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-family: var(--font-cyber, 'Courier New', monospace);
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+}
+
+.btn-invite-decline-banner:hover {
+  background: rgba(239, 68, 68, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 

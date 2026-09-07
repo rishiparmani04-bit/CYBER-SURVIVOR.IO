@@ -2428,6 +2428,26 @@ class Game {
     this.isAdShowing = false;
     this.enemyIdCounter = 0;
     this.sentFriendRequests = new Set();
+    this.pendingInvites = new Map();
+    this.currentSquadInvite = null;
+    this.pendingSquadInviteCode = null;
+
+    // Unique Socket ID & User ID for multiplayer handshake & invite routing
+    this.userPresenceId = null;
+    this.userId = null;
+    this.socketId = null;
+
+    let _socket = null;
+    Object.defineProperty(this, 'socket', {
+      get: () => _socket || (typeof window !== 'undefined' ? window.socket : null),
+      set: (s) => {
+        _socket = s;
+        if (s?.id) this.socketId = s.id;
+        this.initSocket();
+      },
+      configurable: true,
+      enumerable: true
+    });
 
     // Register Google H5 Games Ads Game Hooks (Pause Loop & Mute Audio)
     if (window.AdManager) {
@@ -3283,21 +3303,34 @@ class Game {
       if (e.target.id === 'avatarModal') this.closeAvatarModal();
     });
 
-    // Squad Comm-Link Invitation Modal Listeners
+    // Squad Comm-Link Invitation Alert Banner & Modal Listeners
+    document.getElementById('btn-accept-invite-banner')?.addEventListener('click', () => {
+      this.acceptSquadInvite();
+    });
+    document.getElementById('btn-decline-invite-banner')?.addEventListener('click', () => {
+      this.declineSquadInvite();
+    });
     document.getElementById('btn-accept-squad-invite')?.addEventListener('click', () => {
       this.acceptSquadInvite();
     });
     document.getElementById('btn-decline-squad-invite')?.addEventListener('click', () => {
-      document.getElementById('squad-invite-modal')?.classList.add('hidden');
+      this.declineSquadInvite();
     });
     document.getElementById('btn-close-invite-modal')?.addEventListener('click', () => {
-      document.getElementById('squad-invite-modal')?.classList.add('hidden');
+      this.declineSquadInvite();
     });
     document.getElementById('squad-invite-modal')?.addEventListener('click', (e) => {
       if (e.target.id === 'squad-invite-modal') {
-        document.getElementById('squad-invite-modal')?.classList.add('hidden');
+        this.declineSquadInvite();
       }
     });
+
+    // Window event listeners for squad invite / join events
+    if (typeof window !== 'undefined') {
+      window.addEventListener('squad_invite_received', (e) => this.handleSquadInviteReceived(e.detail || e));
+      window.addEventListener('squad_joined', (e) => this.handleSquadJoined(e.detail || e));
+      window.addEventListener('squad_declined', (e) => this.handleSquadDeclined(e.detail || e));
+    }
 
     document.getElementById('squad-lobby-modal')?.addEventListener('click', (e) => {
       if (e.target.id === 'squad-lobby-modal') {
@@ -8452,8 +8485,12 @@ class Game {
           try { targetPeer.conn.send(data); } catch (e) {}
         }
       }
-    } else if (data.type === 'SQUAD_INVITE') {
-      this.handleSquadInvite(data);
+    } else if (data.type === 'SQUAD_INVITE' || data.event === 'squad_invite_received' || data.event === 'squad_invite') {
+      this.handleSquadInviteReceived(data);
+    } else if (data.type === 'SQUAD_JOINED' || data.event === 'squad_joined') {
+      this.handleSquadJoined(data);
+    } else if (data.type === 'SQUAD_DECLINE' || data.type === 'SQUAD_DECLINED' || data.event === 'squad_declined') {
+      this.handleSquadDeclined(data);
     }
   }
 
@@ -8507,8 +8544,12 @@ class Game {
           this.renderClientSquadPreview(this.lastClientRoster);
         }
       }
-    } else if (data.type === 'SQUAD_INVITE') {
-      this.handleSquadInvite(data);
+    } else if (data.type === 'SQUAD_INVITE' || data.event === 'squad_invite_received' || data.event === 'squad_invite') {
+      this.handleSquadInviteReceived(data);
+    } else if (data.type === 'SQUAD_JOINED' || data.event === 'squad_joined') {
+      this.handleSquadJoined(data);
+    } else if (data.type === 'SQUAD_DECLINE' || data.type === 'SQUAD_DECLINED' || data.event === 'squad_declined') {
+      this.handleSquadDeclined(data);
     } else if (data.type === 'REVIVE_SUCCESS' || data.type === 'PLAYER_REVIVED') {
       const targetPeerId = data.peerId || data.targetPeerId || data.id;
       const targetSlot = data.slot || data.targetSlot;
@@ -9491,6 +9532,24 @@ class Game {
   // ==========================================================================
   // REAL-TIME FRIEND PRESENCE & 1-CLICK SQUAD INVITES
   // ==========================================================================
+  initSocket() {
+    const s = this.socket || (typeof window !== 'undefined' ? window.socket : null);
+    if (!s) return;
+    if (s.id) {
+      this.socketId = s.id;
+    }
+    if (typeof s.on === 'function' && !s._squadListenersAttached) {
+      s._squadListenersAttached = true;
+      s.on('squad_invite_received', (data) => this.handleSquadInviteReceived(data));
+      s.on('squad_invite', (data) => this.handleSquadInviteReceived(data));
+      s.on('squad_joined', (data) => this.handleSquadJoined(data));
+      s.on('squad_declined', (data) => this.handleSquadDeclined(data));
+    }
+  }
+
+  // ==========================================================================
+  // REAL-TIME FRIEND PRESENCE & 1-CLICK SQUAD INVITES
+  // ==========================================================================
   initPresenceSystem() {
     try {
       this.userPresenceId = localStorage.getItem('cyber_presence_id');
@@ -9501,6 +9560,11 @@ class Game {
     } catch (e) {
       this.userPresenceId = 'cyber_usr_' + Math.random().toString(36).substring(2, 9);
     }
+
+    this.userId = this.userPresenceId;
+    this.socketId = this.socket?.id || (typeof window !== 'undefined' && window.socket?.id) || this.userPresenceId;
+
+    this.initSocket();
 
     this.friendsPresence = new Map();
 
@@ -9560,6 +9624,10 @@ class Game {
       const pong = {
         type: 'PRESENCE_PONG',
         fromPresenceId: this.userPresenceId,
+        fromSocketId: this.socketId || this.userId,
+        fromUserId: this.userId,
+        socketId: this.socketId || this.userId,
+        userId: this.userId,
         fromName: this.saveData.playerName || 'Cyber Operative',
         avatar: this.getUserAvatar(),
         status: 'ONLINE_IN_LOBBY'
@@ -9578,17 +9646,25 @@ class Game {
         online: true,
         status: 'ONLINE - IN LOBBY',
         name: data.fromName,
-        presenceId: data.fromPresenceId,
+        presenceId: data.fromPresenceId || data.userId || data.socketId,
+        userId: data.fromUserId || data.userId || data.fromPresenceId,
+        socketId: data.fromSocketId || data.socketId || data.fromPresenceId,
         avatar: data.avatar || '🚀',
         lastSeen: Date.now()
       };
 
-      if (data.fromPresenceId) this.friendsPresence.set(data.fromPresenceId, info);
+      if (info.socketId) this.friendsPresence.set(info.socketId, info);
+      if (info.presenceId) this.friendsPresence.set(info.presenceId, info);
+      if (info.userId) this.friendsPresence.set(info.userId, info);
       if (data.fromName) this.friendsPresence.set(data.fromName.toLowerCase(), info);
 
       this.renderFriendsDrawer();
-    } else if (data.type === 'SQUAD_INVITE') {
-      this.handleSquadInvite(data);
+    } else if (data.type === 'SQUAD_INVITE' || data.event === 'squad_invite_received' || data.event === 'squad_invite') {
+      this.handleSquadInviteReceived(data);
+    } else if (data.type === 'SQUAD_JOINED' || data.event === 'squad_joined') {
+      this.handleSquadJoined(data);
+    } else if (data.type === 'SQUAD_DECLINE' || data.type === 'SQUAD_DECLINED' || data.event === 'squad_declined') {
+      this.handleSquadDeclined(data);
     }
   }
 
@@ -9599,8 +9675,8 @@ class Game {
     const now = Date.now();
     // Decay presence if not seen in 22 seconds
     friends.forEach((f) => {
-      const key = f.presenceId || f.peerId || f.name.toLowerCase();
-      const existing = this.friendsPresence.get(key) || this.friendsPresence.get(f.name.toLowerCase());
+      const key = f.socketId || f.userId || f.presenceId || f.peerId || f.name.toLowerCase();
+      const existing = this.friendsPresence.get(key) || (f.socketId && this.friendsPresence.get(f.socketId)) || (f.presenceId && this.friendsPresence.get(f.presenceId)) || this.friendsPresence.get(f.name.toLowerCase());
       if (existing && (now - (existing.lastSeen || 0) > 22000)) {
         existing.online = false;
         existing.status = 'OFFLINE';
@@ -9611,6 +9687,10 @@ class Game {
     const ping = {
       type: 'PRESENCE_PING',
       fromPresenceId: this.userPresenceId,
+      fromSocketId: this.socketId || this.userId,
+      fromUserId: this.userId,
+      socketId: this.socketId || this.userId,
+      userId: this.userId,
       fromName: this.saveData.playerName || 'Cyber Operative',
       avatar: this.getUserAvatar()
     };
@@ -9632,10 +9712,14 @@ class Game {
                 status: 'ONLINE - IN LOBBY',
                 name: f.name,
                 presenceId: targetId,
+                userId: f.userId || targetId,
+                socketId: f.socketId || targetId,
                 avatar: f.avatar || '🚀',
                 lastSeen: Date.now()
               };
               this.friendsPresence.set(targetId, info);
+              if (f.userId) this.friendsPresence.set(f.userId, info);
+              if (f.socketId) this.friendsPresence.set(f.socketId, info);
               this.friendsPresence.set(f.name.toLowerCase(), info);
               this.renderFriendsDrawer();
               setTimeout(() => { try { testConn.close(); } catch(e){} }, 1000);
@@ -9649,29 +9733,84 @@ class Game {
     this.renderFriendsDrawer();
   }
 
-  sendSquadInvite(friendPeerId, friendName, btnEl) {
+  sendSquadInvite(friendTarget, friendName, btnEl, optSocketId, optUserId) {
+    let targetSocketId = optSocketId;
+    let targetUserId = optUserId;
+    let targetPeerId = null;
+
+    if (typeof friendTarget === 'object' && friendTarget !== null) {
+      targetSocketId = friendTarget.socketId || friendTarget.targetSocketId || targetSocketId;
+      targetUserId = friendTarget.userId || friendTarget.targetUserId || targetUserId;
+      targetPeerId = friendTarget.peerId || friendTarget.presenceId || targetPeerId;
+      friendName = friendTarget.name || friendName;
+    } else if (typeof friendTarget === 'string') {
+      targetPeerId = friendTarget;
+    }
+
+    // Resolve socket/user ID from presence map if needed
+    if (targetPeerId && this.friendsPresence) {
+      const pres = this.friendsPresence.get(targetPeerId) || this.friendsPresence.get(targetPeerId.toLowerCase());
+      if (pres) {
+        if (!targetSocketId) targetSocketId = pres.socketId || pres.presenceId;
+        if (!targetUserId) targetUserId = pres.userId || pres.presenceId;
+        if (!friendName) friendName = pres.name;
+      }
+    }
+
+    if (!targetSocketId && !targetUserId && targetPeerId) {
+      targetSocketId = targetPeerId;
+      targetUserId = targetPeerId;
+    }
+
     if (!this.roomCode) {
       this.roomCode = this.generateSquadRoomCode();
       const codeEl = document.getElementById('squad-generated-code');
       if (codeEl) codeEl.textContent = this.roomCode;
     }
 
+    const inviteId = 'inv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    const myUniqueSocketId = this.socketId || this.socket?.id || (typeof window !== 'undefined' && window.socket?.id) || this.userPresenceId;
+    const myUniqueUserId = this.userId || this.userPresenceId;
+
     const payload = {
       type: 'SQUAD_INVITE',
+      event: 'squad_invite_received',
+      inviteId: inviteId,
       hostName: this.saveData.playerName || 'Host Operative',
+      fromName: this.saveData.playerName || 'Host Operative',
       roomCode: this.roomCode,
       hostPeerId: this.peer ? this.peer.id : this.userPresenceId,
+      hostSocketId: myUniqueSocketId,
+      fromSocketId: myUniqueSocketId,
+      fromUserId: myUniqueUserId,
       targetName: friendName,
-      targetPeerId: friendPeerId
+      targetPeerId: targetPeerId,
+      targetSocketId: targetSocketId,
+      targetUserId: targetUserId
     };
 
+    // 1. Target by Unique Socket ID / userId
+    if (this.socket && typeof this.socket.emit === 'function') {
+      try {
+        this.socket.emit('squad_invite', payload);
+        this.socket.emit('squad_invite_received', payload);
+      } catch (e) {}
+    }
+    if (typeof window !== 'undefined' && window.socket && typeof window.socket.emit === 'function' && window.socket !== this.socket) {
+      try {
+        window.socket.emit('squad_invite', payload);
+        window.socket.emit('squad_invite_received', payload);
+      } catch (e) {}
+    }
     if (this.presenceBus) {
       try { this.presenceBus.postMessage(payload); } catch (e) {}
     }
-
-    if (friendPeerId && this.presencePeer && !this.presencePeer.destroyed) {
+    if (this.localNetChannel) {
+      try { this.localNetChannel.postMessage(payload); } catch (e) {}
+    }
+    if (targetPeerId && this.presencePeer && !this.presencePeer.destroyed) {
       try {
-        const conn = this.presencePeer.connect(friendPeerId, { reliable: true });
+        const conn = this.presencePeer.connect(targetPeerId, { reliable: true });
         conn.on('open', () => {
           conn.send(payload);
           setTimeout(() => { try { conn.close(); } catch(e){} }, 2000);
@@ -9679,61 +9818,406 @@ class Game {
       } catch (e) {}
     }
 
-    if (btnEl) {
-      btnEl.textContent = 'INVITE SENT...';
-      btnEl.classList.add('sent');
-      btnEl.disabled = true;
-      setTimeout(() => {
-        if (btnEl) {
-          btnEl.textContent = '[+ INVITE TO SQUAD]';
-          btnEl.classList.remove('sent');
-          btnEl.disabled = false;
-        }
-      }, 3500);
+    // 2. Button in 'Pending' state
+    const inviteKey = targetSocketId || targetUserId || targetPeerId || friendName;
+    if (!this.pendingInvites) this.pendingInvites = new Map();
+
+    if (this.pendingInvites.has(inviteKey)) {
+      const prev = this.pendingInvites.get(inviteKey);
+      if (prev?.timeoutId) clearTimeout(prev.timeoutId);
     }
 
+    if (btnEl) {
+      btnEl.textContent = 'Pending';
+      btnEl.classList.add('pending');
+      btnEl.disabled = true;
+    }
+
+    // Watchdog: If declined or timed out, reset sender's button from 'Pending' back to [+ INVITE TO SQUAD]
+    const timeoutId = setTimeout(() => {
+      if (this.pendingInvites && this.pendingInvites.has(inviteKey)) {
+        this.pendingInvites.delete(inviteKey);
+        if (btnEl) {
+          btnEl.textContent = '[+ INVITE TO SQUAD]';
+          btnEl.classList.remove('pending', 'sent');
+          btnEl.disabled = false;
+        }
+        this.showNotification(`Squad invite to ${friendName} timed out.`, 'INVITE TIMEOUT', 'amber');
+      }
+    }, 15000);
+
+    this.pendingInvites.set(inviteKey, {
+      inviteId,
+      btnEl,
+      timeoutId,
+      targetSocketId,
+      targetUserId,
+      friendName
+    });
+
     this.showNotification(`Squad invite transmitted to ${friendName}!`, 'INVITE DISPATCHED', 'cyan');
-    this.audio.playDeflect();
+    if (this.audio && typeof this.audio.playDeflect === 'function') this.audio.playDeflect();
   }
 
   handleSquadInvite(data) {
+    this.handleSquadInviteReceived(data);
+  }
+
+  handleSquadInviteReceived(data) {
     if (!data || !data.roomCode) return;
-    if (data.targetName && this.saveData.playerName && data.targetName.toLowerCase() !== this.saveData.playerName.toLowerCase() && data.targetPeerId !== this.userPresenceId) {
-      return;
-    }
-    if (data.hostPeerId === this.userPresenceId || (data.hostName && data.hostName.toLowerCase() === (this.saveData.playerName || '').toLowerCase())) {
+
+    // 1. Target by Unique Socket ID: Route invites using unique socket.id / userId instead of username,
+    // so players with the same display name receive their own invites.
+    const myUniqueIds = [
+      this.socketId,
+      this.userId,
+      this.userPresenceId,
+      this.socket?.id,
+      (typeof window !== 'undefined' ? window.socket?.id : null),
+      this.peer?.id
+    ].filter(Boolean);
+
+    const targetId = data.targetSocketId || data.targetUserId || data.targetPeerId || data.to || data.receiverId;
+
+    if (targetId && !myUniqueIds.includes(targetId)) {
+      // Invite was targeted at a specific socket/user ID, and this client is NOT that recipient!
+      // (e.g. another player with the same display name)
       return;
     }
 
-    const modal = document.getElementById('squad-invite-modal');
-    const hostEl = document.getElementById('squad-invite-hostname');
-    const roomEl = document.getElementById('squad-invite-roomcode');
-    if (!modal) return;
+    // Ignore self-invites
+    if (data.fromSocketId && myUniqueIds.includes(data.fromSocketId)) return;
+    if (data.fromUserId && myUniqueIds.includes(data.fromUserId)) return;
+    if (data.hostPeerId && myUniqueIds.includes(data.hostPeerId)) return;
 
-    if (hostEl) hostEl.textContent = data.hostName || 'Squad Host';
-    if (roomEl) roomEl.textContent = data.roomCode;
+    this.currentSquadInvite = data;
     this.pendingSquadInviteCode = data.roomCode;
 
-    modal.classList.remove('hidden');
-    this.audio.playLevelUp();
+    // 2. Render Incoming Invite UI on Receiver:
+    // On squad_invite_received, immediately display an alert banner on the receiver's screen with functional [ACCEPT] and [DECLINE] buttons.
+    let banner = document.getElementById('squad-invite-banner');
+    if (!banner) {
+      banner = this.createSquadInviteBanner();
+    }
+
+    const hostNameEl = document.getElementById('squad-banner-hostname') || banner.querySelector('.invite-hostname');
+    const roomCodeEl = document.getElementById('squad-banner-roomcode') || banner.querySelector('.room-pill') || banner.querySelector('.invite-room-val');
+    if (hostNameEl) hostNameEl.textContent = data.hostName || data.fromName || 'Squad Host';
+    if (roomCodeEl) roomCodeEl.textContent = data.roomCode;
+
+    banner.classList.remove('hidden');
+    banner.style.display = 'block';
+
+    // Also update modal if present
+    const modal = document.getElementById('squad-invite-modal');
+    if (modal) {
+      const modalHost = document.getElementById('squad-invite-hostname');
+      const modalRoom = document.getElementById('squad-invite-roomcode');
+      if (modalHost) modalHost.textContent = data.hostName || data.fromName || 'Squad Host';
+      if (modalRoom) modalRoom.textContent = data.roomCode;
+      modal.classList.remove('hidden');
+    }
+
+    if (this.audio && typeof this.audio.playLevelUp === 'function') this.audio.playLevelUp();
+
+    // Auto-timeout after 18s on receiver if unhandled
+    if (this.inviteBannerTimeout) clearTimeout(this.inviteBannerTimeout);
+    this.inviteBannerTimeout = setTimeout(() => {
+      this.declineSquadInvite(true);
+    }, 18000);
+  }
+
+  createSquadInviteBanner() {
+    let banner = document.getElementById('squad-invite-banner');
+    if (banner) return banner;
+
+    banner = document.createElement('div');
+    banner.id = 'squad-invite-banner';
+    banner.className = 'squad-invite-banner hidden';
+    banner.setAttribute('role', 'alert');
+    banner.setAttribute('aria-live', 'assertive');
+    banner.innerHTML = `
+      <div class="squad-invite-banner-inner">
+        <div class="invite-banner-left">
+          <span class="invite-banner-icon">📡</span>
+          <div class="invite-banner-text">
+            <div class="invite-banner-title">SQUAD COMM-LINK INVITATION</div>
+            <div class="invite-banner-desc"><strong id="squad-banner-hostname" class="invite-hostname">Host</strong> invited you to Squad Room: <span id="squad-banner-roomcode" class="room-pill">CYBER-42X</span></div>
+          </div>
+        </div>
+        <div class="invite-banner-actions">
+          <button id="btn-accept-invite-banner" class="btn-invite-accept-banner">[ACCEPT]</button>
+          <button id="btn-decline-invite-banner" class="btn-invite-decline-banner">[DECLINE]</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(banner);
+
+    banner.querySelector('#btn-accept-invite-banner')?.addEventListener('click', () => {
+      this.acceptSquadInvite();
+    });
+    banner.querySelector('#btn-decline-invite-banner')?.addEventListener('click', () => {
+      this.declineSquadInvite();
+    });
+
+    return banner;
   }
 
   acceptSquadInvite() {
-    const roomCode = this.pendingSquadInviteCode;
+    if (this.inviteBannerTimeout) clearTimeout(this.inviteBannerTimeout);
+    const invite = this.currentSquadInvite;
+    const roomCode = this.pendingSquadInviteCode || invite?.roomCode;
+
+    // Dismiss alert banner and modal immediately
+    const banner = document.getElementById('squad-invite-banner');
+    if (banner) {
+      banner.classList.add('hidden');
+      banner.style.display = 'none';
+    }
     document.getElementById('squad-invite-modal')?.classList.add('hidden');
+
     if (!roomCode) return;
 
+    // 1. Join the squad room
     const squadModal = document.getElementById('squad-lobby-modal');
     if (squadModal) squadModal.classList.remove('hidden');
 
     document.getElementById('tab-btn-join-squad')?.click();
-
     const inputCode = document.getElementById('input-join-squad-code');
     if (inputCode) inputCode.value = roomCode;
 
     this.joinSquadRoom(roomCode);
-    this.showNotification(`Connecting to squad ${roomCode}...`, 'SQUAD JOIN', 'green');
-    this.audio.playLevelUp();
+
+    // 2. Emits squad_joined to both clients
+    const myUniqueSocketId = this.socketId || this.socket?.id || (typeof window !== 'undefined' && window.socket?.id) || this.userPresenceId;
+    const myUniqueUserId = this.userId || this.userPresenceId;
+
+    const joinedPacket = {
+      type: 'SQUAD_JOINED',
+      event: 'squad_joined',
+      roomCode: roomCode,
+      joinerSocketId: myUniqueSocketId,
+      joinerUserId: myUniqueUserId,
+      joinerName: this.saveData.playerName || 'Cyber Operative',
+      joinerAvatar: this.getUserAvatar(),
+      joinerHero: this.selectedHero || 'commando',
+      hostSocketId: invite?.fromSocketId || invite?.hostSocketId,
+      hostUserId: invite?.fromUserId,
+      hostName: invite?.hostName || invite?.fromName,
+      targetSocketId: invite?.fromSocketId || invite?.hostSocketId,
+      targetUserId: invite?.fromUserId,
+      inviteId: invite?.inviteId
+    };
+
+    if (this.socket && typeof this.socket.emit === 'function') {
+      try { this.socket.emit('squad_joined', joinedPacket); } catch (e) {}
+    }
+    if (typeof window !== 'undefined' && window.socket && typeof window.socket.emit === 'function' && window.socket !== this.socket) {
+      try { window.socket.emit('squad_joined', joinedPacket); } catch (e) {}
+    }
+    if (this.presenceBus) {
+      try { this.presenceBus.postMessage(joinedPacket); } catch (e) {}
+    }
+    if (this.localNetChannel) {
+      try { this.localNetChannel.postMessage(joinedPacket); } catch (e) {}
+    }
+    if (typeof window !== 'undefined') {
+      try { window.dispatchEvent(new CustomEvent('squad_joined', { detail: joinedPacket })); } catch (e) {}
+    }
+
+    // Call locally so both clients update Connected Squad Roster and clear Pending
+    this.handleSquadJoined(joinedPacket);
+
+    this.showNotification(`Accepted invite! Connecting to squad ${roomCode}...`, 'SQUAD JOIN', 'green');
+    if (this.audio && typeof this.audio.playLevelUp === 'function') this.audio.playLevelUp();
+    this.currentSquadInvite = null;
+  }
+
+  handleSquadJoined(data) {
+    if (!data) return;
+
+    // 1. Clear the 'Pending' status on sender's button
+    const targetKey = data.joinerSocketId || data.joinerUserId || data.joinerName;
+    const buttons = document.querySelectorAll('.btn-squad-invite');
+    buttons.forEach((btn) => {
+      const match = !targetKey ||
+        btn.getAttribute('data-socketid') === targetKey ||
+        btn.getAttribute('data-userid') === targetKey ||
+        btn.getAttribute('data-peerid') === targetKey ||
+        (btn.getAttribute('data-name') && btn.getAttribute('data-name').toLowerCase() === (data.joinerName || '').toLowerCase());
+
+      if (match) {
+        btn.textContent = 'IN SQUAD';
+        btn.classList.remove('pending', 'sent');
+        btn.classList.add('in-squad');
+        btn.disabled = true;
+      }
+    });
+
+    if (this.pendingInvites) {
+      this.pendingInvites.forEach((item, k) => {
+        if (k === targetKey || (item.friendName && item.friendName.toLowerCase() === (data.joinerName || '').toLowerCase())) {
+          if (item.timeoutId) clearTimeout(item.timeoutId);
+          this.pendingInvites.delete(k);
+        }
+      });
+    }
+
+    // 2. Update the Connected Squad Roster on both screens!
+    if (this.isHost) {
+      const peerId = data.joinerSocketId || data.joinerUserId || ('slot_' + this.getNextAvailableSlot());
+      if (!this.squadPeers.has(peerId)) {
+        const assignedSlot = this.getNextAvailableSlot();
+        const newPeer = {
+          slot: assignedSlot,
+          peerId: peerId,
+          socketId: data.joinerSocketId,
+          userId: data.joinerUserId,
+          name: data.joinerName || `Operative_P${assignedSlot}`,
+          avatar: data.joinerAvatar || '🚀',
+          hero: data.joinerHero || 'commando',
+          heroId: data.joinerHero || 'commando',
+          color: this.getPlayerSlotColor(assignedSlot),
+          currentWeapon: 'ak47',
+          x: this.player ? this.player.x + 40 : 100,
+          y: this.player ? this.player.y + 40 : 100,
+          hp: 120,
+          maxHp: 120,
+          shield: 60,
+          maxShield: 60,
+          radius: 16,
+          invulnTime: 0,
+          isDowned: false,
+          downedTimer: 0,
+          reviveProgress: 0,
+          isShooting: false,
+          shooting: false,
+          walkTimer: 0,
+          isHuman: true
+        };
+        this.squadPeers.set(peerId, newPeer);
+        this.broadcastSquadRoster();
+      }
+      this.updateSquadLobbyUI();
+    } else {
+      const previewBox = document.getElementById('client-squad-preview');
+      if (previewBox) previewBox.classList.remove('hidden');
+
+      const roster = data.squadRoster || [
+        { slot: 1, name: data.hostName || 'Host Operative', avatar: '🚀', hero: 'commando', ready: true },
+        { slot: 2, name: data.joinerName || this.saveData.playerName || 'Operative', avatar: data.joinerAvatar || this.getUserAvatar(), hero: data.joinerHero || this.selectedHero || 'commando', ready: true }
+      ];
+      this.renderClientSquadPreview(roster);
+    }
+  }
+
+  declineSquadInvite(isTimeout = false) {
+    if (this.inviteBannerTimeout) clearTimeout(this.inviteBannerTimeout);
+    const banner = document.getElementById('squad-invite-banner');
+    if (banner) {
+      banner.classList.add('hidden');
+      banner.style.display = 'none';
+    }
+    document.getElementById('squad-invite-modal')?.classList.add('hidden');
+
+    const invite = this.currentSquadInvite;
+    if (invite) {
+      const myUniqueSocketId = this.socketId || this.socket?.id || (typeof window !== 'undefined' && window.socket?.id) || this.userPresenceId;
+      const myUniqueUserId = this.userId || this.userPresenceId;
+
+      const declinePacket = {
+        type: 'SQUAD_DECLINE',
+        event: 'squad_declined',
+        inviteId: invite.inviteId,
+        roomCode: invite.roomCode,
+        isTimeout: Boolean(isTimeout),
+        targetSocketId: invite.fromSocketId || invite.hostSocketId,
+        targetUserId: invite.fromUserId,
+        declinerSocketId: myUniqueSocketId,
+        declinerUserId: myUniqueUserId,
+        declinerName: this.saveData.playerName || 'Operative'
+      };
+
+      if (this.socket && typeof this.socket.emit === 'function') {
+        try { this.socket.emit('squad_declined', declinePacket); } catch (e) {}
+      }
+      if (typeof window !== 'undefined' && window.socket && typeof window.socket.emit === 'function' && window.socket !== this.socket) {
+        try { window.socket.emit('squad_declined', declinePacket); } catch (e) {}
+      }
+      if (this.presenceBus) {
+        try { this.presenceBus.postMessage(declinePacket); } catch (e) {}
+      }
+      if (this.localNetChannel) {
+        try { this.localNetChannel.postMessage(declinePacket); } catch (e) {}
+      }
+      if (typeof window !== 'undefined') {
+        try { window.dispatchEvent(new CustomEvent('squad_declined', { detail: declinePacket })); } catch (e) {}
+      }
+    }
+
+    if (!isTimeout) {
+      this.showNotification('Squad invite declined.', 'INVITE DECLINED', 'red');
+    }
+    this.currentSquadInvite = null;
+    this.pendingSquadInviteCode = null;
+  }
+
+  handleSquadDeclined(data) {
+    if (!data) return;
+
+    const myUniqueIds = [
+      this.socketId,
+      this.userId,
+      this.userPresenceId,
+      this.socket?.id,
+      (typeof window !== 'undefined' ? window.socket?.id : null),
+      this.peer?.id
+    ].filter(Boolean);
+
+    if (data.targetSocketId && !myUniqueIds.includes(data.targetSocketId)) return;
+    if (data.targetUserId && !myUniqueIds.includes(data.targetUserId)) return;
+
+    if (!data.isTimeout) {
+      this.showNotification(`${data.declinerName || 'Operative'} declined the squad invite.`, 'INVITE DECLINED', 'amber');
+    }
+
+    // If declined or timed out, reset the sender's button from 'Pending' back to [+ INVITE TO SQUAD]
+    this.resetPendingInviteButton(data.declinerSocketId || data.declinerUserId || data.declinerName);
+  }
+
+  resetPendingInviteButton(targetIdOrName) {
+    const buttons = document.querySelectorAll('.btn-squad-invite');
+    buttons.forEach((btn) => {
+      const match = !targetIdOrName ||
+        btn.getAttribute('data-socketid') === targetIdOrName ||
+        btn.getAttribute('data-userid') === targetIdOrName ||
+        btn.getAttribute('data-peerid') === targetIdOrName ||
+        (btn.getAttribute('data-name') && btn.getAttribute('data-name').toLowerCase() === targetIdOrName.toLowerCase());
+
+      if (match) {
+        btn.textContent = '[+ INVITE TO SQUAD]';
+        btn.classList.remove('pending', 'sent');
+        btn.disabled = false;
+      }
+    });
+
+    if (this.pendingInvites) {
+      if (targetIdOrName && this.pendingInvites.has(targetIdOrName)) {
+        const item = this.pendingInvites.get(targetIdOrName);
+        if (item?.timeoutId) clearTimeout(item.timeoutId);
+        this.pendingInvites.delete(targetIdOrName);
+      } else {
+        this.pendingInvites.forEach((item) => {
+          if (item?.timeoutId) clearTimeout(item.timeoutId);
+          if (item?.btnEl) {
+            item.btnEl.textContent = '[+ INVITE TO SQUAD]';
+            item.btnEl.classList.remove('pending', 'sent');
+            item.btnEl.disabled = false;
+          }
+        });
+        this.pendingInvites.clear();
+      }
+    }
   }
 
   // ==========================================================================
@@ -9853,6 +10337,12 @@ class Game {
       const isOnline = Boolean(pres && pres.online);
       const friendAvatar = pres?.avatar || f.avatar || 'panda';
 
+      const targetSocketId = f.socketId || pres?.socketId || f.presenceId || f.peerId || '';
+      const targetUserId = f.userId || pres?.userId || f.presenceId || f.peerId || '';
+      const targetPeerId = f.presenceId || f.peerId || '';
+      const inviteKey = targetSocketId || targetUserId || targetPeerId || f.name;
+      const isPending = Boolean(this.pendingInvites && this.pendingInvites.has(inviteKey));
+
       const row = document.createElement('div');
       row.className = 'friend-item-row';
       row.innerHTML = `
@@ -9872,17 +10362,22 @@ class Game {
           </div>
         </div>
         <div class="friend-item-actions">
-          <button class="btn-squad-invite ${isOnline ? '' : 'disabled'}" ${isOnline ? '' : 'disabled'} data-peerid="${f.presenceId || f.peerId || ''}" data-name="${f.name}" title="${isOnline ? 'Invite to Squad' : 'Friend is currently offline'}">
-            [+ INVITE TO SQUAD]
+          <button class="btn-squad-invite ${isOnline ? '' : 'disabled'} ${isPending ? 'pending' : ''}" ${isOnline && !isPending ? '' : 'disabled'} data-socketid="${targetSocketId}" data-userid="${targetUserId}" data-peerid="${targetPeerId}" data-name="${f.name}" title="${isOnline ? (isPending ? 'Invite pending...' : 'Invite to Squad') : 'Friend is currently offline'}">
+            ${isPending ? 'Pending' : '[+ INVITE TO SQUAD]'}
           </button>
           <button class="btn-remove-friend" data-id="${f.peerId || f.name}">REMOVE</button>
         </div>
       `;
 
       const inviteBtn = row.querySelector('.btn-squad-invite');
-      if (inviteBtn && isOnline) {
+      if (inviteBtn && isOnline && !isPending) {
         inviteBtn.onclick = () => {
-          this.sendSquadInvite(f.presenceId || f.peerId, f.name, inviteBtn);
+          this.sendSquadInvite({
+            socketId: targetSocketId,
+            userId: targetUserId,
+            peerId: targetPeerId,
+            name: f.name
+          }, f.name, inviteBtn);
         };
       }
 
