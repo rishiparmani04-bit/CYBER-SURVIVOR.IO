@@ -131,15 +131,15 @@ const WEEKLY_BUNDLES = [
 ];
 
 const OPERATIVE_AVATARS = [
-  { id: 'panda', name: 'Master Panda', role: 'S-Tier Mystic Tank', icon: 'assets/avatars/avatar_panda.png', tier: 'S' },
-  { id: 'red_hood', name: 'Scarlet Operative', role: 'S-Tier High-Velocity Striker', icon: 'assets/avatars/avatar_red_hood.png', tier: 'S' },
-  { id: 'scientist', name: 'Dr. Quantum', role: 'A-Tier Tactical Alchemist', icon: 'assets/avatars/avatar_scientist.png', tier: 'A' },
-  { id: 'cyborg', name: 'Mecha Stalker', role: 'B-Tier Cyber Assassin', icon: 'assets/avatars/avatar_cyborg.png', tier: 'B' },
-  { id: 'ninja', name: 'Neon Shinobi', role: 'B-Tier Shadow Duelist', icon: 'assets/avatars/avatar_ninja.png', tier: 'B' },
-  { id: 'cat_medic', name: 'Neko Medic', role: 'C-Tier Support Field Unit', icon: 'assets/avatars/avatar_cat_medic.png', tier: 'C' },
-  { id: 'punk', name: 'Cyber Punk', role: 'C-Tier Riot Breaker', icon: 'assets/avatars/avatar_punk.png', tier: 'C' },
-  { id: 'veteran', name: 'War Commander', role: 'C-Tier Heavy Ballistics', icon: 'assets/avatars/avatar_veteran.png', tier: 'C' },
-  { id: 'scout', name: 'Aero Scout', role: 'C-Tier Recon Operative', icon: 'assets/avatars/avatar_scout.png', tier: 'C' }
+  { id: 'panda', name: 'Master Panda', role: 'Mystic Tank', icon: 'assets/avatars/avatar_panda.png', tier: 'S' },
+  { id: 'red_hood', name: 'Scarlet Operative', role: 'High-Velocity Striker', icon: 'assets/avatars/avatar_red_hood.png', tier: 'S' },
+  { id: 'scientist', name: 'Dr. Quantum', role: 'Tactical Alchemist', icon: 'assets/avatars/avatar_scientist.png', tier: 'A' },
+  { id: 'cyborg', name: 'Mecha Stalker', role: 'Cyber Assassin', icon: 'assets/avatars/avatar_cyborg.png', tier: 'B' },
+  { id: 'ninja', name: 'Neon Shinobi', role: 'Shadow Duelist', icon: 'assets/avatars/avatar_ninja.png', tier: 'B' },
+  { id: 'cat_medic', name: 'Neko Medic', role: 'Support Field Unit', icon: 'assets/avatars/avatar_cat_medic.png', tier: 'C' },
+  { id: 'punk', name: 'Cyber Punk', role: 'Riot Breaker', icon: 'assets/avatars/avatar_punk.png', tier: 'C' },
+  { id: 'veteran', name: 'War Commander', role: 'Heavy Ballistics', icon: 'assets/avatars/avatar_veteran.png', tier: 'C' },
+  { id: 'scout', name: 'Aero Scout', role: 'Recon Operative', icon: 'assets/avatars/avatar_scout.png', tier: 'C' }
 ];
 
 const AVATAR_FALLBACK_SVGS = {
@@ -2819,15 +2819,16 @@ class Game {
       });
     }
 
-    // Direct Operative Account & Profile Callsign Modal
+    // Direct Operative Account & Profile Callsign Modal (Step 1 & Step 2)
     document.getElementById('btn-profile-account')?.addEventListener('click', () => {
-      this.openCallsignModal();
+      if (this.isUserAuthenticated()) {
+        this.openProfileModal();
+      } else {
+        this.openCallsignModal();
+      }
     });
 
     document.getElementById('btn-close-callsign-modal')?.addEventListener('click', () => {
-      this.closeCallsignModal();
-    });
-    document.getElementById('btn-cancel-callsign')?.addEventListener('click', () => {
       this.closeCallsignModal();
     });
     document.getElementById('callsign-auth-modal')?.addEventListener('click', (e) => {
@@ -2842,9 +2843,28 @@ class Game {
         this.confirmCallsignInput();
       }
     });
-    document.getElementById('btn-switch-avatar-from-callsign')?.addEventListener('click', () => {
-      this.closeCallsignModal();
-      this.openAvatarModal();
+
+    // Step 2 Profile Setup Modal Listeners
+    document.getElementById('btn-close-profile-modal')?.addEventListener('click', () => {
+      this.closeProfileModal();
+    });
+    document.getElementById('btn-close-profile-setup')?.addEventListener('click', () => {
+      this.closeProfileModal();
+    });
+    document.getElementById('profile-setup-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'profile-setup-modal') this.closeProfileModal();
+    });
+    document.getElementById('btn-update-profile-callsign')?.addEventListener('click', () => {
+      this.updateProfileCallsign();
+    });
+    document.getElementById('input-profile-callsign')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.updateProfileCallsign();
+      }
+    });
+    document.getElementById('btn-profile-signout')?.addEventListener('click', () => {
+      this.signOutOperative();
     });
 
     // Dual Auth: Direct Google Sign-In Button inside Operative Callsign Modal
@@ -2977,12 +2997,20 @@ class Game {
       document.getElementById('squad-friends-drawer')?.classList.add('hidden');
     });
 
-    // Operative Avatar Protocol Modal Listeners
+    // Operative Avatar & Profile Setup Listeners
     document.getElementById('topbar-avatar-frame')?.addEventListener('click', () => {
-      this.openAvatarModal();
+      if (this.isUserAuthenticated()) {
+        this.openProfileModal();
+      } else {
+        this.openCallsignModal();
+      }
     });
     document.getElementById('slot-1-avatar')?.addEventListener('click', () => {
-      this.openAvatarModal();
+      if (this.isUserAuthenticated()) {
+        this.openProfileModal();
+      } else {
+        this.openCallsignModal();
+      }
     });
     document.getElementById('btn-close-avatar-modal')?.addEventListener('click', () => {
       this.closeAvatarModal();
@@ -8494,7 +8522,8 @@ class Game {
   renderAvatarHTML(avatarKey, className = '', extraStyle = '') {
     const def = this.getAvatarDef(avatarKey);
     const iconSrc = def.icon || 'assets/avatars/avatar_panda.png';
-    return `<img src="${iconSrc}" alt="${def.name}" class="avatar-sprite-img ${className}" style="image-rendering: pixelated; object-fit: contain; ${extraStyle}" onerror="this.onerror=null; this.src='assets/avatars/avatar_panda.png';">`;
+    const fallback = this.getAvatarFallbackSrc(def.id);
+    return `<img src="${iconSrc}" alt="${def.name}" class="avatar-sprite-img ${className}" style="image-rendering: pixelated; object-fit: contain; ${extraStyle}" onerror="this.onerror=null; this.src='${fallback}';">`;
   }
 
   getUserAvatar() {
@@ -8799,7 +8828,7 @@ class Game {
       this.updateSquadLobbyUI();
     }
 
-    this.showNotification(`Operative authenticated: ${cleanCallsign} [${user.id.slice(0, 8)}]`, 'CALLSIGN REGISTERED', 'green');
+    this.showNotification(`Welcome, Operative ${cleanCallsign}!`, 'CALLSIGN REGISTERED', 'green');
     this.audio.playLevelUp();
 
     this.closeCallsignModal();
@@ -8809,6 +8838,9 @@ class Game {
       const action = this.pendingFriendAction;
       this.pendingFriendAction = null;
       action();
+    } else {
+      // Reveal Step 2 Profile Setup
+      this.openProfileModal();
     }
 
     return true;
@@ -8875,7 +8907,7 @@ class Game {
       this.updateSquadLobbyUI();
     }
 
-    this.showNotification(`Authenticated via Google: ${user.email || cleanName}`, 'GOOGLE CLOUD CONNECTED', 'green');
+    this.showNotification(`Welcome, ${cleanName}!`, 'GOOGLE ACCOUNT CONNECTED', 'green');
     if (this.audio && typeof this.audio.playLevelUp === 'function') {
       this.audio.playLevelUp();
     }
@@ -8886,6 +8918,9 @@ class Game {
       const action = this.pendingFriendAction;
       this.pendingFriendAction = null;
       action();
+    } else {
+      // Reveal Step 2 Profile Setup
+      this.openProfileModal();
     }
 
     return true;
@@ -8910,24 +8945,46 @@ class Game {
     this.renderFriendsDrawer();
     this.updateHeroPreview();
     this.showGoogleAuthModalState();
+    this.closeProfileModal();
     this.showNotification('Signed out. Operating in Guest Mode.', 'GUEST ACTIVE', 'amber');
     this.audio.playDeflect();
   }
 
   updateTopbarUserProfile() {
     const user = this.getAuthUser();
+    const isAuth = this.isUserAuthenticated();
     const nameEl = document.getElementById('topbar-player-name');
+    const authBtn = document.getElementById('btn-profile-account');
+    const signOutBtn = document.getElementById('btn-reset-data-top');
+
     if (nameEl) {
-      nameEl.textContent = user?.username || this.saveData.playerName || 'Operative';
+      nameEl.textContent = isAuth ? (user?.username || this.saveData.playerName) : 'Guest Operative';
     }
     const stageName = document.getElementById('stage-player-name');
     if (stageName) {
-      stageName.textContent = user?.username || this.saveData.playerName || 'Operative';
+      stageName.textContent = isAuth ? (user?.username || this.saveData.playerName) : 'Guest Operative';
+    }
+    if (authBtn) {
+      authBtn.textContent = isAuth ? 'Profile' : 'Sign In';
+      authBtn.className = isAuth ? 'btn-auth-sm' : 'btn-auth-sm btn-signin-pulse';
+    }
+    if (signOutBtn) {
+      signOutBtn.style.display = isAuth ? 'inline-flex' : 'none';
     }
   }
 
+  // ==========================================================================
+  // STEP 1: CLEAN SIGN-IN MODAL (AUTH FIRST)
+  // ==========================================================================
   openCallsignModal(pendingAction = null) {
     this.pendingFriendAction = pendingAction;
+
+    // If user is already authenticated and clicked their profile, open Step 2 directly!
+    if (this.isUserAuthenticated() && !pendingAction) {
+      this.openProfileModal();
+      return;
+    }
+
     const modal = document.getElementById('callsign-auth-modal');
     if (!modal) return;
 
@@ -8937,56 +8994,19 @@ class Game {
       } catch (e) {}
     }
 
-    const user = this.getAuthUser();
     const input = document.getElementById('input-operative-callsign');
-    const avatarPreview = document.getElementById('callsign-avatar-preview');
-    const avatarName = document.getElementById('callsign-avatar-name');
-    const avatarTier = document.getElementById('callsign-avatar-tier');
-    const profileActive = document.getElementById('callsign-profile-active');
-    const profileId = document.getElementById('profile-operative-id');
-    const googleEmailRow = document.getElementById('profile-google-email-row');
-    const googleEmailVal = document.getElementById('profile-google-email');
-    const confirmBtn = document.getElementById('btn-confirm-callsign');
     const subtitle = document.getElementById('callsign-modal-subtitle');
 
-    const currentAvatar = this.getUserAvatar();
-    const avDef = this.getAvatarDef(currentAvatar);
-
     if (input) {
-      input.value = user?.username || (this.saveData.playerName !== 'Guest Operative' ? this.saveData.playerName : '') || '';
+      input.value = (this.saveData.playerName && this.saveData.playerName !== 'Guest Operative') ? this.saveData.playerName : '';
     }
 
-    if (avatarPreview) {
-      avatarPreview.innerHTML = this.renderAvatarHTML(currentAvatar, 'callsign-preview-avatar');
-    }
-    if (avatarName) avatarName.textContent = avDef.name;
-    if (avatarTier) {
-      avatarTier.textContent = `${avDef.tier}-TIER ${avDef.role.toUpperCase()}`;
-      avatarTier.style.color = (avDef.tier === 'S' ? '#ff0044' : avDef.tier === 'A' ? '#ffb700' : avDef.tier === 'B' ? '#9d4edd' : '#00f0ff');
-    }
-
-    if (this.isUserAuthenticated()) {
-      if (profileActive) profileActive.classList.remove('hidden');
-      if (profileId) profileId.textContent = user.id;
-      if (googleEmailRow && googleEmailVal) {
-        if (user.email) {
-          googleEmailRow.style.display = 'flex';
-          googleEmailVal.textContent = user.email;
-        } else {
-          googleEmailRow.style.display = 'none';
-        }
-      }
-      if (confirmBtn) confirmBtn.textContent = '✓ UPDATE CALLSIGN';
-      if (subtitle) subtitle.textContent = user.authProvider === 'google' ? 'GOOGLE AUTHENTICATED OPERATIVE LINKED' : 'OPERATIVE CALLSIGN LINKED & ACTIVE';
-    } else {
-      if (profileActive) profileActive.classList.add('hidden');
-      if (googleEmailRow) googleEmailRow.style.display = 'none';
-      if (confirmBtn) confirmBtn.textContent = '⚡ ENTER MATRIX / CONFIRM CALLSIGN';
-      if (subtitle) subtitle.textContent = pendingAction ? 'SET CALLSIGN TO ENABLE FRIEND NETWORK' : 'DIRECT OPERATIVE IDENTITY • SQUAD COMM-LINK';
+    if (subtitle) {
+      subtitle.textContent = pendingAction ? 'AUTHENTICATE TO ACCESS FRIEND NETWORK' : 'AUTHENTICATION PROTOCOL';
     }
 
     modal.classList.remove('hidden');
-    this.audio.playDeflect();
+    if (this.audio) this.audio.playDeflect();
     if (input) setTimeout(() => input.focus(), 150);
   }
 
@@ -8997,12 +9017,129 @@ class Game {
 
   confirmCallsignInput() {
     const input = document.getElementById('input-operative-callsign');
-    const val = input?.value?.trim();
+    let val = input?.value?.trim();
     if (!val) {
-      this.showNotification('Please enter a callsign.', 'INPUT REQUIRED', 'red');
-      return;
+      val = 'Operative_' + Math.floor(1000 + Math.random() * 9000);
     }
     this.loginOperativeCallsign(val);
+  }
+
+  // ==========================================================================
+  // STEP 2: PROFILE SETUP & OPERATIVE SPRITE CUSTOMIZATION (PROFILE SECOND)
+  // ==========================================================================
+  openProfileModal() {
+    const modal = document.getElementById('profile-setup-modal');
+    if (!modal) return;
+
+    const user = this.getAuthUser();
+    const input = document.getElementById('input-profile-callsign');
+    const accountText = document.getElementById('profile-account-text');
+    const tierPill = document.getElementById('profile-current-tier-pill');
+
+    const currentAvatar = this.getUserAvatar();
+    const avDef = this.getAvatarDef(currentAvatar);
+
+    if (input) {
+      input.value = user?.username || this.saveData.playerName || '';
+    }
+
+    if (accountText) {
+      if (user?.authProvider === 'google' && user.email) {
+        accountText.textContent = `Google Account: ${user.email}`;
+      } else if (user?.username) {
+        accountText.textContent = `Operative Callsign Active: ${user.username}`;
+      } else {
+        accountText.textContent = 'Guest Operative';
+      }
+    }
+
+    if (tierPill) {
+      tierPill.textContent = `${avDef.tier}-TIER • ${avDef.role.toUpperCase()}`;
+      tierPill.className = `profile-current-tier-pill tier-${avDef.tier.toLowerCase()}`;
+    }
+
+    this.renderProfileAvatarGrid();
+
+    modal.classList.remove('hidden');
+    if (this.audio) this.audio.playDeflect();
+    if (input) setTimeout(() => input.focus(), 150);
+  }
+
+  closeProfileModal() {
+    document.getElementById('profile-setup-modal')?.classList.add('hidden');
+  }
+
+  updateProfileCallsign() {
+    const input = document.getElementById('input-profile-callsign');
+    const val = input?.value?.trim();
+    if (!val) {
+      this.showNotification('Please enter a valid callsign.', 'INPUT REQUIRED', 'red');
+      return;
+    }
+    if (val.length < 3 || val.length > 20) {
+      this.showNotification('Callsign must be 3 to 20 characters.', 'INVALID CALLSIGN', 'red');
+      return;
+    }
+    if (this.authUser) {
+      this.authUser.username = val;
+      this.authUser.updatedAt = Date.now();
+      try {
+        localStorage.setItem('cyber_auth_user', JSON.stringify(this.authUser));
+      } catch (e) {}
+    }
+    this.saveData.playerName = val;
+    SaveManager.save(this.saveData);
+
+    this.updateTopbarUserProfile();
+    if (this.isPrivateMatch) {
+      this.broadcastSquadRoster();
+      this.updateSquadLobbyUI();
+    }
+    this.showNotification(`Callsign updated to: ${val}`, 'PROFILE UPDATED', 'green');
+    if (this.audio) this.audio.playLevelUp();
+    this.openProfileModal();
+  }
+
+  renderProfileAvatarGrid() {
+    const grid = document.getElementById('profile-avatar-selection-grid');
+    if (!grid) return;
+
+    const currentAvatar = this.getUserAvatar();
+    grid.innerHTML = '';
+
+    OPERATIVE_AVATARS.forEach(av => {
+      const card = document.createElement('div');
+      const isSelected = av.id === currentAvatar;
+      card.className = `avatar-card profile-avatar-card tier-${av.tier.toLowerCase()} ${isSelected ? 'active-avatar-card' : ''}`;
+      card.title = `${av.name} (${av.tier}-Tier ${av.role})`;
+
+      card.innerHTML = `
+        <div class="avatar-card-icon-wrap">
+          ${this.renderAvatarHTML(av.id, 'card-avatar-sprite')}
+        </div>
+        <div class="avatar-card-info">
+          <div class="avatar-card-name">${av.name}</div>
+          <div class="avatar-card-tier-role">
+            <span class="avatar-tier-badge tier-${av.tier.toLowerCase()}">${av.tier}</span>
+            <span class="avatar-role-text">${av.role}</span>
+          </div>
+        </div>
+        ${isSelected ? '<span class="avatar-equipped-check">EQUIPPED</span>' : ''}
+      `;
+
+      card.addEventListener('click', () => {
+        this.setUserAvatar(av.id);
+        if (this.audio) this.audio.playLevelUp();
+        const tierPill = document.getElementById('profile-current-tier-pill');
+        if (tierPill) {
+          tierPill.textContent = `${av.tier}-TIER • ${av.role.toUpperCase()}`;
+          tierPill.className = `profile-current-tier-pill tier-${av.tier.toLowerCase()}`;
+        }
+        this.renderProfileAvatarGrid();
+      });
+
+      grid.appendChild(card);
+    });
   }
 
   // ==========================================================================
@@ -9339,6 +9476,22 @@ class Game {
   renderFriendsDrawer() {
     const container = document.getElementById('friends-list-container');
     if (!container) return;
+
+    if (!this.isUserAuthenticated()) {
+      container.innerHTML = `
+        <div class="friends-locked-box" style="text-align: center; padding: 24px 16px; background: rgba(10, 20, 35, 0.85); border: 1px solid #00ffee; border-radius: 8px; margin: 12px 0;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">🔒</div>
+          <div style="color: #00ffee; font-weight: 700; font-family: var(--font-cyber); margin-bottom: 6px;">SQUAD FRIEND NETWORK LOCKED</div>
+          <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 14px; line-height: 1.4;">Sign in with Google or an Operative Callsign to unlock live friend presence, 1-click squad invites, and friend requests.</p>
+          <button id="btn-unlock-friends-auth" class="btn-cyber-primary" style="padding: 8px 16px; font-size: 0.8rem; cursor: pointer; background: rgba(0, 255, 238, 0.15); border: 1px solid #00ffee; color: #00ffee; border-radius: 6px; font-weight: 700;">⚡ SIGN IN TO UNLOCK</button>
+        </div>
+      `;
+      document.getElementById('btn-unlock-friends-auth')?.addEventListener('click', () => {
+        this.openCallsignModal(() => this.renderFriendsDrawer());
+      });
+      return;
+    }
+
     const list = this.getFriendsList();
     this.updateSquadFriendsCount();
 

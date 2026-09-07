@@ -7165,6 +7165,8 @@ body.hide-touch-controls .touch-controls-layer {
 
 .btn-avatar-cancel:hover {
   color: #f1f5f9;
+}
+
 .avatar-sprite-img {
   image-rendering: pixelated;
   width: 44px;
@@ -7321,6 +7323,37 @@ body.hide-touch-controls .touch-controls-layer {
   flex-shrink: 0;
 }
 
+/* Base Cyberpunk Input & Button Styling */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input:not([type]),
+textarea,
+select {
+  background: rgba(10, 20, 35, 0.85);
+  border: 1px solid #00ffee;
+  border-radius: 6px;
+  color: #00f0ff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.9rem;
+  padding: 10px 14px;
+  outline: none;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+  transition: all 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input:not([type]):focus,
+textarea:focus,
+select:focus {
+  border-color: #00ffee;
+  box-shadow: 0 0 14px rgba(0, 255, 238, 0.4), inset 0 0 10px rgba(0, 0, 0, 0.6);
+}
+
 /* Dual Auth Google Section */
 .auth-google-section {
   display: flex;
@@ -7336,22 +7369,25 @@ body.hide-touch-controls .touch-controls-layer {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: #ffffff;
-  color: #1f2937;
-  font-family: var(--font-title);
+  background: rgba(10, 20, 35, 0.85);
+  color: #00ffee;
+  font-family: var(--font-cyber);
   font-size: 0.88rem;
   font-weight: 700;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid #00ffee;
   border-radius: 6px;
-  padding: 10px 16px;
+  padding: 12px 16px;
   cursor: pointer;
+  letter-spacing: 1px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 12px rgba(0, 255, 238, 0.25);
 }
 
 .auth-google-section .google-action-btn:hover {
-  background: #f1f5f9;
-  box-shadow: 0 0 16px rgba(66, 133, 244, 0.6);
+  background: rgba(0, 255, 238, 0.25);
+  border-color: #00ffee;
+  box-shadow: 0 0 20px rgba(0, 255, 238, 0.75), 0 0 8px #00ffee;
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
@@ -7366,22 +7402,22 @@ body.hide-touch-controls .touch-controls-layer {
   align-items: center;
   gap: 12px;
   width: 100%;
-  margin: 4px 0;
+  margin: 6px 0;
 }
 
 .auth-divider-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, #00ffee, transparent);
 }
 
 .auth-divider-text {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-family: var(--font-cyber);
+  font-size: 0.78rem;
   font-weight: 700;
-  color: #00f0ff;
-  letter-spacing: 1.5px;
-  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+  color: #00ffee;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(0, 255, 238, 0.6);
   white-space: nowrap;
 }
 
@@ -7392,162 +7428,57 @@ body.hide-touch-controls .touch-controls-layer {
 }
 
 .callsign-input-label {
-  font-family: var(--font-title);
+  font-family: var(--font-cyber);
   font-size: 0.72rem;
-  font-weight: 800;
-  color: #00f0ff;
+  font-weight: 700;
+  color: #00ffee;
   letter-spacing: 1px;
 }
 
 .callsign-input-wrap {
   display: flex;
   align-items: center;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(0, 240, 255, 0.35);
+  background: rgba(10, 20, 35, 0.85);
+  border: 1px solid #00ffee;
   border-radius: 6px;
-  padding: 2px 8px;
+  padding: 4px 10px;
   transition: all 0.2s ease;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
 }
 
 .callsign-input-wrap:focus-within {
-  border-color: #00f0ff;
-  box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
-  background: rgba(15, 23, 42, 0.98);
+  border-color: #00ffee;
+  box-shadow: 0 0 16px rgba(0, 255, 238, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.6);
+  background: rgba(10, 20, 35, 0.95);
 }
 
 .callsign-input-tag {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 800;
-  color: #64748b;
+  color: #00ffee;
   margin-right: 6px;
+  opacity: 0.8;
 }
 
 .callsign-text-input {
   flex: 1;
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   outline: none;
-  color: #f8fafc;
-  font-family: var(--font-title);
-  font-size: 1.05rem;
+  color: #00f0ff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 1px;
-  padding: 8px 4px;
+  letter-spacing: 0.5px;
+  padding: 8px 6px;
 }
 
 .callsign-input-hint {
   font-family: var(--font-mono);
   font-size: 0.65rem;
   color: #64748b;
-}
-
-.callsign-avatar-preview-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 10px 14px;
-}
-
-.callsign-avatar-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 240, 255, 0.4);
-  background: rgba(5, 8, 17, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
-}
-
-.callsign-avatar-wrap .avatar-sprite-img {
-  width: 40px;
-  height: 40px;
-}
-
-.callsign-avatar-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.callsign-avatar-name {
-  font-family: var(--font-title);
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: #f1f5f9;
-}
-
-.callsign-avatar-tier {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: #ff0044;
-  font-weight: 700;
-}
-
-.btn-link-sm {
-  background: transparent;
-  border: none;
-  color: #00f0ff;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0;
-  text-align: left;
-  margin-top: 3px;
-  transition: color 0.2s ease;
-}
-
-.btn-link-sm:hover {
-  color: #00ff88;
-  text-decoration: underline;
-}
-
-.callsign-profile-active {
-  background: rgba(0, 255, 136, 0.08);
-  border: 1px solid rgba(0, 255, 136, 0.3);
-  border-radius: 8px;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.profile-status-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #00ff88;
-}
-
-.profile-id-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.72rem;
-}
-
-.profile-id-label {
-  color: #94a3b8;
-  font-family: var(--font-title);
-}
-
-.profile-id-val {
-  color: #00f0ff;
-  font-family: var(--font-mono);
-  background: rgba(0, 0, 0, 0.4);
-  padding: 2px 6px;
-  border-radius: 4px;
 }
 
 .callsign-card-actions {
@@ -7557,42 +7488,357 @@ body.hide-touch-controls .touch-controls-layer {
 }
 
 .btn-callsign-confirm {
-  flex: 1;
-  background: linear-gradient(135deg, #00f0ff, #0088ff);
-  color: #020617;
+  width: 100%;
+  background: rgba(0, 255, 238, 0.15);
+  border: 1px solid #00ffee;
+  color: #00ffee;
   font-family: var(--font-cyber);
-  font-size: 0.82rem;
-  font-weight: 900;
-  padding: 11px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 20px;
   border-radius: 6px;
-  border: none;
   cursor: pointer;
-  letter-spacing: 1px;
-  box-shadow: 0 0 18px rgba(0, 240, 255, 0.5);
+  letter-spacing: 1.5px;
+  box-shadow: 0 0 15px rgba(0, 255, 238, 0.35);
   transition: all 0.2s ease;
 }
 
 .btn-callsign-confirm:hover {
-  box-shadow: 0 0 28px rgba(0, 240, 255, 0.85);
+  background: rgba(0, 255, 238, 0.3);
+  box-shadow: 0 0 24px rgba(0, 255, 238, 0.85), 0 0 10px #00ffee;
   transform: translateY(-1px);
 }
 
-.btn-callsign-cancel {
-  background: transparent;
-  color: #94a3b8;
+/* ==========================================================================
+   STEP 2: OPERATIVE PROFILE SETUP & SPRITE CUSTOMIZATION MODAL
+   ========================================================================== */
+.profile-setup-card {
+  width: 92%;
+  max-width: 580px;
+  max-height: 90vh;
+  background: rgba(10, 14, 26, 0.98);
+  border: 1px solid #00ffee;
+  box-shadow: 0 0 40px rgba(0, 255, 238, 0.25), inset 0 0 20px rgba(0, 255, 238, 0.05);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.profile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 255, 238, 0.2);
+  padding-bottom: 12px;
+}
+
+.profile-header-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-header-icon {
+  font-size: 1.8rem;
+}
+
+.profile-title {
+  font-family: var(--font-cyber);
+  font-size: 1.15rem;
+  color: #00ffee;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(0, 255, 238, 0.6);
+  margin: 0;
+}
+
+.profile-sub {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 11px 14px;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+.profile-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-account-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 255, 238, 0.08);
+  border: 1px solid rgba(0, 255, 238, 0.25);
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: #00ffee;
+}
+
+.profile-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00ffee;
+  box-shadow: 0 0 8px #00ffee;
+}
+
+.profile-section-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(10, 20, 35, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.profile-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-field-label {
+  font-family: var(--font-cyber);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #00ffee;
+  letter-spacing: 1px;
+}
+
+.profile-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.profile-current-tier-pill {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  background: rgba(0, 255, 238, 0.15);
+  border: 1px solid #00ffee;
+  color: #00ffee;
+}
+
+.profile-current-tier-pill.tier-s {
+  background: rgba(255, 0, 85, 0.15);
+  border-color: #ff0055;
+  color: #ff0055;
+}
+
+.profile-current-tier-pill.tier-a {
+  background: rgba(255, 183, 0, 0.15);
+  border-color: #ffb700;
+  color: #ffb700;
+}
+
+.profile-current-tier-pill.tier-b {
+  background: rgba(157, 78, 221, 0.15);
+  border-color: #9d4edd;
+  color: #9d4edd;
+}
+
+.profile-current-tier-pill.tier-c {
+  background: rgba(0, 255, 238, 0.15);
+  border-color: #00ffee;
+  color: #00ffee;
+}
+
+.profile-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.profile-avatar-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(10, 20, 35, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 8px 10px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.btn-callsign-cancel:hover {
-  color: #f8fafc;
-  border-color: rgba(255, 255, 255, 0.4);
+.profile-avatar-card:hover {
+  border-color: #00ffee;
+  background: rgba(0, 255, 238, 0.1);
+  box-shadow: 0 0 12px rgba(0, 255, 238, 0.35);
+  transform: translateY(-1px);
+}
+
+.profile-avatar-card.active-avatar-card {
+  border-color: #00ffee;
+  background: rgba(0, 255, 238, 0.2);
+  box-shadow: 0 0 16px rgba(0, 255, 238, 0.6), inset 0 0 8px rgba(0, 255, 238, 0.2);
+}
+
+.avatar-card-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 8, 17, 0.9);
+  border: 1px solid rgba(0, 255, 238, 0.3);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar-card-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.avatar-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.avatar-card-name {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avatar-card-tier-role {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.avatar-role-text {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avatar-equipped-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #00ffee;
+  color: #030712;
+  font-family: var(--font-cyber);
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.profile-card-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid rgba(0, 255, 238, 0.2);
+  padding-top: 14px;
+}
+
+.btn-cyber-primary {
+  flex: 1;
+  background: rgba(0, 255, 238, 0.15);
+  border: 1px solid #00ffee;
+  color: #00ffee;
+  font-family: var(--font-cyber);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  box-shadow: 0 0 12px rgba(0, 255, 238, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-cyber-primary:hover {
+  background: rgba(0, 255, 238, 0.3);
+  box-shadow: 0 0 20px rgba(0, 255, 238, 0.8), 0 0 8px #00ffee;
+  transform: translateY(-1px);
+}
+
+.btn-cyber-action {
+  background: rgba(0, 255, 238, 0.15);
+  border: 1px solid #00ffee;
+  color: #00ffee;
+  font-family: var(--font-cyber);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-cyber-action:hover {
+  background: rgba(0, 255, 238, 0.3);
+  box-shadow: 0 0 14px rgba(0, 255, 238, 0.6);
+}
+
+.btn-cyber-danger {
+  background: rgba(255, 0, 85, 0.15);
+  border: 1px solid #ff0055;
+  color: #ff0055;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+}
+
+.btn-cyber-danger:hover {
+  background: rgba(255, 0, 85, 0.3);
+  box-shadow: 0 0 16px rgba(255, 0, 85, 0.6), 0 0 8px #ff0055;
+  transform: translateY(-1px);
+}
+
+.btn-signin-pulse {
+  background: rgba(0, 255, 238, 0.2) !important;
+  border: 1px solid #00ffee !important;
+  color: #00ffee !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 12px rgba(0, 255, 238, 0.4) !important;
+  animation: authPulse 2s infinite ease-in-out;
+}
+
+@keyframes authPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 255, 238, 0.3); }
+  50% { box-shadow: 0 0 18px rgba(0, 255, 238, 0.7), 0 0 6px #00ffee; }
 }
 
 /* ==========================================================================
