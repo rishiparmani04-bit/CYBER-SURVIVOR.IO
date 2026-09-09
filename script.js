@@ -10086,7 +10086,7 @@ class Game {
       });
 
       // Attach explicit error handler to Peer instance. If unavailable-id or any connection error is caught,
-      // cleanly destroy failed instance and automatically retry with newly generated random ID rather than aborting.
+      // cleanly destroy failed instance, update active presence registry with newly generated socket ID, and retry.
       peerInstance.on('error', (err) => {
         const errType = err?.type || err?.message || 'peer_error';
         console.warn('[Presence] Peer error caught:', errType);
@@ -10099,6 +10099,13 @@ class Game {
           } catch (e) {}
           this.presencePeer = null;
           this.isPresencePeerReady = false;
+
+          // When a peer ID returns unavailable-id or reconnects, update active presence registry with new auto-generated socket ID immediately
+          const newSocketId = 'sock_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+          this.clientSocketId = newSocketId;
+          this.socketId = (this.socket && this.socket.id) || (typeof window !== 'undefined' && window.socket && window.socket.id) || newSocketId;
+          try { sessionStorage.setItem('cyber_tab_socket_id', newSocketId); } catch (e) {}
+          this.registerPlayerPresence();
 
           // Automatically retry with newly generated random ID
           if (this.presenceRetryTimeout) clearTimeout(this.presenceRetryTimeout);
@@ -10118,6 +10125,13 @@ class Game {
       });
 
       peerInstance.on('disconnected', () => {
+        // When disconnected or reconnecting, update the active presence registry with new auto-generated socket ID immediately
+        const newSocketId = 'sock_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+        this.clientSocketId = newSocketId;
+        this.socketId = (this.socket && this.socket.id) || (typeof window !== 'undefined' && window.socket && window.socket.id) || newSocketId;
+        try { sessionStorage.setItem('cyber_tab_socket_id', newSocketId); } catch (e) {}
+        this.registerPlayerPresence();
+
         if (this.presencePeer === peerInstance && !peerInstance.destroyed) {
           try {
             peerInstance.reconnect();
@@ -10139,7 +10153,10 @@ class Game {
 
   registerPlayerPresence(assignedId) {
     this.isPresencePeerReady = true;
-    this.currentPresencePeerId = assignedId || (this.presencePeer && this.presencePeer.id) || this.userPresenceId;
+    this.currentPresencePeerId = assignedId || (this.presencePeer && this.presencePeer.id) || this.currentPresencePeerId || this.userPresenceId;
+
+    const currentSocketId = (this.socket && this.socket.id) || (typeof window !== 'undefined' && window.socket && window.socket.id) || this.clientSocketId || this.socketId;
+    this.socketId = currentSocketId;
 
     const presencePayload = {
       type: 'PRESENCE_PONG',
@@ -10155,6 +10172,13 @@ class Game {
       lastSeen: Date.now()
     };
 
+    // Update active presence registry immediately for this client
+    if (this.friendsPresence) {
+      if (this.socketId) this.friendsPresence.set(this.socketId, presencePayload);
+      if (this.userPresenceId) this.friendsPresence.set(this.userPresenceId, presencePayload);
+      if (this.currentPresencePeerId) this.friendsPresence.set(this.currentPresencePeerId, presencePayload);
+    }
+
     if (this.presenceBus) {
       try { this.presenceBus.postMessage(presencePayload); } catch (e) {}
     }
@@ -10162,6 +10186,16 @@ class Game {
     if (this.socket && typeof this.socket.emit === 'function') {
       try {
         this.socket.emit('player_presence_active', {
+          presenceId: this.userPresenceId,
+          peerId: this.currentPresencePeerId,
+          playerName: this.saveData.playerName,
+          socketId: this.socketId
+        });
+      } catch (e) {}
+    }
+    if (typeof window !== 'undefined' && window.socket && typeof window.socket.emit === 'function' && window.socket !== this.socket) {
+      try {
+        window.socket.emit('player_presence_active', {
           presenceId: this.userPresenceId,
           peerId: this.currentPresencePeerId,
           playerName: this.saveData.playerName,
@@ -10311,20 +10345,30 @@ class Game {
       targetPeerId = friendTarget;
     }
 
-    // Resolve socket/user ID from presence map if needed
-    if (targetPeerId && this.friendsPresence) {
-      const pres = this.friendsPresence.get(targetPeerId) || this.friendsPresence.get(targetPeerId.toLowerCase());
-      if (pres) {
-        if (!targetSocketId) targetSocketId = pres.socketId || pres.presenceId;
-        if (!targetUserId) targetUserId = pres.userId || pres.presenceId;
-        if (!friendName) friendName = pres.name;
-      }
+    // Strictly resolve receiver's currently active socket ID from presence registry
+    let activePres = null;
+    if (this.friendsPresence) {
+      if (targetPeerId) activePres = this.friendsPresence.get(targetPeerId) || this.friendsPresence.get(targetPeerId.toLowerCase());
+      if (!activePres && targetUserId) activePres = this.friendsPresence.get(targetUserId);
+      if (!activePres && targetSocketId) activePres = this.friendsPresence.get(targetSocketId);
+      if (!activePres && friendName) activePres = this.friendsPresence.get(friendName.toLowerCase());
+    }
+
+    if (activePres && activePres.socketId) {
+      targetSocketId = activePres.socketId;
+      if (activePres.userId) targetUserId = activePres.userId;
+      if (activePres.presenceId && !targetPeerId) targetPeerId = activePres.presenceId;
+      if (activePres.name && !friendName) friendName = activePres.name;
     }
 
     if (!targetSocketId && !targetUserId && targetPeerId) {
       targetSocketId = targetPeerId;
       targetUserId = targetPeerId;
     }
+
+    this.isHost = true;
+    this.mySlot = 1;
+    if (!this.squadPeers) this.squadPeers = new Map();
 
     if (!this.roomCode) {
       this.roomCode = this.generateSquadRoomCode();
@@ -10356,24 +10400,25 @@ class Game {
       receiverId: targetSocketId
     };
 
-    // 1. Send invite payload directly to receiver using their unique socket ID
+    // 1. Route squad invites strictly to receiver's currently active socket ID
     if (this.socket && typeof this.socket.emit === 'function') {
       try {
-        this.socket.emit('squad_invite', payload);
-        this.socket.emit('squad_invite_received', payload);
         if (targetSocketId) {
           this.socket.emit('squad_invite_to', { targetSocketId, ...payload });
           this.socket.emit('direct_squad_invite', { targetSocketId, ...payload });
         }
+        this.socket.emit('squad_invite', payload);
+        this.socket.emit('squad_invite_received', payload);
       } catch (e) {}
     }
     if (typeof window !== 'undefined' && window.socket && typeof window.socket.emit === 'function' && window.socket !== this.socket) {
       try {
-        window.socket.emit('squad_invite', payload);
-        window.socket.emit('squad_invite_received', payload);
         if (targetSocketId) {
           window.socket.emit('squad_invite_to', { targetSocketId, ...payload });
+          window.socket.emit('direct_squad_invite', { targetSocketId, ...payload });
         }
+        window.socket.emit('squad_invite', payload);
+        window.socket.emit('squad_invite_received', payload);
       } catch (e) {}
     }
     if (this.presenceBus) {
@@ -10462,9 +10507,13 @@ class Game {
         this.socketId,
         this.userId,
         this.userPresenceId,
+        this.currentPresencePeerId,
+        (this.presencePeer && this.presencePeer.id),
         this.socket?.id,
         (typeof window !== 'undefined' ? window.socket?.id : null),
-        this.peer?.id
+        this.peer?.id,
+        (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('cyber_tab_socket_id') : null),
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('cyber_presence_id') : null)
       ].filter(Boolean);
 
       // 1. Ignore if this packet came from this sender device
@@ -10496,8 +10545,7 @@ class Game {
       this.currentSquadInvite = data;
       this.pendingSquadInviteCode = data.roomCode;
 
-      // 3. On receiver device: Render non-blocking incoming invite banner
-      // Ensure incoming invite does NOT block the entire page or cause unhandled script errors
+      // 3. On receiver device: Render non-blocking incoming invite banner with direct accept/decline actions
       let banner = document.getElementById('squad-invite-banner');
       if (!banner) {
         banner = this.createSquadInviteBanner();
@@ -10511,6 +10559,23 @@ class Game {
       banner.classList.remove('hidden');
       banner.style.display = 'block';
       banner.style.pointerEvents = 'auto';
+      banner.style.zIndex = '99999';
+
+      // Ensure banner buttons have direct click handlers attached
+      const acceptBtn = banner.querySelector('#btn-accept-invite-banner') || document.getElementById('btn-accept-invite-banner');
+      if (acceptBtn) {
+        acceptBtn.onclick = (e) => {
+          e.preventDefault();
+          this.acceptSquadInvite();
+        };
+      }
+      const declineBtn = banner.querySelector('#btn-decline-invite-banner') || document.getElementById('btn-decline-invite-banner');
+      if (declineBtn) {
+        declineBtn.onclick = (e) => {
+          e.preventDefault();
+          this.declineSquadInvite();
+        };
+      }
 
       // Keep squad-invite-modal hidden so it does not block the entire page with a dark backdrop
       const modal = document.getElementById('squad-invite-modal');
@@ -10657,13 +10722,27 @@ class Game {
         } catch (e) {}
       }
       if (typeof window !== 'undefined' && window.socket && typeof window.socket.emit === 'function' && window.socket !== this.socket) {
-        try { window.socket.emit('squad_joined', joinedPacket); } catch (e) {}
+        try {
+          window.socket.emit('squad_joined', joinedPacket);
+          if (joinedPacket.targetSocketId) {
+            window.socket.emit('squad_joined_to', { targetSocketId: joinedPacket.targetSocketId, ...joinedPacket });
+          }
+        } catch (e) {}
       }
       if (this.presenceBus) {
         try { this.presenceBus.postMessage(joinedPacket); } catch (e) {}
       }
       if (this.localNetChannel) {
         try { this.localNetChannel.postMessage(joinedPacket); } catch (e) {}
+      }
+      if (this.presencePeer && !this.presencePeer.destroyed && (invite?.hostPeerId || invite?.fromPresenceId)) {
+        try {
+          const peerConn = this.presencePeer.connect(invite.hostPeerId || invite.fromPresenceId, { reliable: true });
+          peerConn.on('open', () => {
+            peerConn.send(joinedPacket);
+            setTimeout(() => { try { peerConn.close(); } catch(e){} }, 2000);
+          });
+        } catch (e) {}
       }
       if (typeof window !== 'undefined') {
         try { window.dispatchEvent(new CustomEvent('squad_joined', { detail: joinedPacket })); } catch (e) {}
@@ -10707,12 +10786,14 @@ class Game {
 
       if (this.pendingInvites) {
         this.pendingInvites.forEach((item, k) => {
-          if (
+          const isMatch = (
             k === targetKey ||
+            (data.inviteId && item.inviteId === data.inviteId) ||
             (item.friendName && item.friendName.toLowerCase() === (data.joinerName || '').toLowerCase()) ||
             (data.joinerSocketId && item.targetSocketId === data.joinerSocketId) ||
             (data.joinerUserId && item.targetUserId === data.joinerUserId)
-          ) {
+          );
+          if (isMatch) {
             if (item.timeoutId) clearTimeout(item.timeoutId);
             if (item.btnEl) {
               item.btnEl.textContent = 'IN SQUAD';
@@ -11069,9 +11150,9 @@ class Game {
       const isOnline = Boolean(pres && pres.online);
       const friendAvatar = pres?.avatar || f.avatar || 'panda';
 
-      const targetSocketId = f.socketId || pres?.socketId || f.presenceId || f.peerId || '';
-      const targetUserId = f.userId || pres?.userId || f.presenceId || f.peerId || '';
-      const targetPeerId = f.presenceId || f.peerId || '';
+      const targetSocketId = pres?.socketId || f.socketId || pres?.presenceId || f.presenceId || f.peerId || '';
+      const targetUserId = pres?.userId || f.userId || pres?.presenceId || f.presenceId || f.peerId || '';
+      const targetPeerId = pres?.presenceId || f.presenceId || f.peerId || '';
       const inviteKey = targetSocketId || targetUserId || targetPeerId || f.name;
       const isPending = Boolean(this.pendingInvites && this.pendingInvites.has(inviteKey));
       const isBrokerActive = (typeof Peer === 'undefined' || this.isPresencePeerReady);

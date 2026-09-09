@@ -73,6 +73,14 @@ class AuthManager {
       setTimeout(() => {
         this.initGisAsync();
       }, 0);
+
+      if (typeof document !== 'undefined') {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', () => this.bindModalControls());
+        } else {
+          this.bindModalControls();
+        }
+      }
     }
   }
 
@@ -635,9 +643,36 @@ class AuthManager {
       }
     });
     this.resetSignInButtonState();
-    if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
-      try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+
+    // Ensure pointer events on lobby, canvas, and modal cards are never frozen
+    try {
+      const canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
+      if (canvas) canvas.style.pointerEvents = 'auto';
+      const canvasContainer = document.getElementById('canvas-container');
+      if (canvasContainer) canvasContainer.style.pointerEvents = 'auto';
+      const uiLayer = document.querySelector('.ui-layer') || document.getElementById('ui-layer') || document.getElementById('game-container');
+      if (uiLayer) uiLayer.style.pointerEvents = 'auto';
+      const modalCard = document.getElementById('callsign-auth-modal');
+      if (modalCard) modalCard.style.pointerEvents = 'auto';
+      const authModal = document.getElementById('authModal');
+      if (authModal) authModal.style.pointerEvents = 'auto';
+    } catch (e) {}
+
+    // Ensure game loop continues in the background
+    if (window.gameInstance) {
+      if (typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
+      if (!window.gameInstance.gameLoopId && !window.gameInstance.isGameOver && window.gameInstance.state !== 'GAMEOVER') {
+        try {
+          window.gameInstance.lastTime = performance.now();
+          window.gameInstance.gameLoopId = requestAnimationFrame((t) => window.gameInstance.gameLoop(t));
+        } catch (e) {}
+      }
     }
+
+    // Ensure close and guest buttons remain bound and clickable
+    this.bindModalControls();
   }
 
   clearAuthError() {
@@ -659,6 +694,156 @@ class AuthManager {
     this.resetSignInButtonState();
     if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
       try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+    }
+  }
+
+  /**
+   * Allow entering a custom callsign directly in the modal to sign in as guest without requiring Google OAuth completion
+   */
+  loginAsGuestWithCallsign(customCallsign) {
+    this.clearAuthError();
+    const input = document.getElementById('input-operative-callsign');
+    let val = (customCallsign || input?.value || '').trim();
+    if (!val) {
+      val = 'Operative_' + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    if (window.gameInstance && typeof window.gameInstance.loginOperativeCallsign === 'function') {
+      window.gameInstance.loginOperativeCallsign(val);
+    } else {
+      this.applyAuthenticatedUser({
+        id: 'guest_' + Math.random().toString(36).substring(2, 9),
+        name: val,
+        email: '',
+        isGuest: true,
+        lastSync: new Date().toLocaleTimeString()
+      });
+    }
+
+    this.closeModal();
+  }
+
+  /**
+   * Ensure modal close button and backdrop click dismiss modal cleanly under all error states
+   */
+  closeModal() {
+    this.clearAuthError();
+    this.resetSignInButtonState();
+
+    const authModal = document.getElementById('authModal') || document.querySelector('.auth-modal');
+    if (authModal) {
+      authModal.classList.add('hidden', 'modal-hidden');
+      authModal.style.display = 'none';
+      authModal.style.pointerEvents = 'none';
+      authModal.style.opacity = '0';
+      authModal.style.visibility = 'hidden';
+    }
+    const card = document.getElementById('callsign-auth-modal');
+    if (card && card !== authModal) {
+      card.classList.add('hidden', 'modal-hidden');
+      card.style.display = 'none';
+      card.style.pointerEvents = 'none';
+    }
+
+    if (typeof window.closeAuthModal === 'function' && window.closeAuthModal !== this.closeModal) {
+      try { window.closeAuthModal(); } catch (e) {}
+    }
+    if (typeof window.closeAllModals === 'function') {
+      try { window.closeAllModals(); } catch (e) {}
+    }
+    if (typeof window.cleanupDarkBackdrops === 'function') {
+      try { window.cleanupDarkBackdrops(true); } catch (e) {}
+    }
+    if (window.gameInstance && typeof window.gameInstance.closeCallsignModal === 'function') {
+      try { window.gameInstance.closeCallsignModal(); } catch (e) {}
+    }
+
+    // Ensure pointer events and animation loop are fully active
+    try {
+      const canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
+      if (canvas) canvas.style.pointerEvents = 'auto';
+      const canvasContainer = document.getElementById('canvas-container');
+      if (canvasContainer) canvasContainer.style.pointerEvents = 'auto';
+      const uiLayer = document.querySelector('.ui-layer') || document.getElementById('ui-layer') || document.getElementById('game-container');
+      if (uiLayer) uiLayer.style.pointerEvents = 'auto';
+    } catch (e) {}
+
+    if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+      try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+    }
+  }
+
+  /**
+   * Bind event listeners for close buttons, backdrop click, and guest callsign confirmation
+   */
+  bindModalControls() {
+    if (typeof document === 'undefined') return;
+
+    // Close button (X)
+    const closeBtn = document.getElementById('btn-close-callsign-modal');
+    if (closeBtn && typeof closeBtn.addEventListener === 'function' && !closeBtn._authBound) {
+      closeBtn._authBound = true;
+      closeBtn.addEventListener('click', (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        this.closeModal();
+      });
+    }
+
+    // Cancel button
+    const cancelBtn = document.getElementById('btn-cancel-callsign-modal');
+    if (cancelBtn && typeof cancelBtn.addEventListener === 'function' && !cancelBtn._authBound) {
+      cancelBtn._authBound = true;
+      cancelBtn.addEventListener('click', (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        this.closeModal();
+      });
+    }
+
+    // Backdrop click
+    const backdrop = document.getElementById('authModal') || document.querySelector('.auth-modal');
+    if (backdrop && typeof backdrop.addEventListener === 'function' && !backdrop._authBound) {
+      backdrop._authBound = true;
+      backdrop.addEventListener('click', (e) => {
+        if (e && e.target === backdrop) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          this.closeModal();
+        }
+      });
+    }
+
+    // Custom Callsign / Guest Sign-In button
+    const confirmBtn = document.getElementById('btn-confirm-callsign');
+    if (confirmBtn && typeof confirmBtn.addEventListener === 'function' && !confirmBtn._authBound) {
+      confirmBtn._authBound = true;
+      confirmBtn.addEventListener('click', (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        const input = document.getElementById('input-operative-callsign');
+        this.loginAsGuestWithCallsign(input?.value);
+      });
+    }
+
+    // Enter key on Callsign input
+    const callsignInput = document.getElementById('input-operative-callsign');
+    if (callsignInput && typeof callsignInput.addEventListener === 'function' && !callsignInput._authBound) {
+      callsignInput._authBound = true;
+      callsignInput.addEventListener('keydown', (e) => {
+        if (e && e.key === 'Enter') {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          this.loginAsGuestWithCallsign(callsignInput.value);
+        }
+      });
+    }
+
+    // Google Sign-In button trigger
+    const googleBtn = document.getElementById('googleSignInBtn');
+    if (googleBtn && typeof googleBtn.addEventListener === 'function' && !googleBtn._authBound) {
+      googleBtn._authBound = true;
+      googleBtn.addEventListener('click', (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        this.signIn();
+      });
     }
   }
 }
