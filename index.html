@@ -131,6 +131,55 @@
         try { window.gameInstance.openAvatarModal(); } catch (e) {}
       }
     };
+
+    window.cleanupDarkBackdrops = function() {
+      try {
+        var backdropIds = [
+          'authModal', 'callsignModal', 'loginModal', 'profileModal',
+          'storeModal', 'shopModal', 'avatarModal', 'squad-invite-modal',
+          'levelup-modal', 'pause-modal', 'gameover-modal', 'victory-modal',
+          'google-auth-modal', 'private-room-modal', 'join-room-modal',
+          'bank-purchase-modal', 'rewarded-ad-modal'
+        ];
+        var hasActive = false;
+        for (var i = 0; i < backdropIds.length; i++) {
+          var el = document.getElementById(backdropIds[i]);
+          if (el && !el.classList.contains('hidden') && !el.classList.contains('modal-hidden') && el.style.display !== 'none' && el.style.display !== '') {
+            hasActive = true;
+            break;
+          }
+        }
+        var squadLobby = document.getElementById('squad-lobby-modal');
+        if (squadLobby && !squadLobby.classList.contains('hidden') && squadLobby.style.display !== 'none') {
+          hasActive = true;
+        }
+        if (!hasActive) {
+          var backdrops = document.querySelectorAll('.modal-backdrop, .auth-modal');
+          for (var j = 0; j < backdrops.length; j++) {
+            var b = backdrops[j];
+            if (b.id === 'squad-lobby-modal' && !b.classList.contains('hidden')) continue;
+            b.classList.add('hidden');
+            b.classList.add('modal-hidden');
+            b.style.display = 'none';
+            b.style.pointerEvents = 'none';
+          }
+          var canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
+          if (canvas) canvas.style.pointerEvents = 'auto';
+          var canvasContainer = document.getElementById('canvas-container');
+          if (canvasContainer) canvasContainer.style.pointerEvents = 'auto';
+          var uiLayer = document.querySelector('.ui-layer') || document.getElementById('ui-layer') || document.getElementById('game-container');
+          if (uiLayer) uiLayer.style.pointerEvents = 'auto';
+          var hud = document.getElementById('game-hud');
+          if (hud) hud.style.pointerEvents = 'auto';
+        }
+      } catch (e) {}
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', window.cleanupDarkBackdrops);
+    } else {
+      window.cleanupDarkBackdrops();
+    }
   </script>
 
   <!-- Anti-Cheat & DevTools Protection Guard -->

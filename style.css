@@ -101,7 +101,7 @@ html, body {
   height: 100vh;
   z-index: 1;
   overflow: hidden;
-  pointer-events: none;
+  pointer-events: auto !important;
 }
 
 /* Hide Default OS Mouse Cursor when In-Game */
@@ -130,20 +130,23 @@ body.playing .hud-btn {
   image-rendering: optimizeSpeed;
   image-rendering: pixelated;
   image-rendering: -webkit-optimize-contrast;
-  pointer-events: none;
+  pointer-events: auto !important;
 }
 
-/* UI Containers - Placed above Canvas with pointer-events: none */
+/* UI Containers - Placed above Canvas with pointer-events: auto */
 .ui-layer,
+#ui-layer,
 #game-hud,
-.hud-layer {
+.hud-layer,
+#game-container,
+.game-container {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   z-index: 10;
-  pointer-events: none;
+  pointer-events: auto !important;
 }
 
 .ui-layer button,
@@ -157,8 +160,13 @@ body.playing .hud-btn {
 #game-hud a,
 #game-hud input,
 #game-hud [data-action],
-#game-hud .touch-ctrl-btn {
-  pointer-events: auto;
+#game-hud .touch-ctrl-btn,
+.btn-squad-invite,
+.btn-invite-accept-banner,
+.btn-invite-decline-banner,
+.btn-invite-accept,
+.btn-invite-decline {
+  pointer-events: auto !important;
 }
 
 .crt-lines {
@@ -242,9 +250,27 @@ body.playing .hud-btn {
   animation: fadeIn 0.25s ease-out forwards;
 }
 
-.modal-backdrop.hidden, 
-.hidden {
+.modal-backdrop.hidden,
+.modal-backdrop.modal-hidden,
+.hidden,
+.modal-hidden,
+#authModal.hidden,
+#authModal.modal-hidden,
+#callsignModal.hidden,
+#callsignModal.modal-hidden,
+#storeModal.hidden,
+#storeModal.modal-hidden,
+#squad-invite-modal.hidden,
+#squad-invite-modal.modal-hidden,
+#squad-lobby-modal.hidden,
+#squad-lobby-modal.modal-hidden,
+#callsign-auth-modal.hidden,
+#callsign-auth-modal.modal-hidden {
   display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
 }
 
 .hud-hidden {
@@ -349,23 +375,21 @@ header {
   transform: translateY(-1px);
 }
 
-#authModal:not(.hidden),
-#authModal:not(.modal-hidden),
-.auth-modal:not(.hidden),
-.auth-modal:not(.modal-hidden),
-#loginModal:not(.hidden),
-#callsignModal:not(.hidden),
-#profileModal:not(.hidden),
-#storeModal:not(.hidden),
-#shopModal:not(.hidden),
-#authModal[style*="display: flex"],
-.auth-modal[style*="display: flex"],
-#loginModal[style*="display: flex"],
-#callsignModal[style*="display: flex"],
-#profileModal[style*="display: flex"],
-#storeModal[style*="display: flex"],
-#shopModal[style*="display: flex"],
-.modal-backdrop[style*="display: flex"] {
+#authModal:not(.hidden):not(.modal-hidden)[style*="display: flex"],
+.auth-modal:not(.hidden):not(.modal-hidden)[style*="display: flex"],
+#loginModal:not(.hidden):not(.modal-hidden)[style*="display: flex"],
+#callsignModal:not(.hidden):not(.modal-hidden)[style*="display: flex"],
+#profileModal:not(.hidden):not(.modal-hidden)[style*="display: flex"],
+#storeModal:not(.hidden):not(.modal-hidden)[style*="display: flex"],
+#shopModal:not(.hidden):not(.modal-hidden)[style*="display: flex"],
+#authModal.active:not(.hidden):not(.modal-hidden),
+.auth-modal.active:not(.hidden):not(.modal-hidden),
+#loginModal.active:not(.hidden):not(.modal-hidden),
+#callsignModal.active:not(.hidden):not(.modal-hidden),
+#profileModal.active:not(.hidden):not(.modal-hidden),
+#storeModal.active:not(.hidden):not(.modal-hidden),
+#shopModal.active:not(.hidden):not(.modal-hidden),
+.modal-backdrop[style*="display: flex"]:not(.hidden):not(.modal-hidden) {
   display: flex !important;
   z-index: 99999 !important;
   visibility: visible !important;
@@ -8169,7 +8193,27 @@ select:focus {
   opacity: 0.9 !important;
 }
 
-/* Squad Comm-Link Invitation Modal */
+/* Squad Comm-Link Invitation Modal (Non-blocking transparent layer) */
+#squad-invite-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none !important;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999998 !important;
+}
+
+#squad-invite-modal:not(.hidden):not(.modal-hidden) {
+  display: flex !important;
+}
+
 .squad-invite-card {
   width: 90%;
   max-width: 480px;
@@ -8181,6 +8225,7 @@ select:focus {
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(20px);
+  pointer-events: auto !important;
 }
 
 .invite-header {
