@@ -340,7 +340,20 @@ function bindHeaderClickHandlers() {
   if (callsignEl) {
     callsignEl.onclick = () => {
       const modal = document.getElementById('callsignModal') || document.getElementById('profileModal');
-      if (modal) modal.style.display = 'flex';
+      if (modal) {
+        modal.classList.remove('hidden', 'modal-hidden');
+        modal.style.display = 'flex';
+        modal.style.pointerEvents = 'auto';
+      }
+      const card = document.getElementById('profile-setup-modal');
+      if (card) {
+        card.classList.remove('hidden', 'modal-hidden');
+        card.style.display = 'flex';
+        card.style.opacity = '1';
+        card.style.visibility = 'visible';
+        card.style.pointerEvents = 'auto';
+      }
+      if (typeof openCallsignModal === 'function') openCallsignModal();
     };
   }
 
@@ -348,7 +361,20 @@ function bindHeaderClickHandlers() {
   currencyEls.forEach(el => {
     el.onclick = () => {
       const modal = document.getElementById('storeModal') || document.getElementById('shopModal');
-      if (modal) modal.style.display = 'flex';
+      if (modal) {
+        modal.classList.remove('hidden', 'modal-hidden');
+        modal.style.display = 'flex';
+        modal.style.pointerEvents = 'auto';
+      }
+      const card = document.getElementById('earn-diamonds-modal');
+      if (card) {
+        card.classList.remove('hidden', 'modal-hidden');
+        card.style.display = 'flex';
+        card.style.opacity = '1';
+        card.style.visibility = 'visible';
+        card.style.pointerEvents = 'auto';
+      }
+      if (typeof openStoreModal === 'function') openStoreModal();
     };
   });
 
@@ -369,14 +395,31 @@ function bindHeaderClickHandlers() {
         if (m.attributeName === 'style') {
           const target = m.target;
           if (target.style.display === 'flex') {
-            target.classList.remove('hidden');
+            target.classList.remove('hidden', 'modal-hidden');
+            target.style.pointerEvents = 'auto';
+            const inner = target.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .bank-purchase-card, .rewarded-ad-card');
+            if (inner) {
+              inner.classList.remove('hidden', 'modal-hidden');
+              inner.style.opacity = '1';
+              inner.style.visibility = 'visible';
+              inner.style.pointerEvents = 'auto';
+              if (inner.id === 'profile-setup-modal' || inner.id === 'earn-diamonds-modal') {
+                inner.style.display = 'flex';
+              } else {
+                inner.style.display = 'block';
+              }
+            }
           } else if (target.style.display === 'none') {
-            target.classList.add('hidden');
+            target.classList.add('hidden', 'modal-hidden');
+            target.style.pointerEvents = 'none';
+            if (typeof window.cleanupDarkBackdrops === 'function') {
+              window.cleanupDarkBackdrops();
+            }
           }
         }
       });
     });
-    ['authModal', 'loginModal', 'callsignModal', 'profileModal', 'storeModal', 'shopModal'].forEach(id => {
+    ['authModal', 'loginModal', 'callsignModal', 'profileModal', 'storeModal', 'shopModal', 'avatarModal', 'squad-lobby-modal', 'squad-invite-modal', 'google-auth-modal', 'private-room-modal', 'join-room-modal', 'bank-purchase-modal', 'rewarded-ad-modal', 'cyber-alert-modal'].forEach(id => {
       const el = document.getElementById(id);
       if (el && !el.dataset.observerBound) {
         el.dataset.observerBound = 'true';
@@ -385,14 +428,20 @@ function bindHeaderClickHandlers() {
     });
   }
 
-  ['authModal', 'callsignModal', 'profileModal', 'storeModal', 'shopModal', 'avatarModal'].forEach(id => {
+  ['authModal', 'callsignModal', 'profileModal', 'storeModal', 'shopModal', 'avatarModal', 'squad-lobby-modal', 'squad-invite-modal', 'google-auth-modal', 'private-room-modal', 'join-room-modal', 'bank-purchase-modal', 'rewarded-ad-modal', 'cyber-alert-modal', 'pause-modal', 'gameover-modal', 'victory-modal'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.dataset.dismissBound) {
       el.dataset.dismissBound = 'true';
       el.addEventListener('click', (e) => {
         if (e.target === el) {
-          el.classList.add('hidden');
-          el.style.display = 'none';
+          if (typeof window.closeAllModals === 'function') {
+            window.closeAllModals();
+          } else {
+            el.classList.add('hidden', 'modal-hidden');
+            el.style.display = 'none';
+            el.style.pointerEvents = 'none';
+            if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
+          }
         }
       });
     }
@@ -400,19 +449,27 @@ function bindHeaderClickHandlers() {
 
   document.getElementById('btn-close-callsign-modal')?.addEventListener('click', () => {
     const m = document.getElementById('authModal') || document.getElementById('callsign-auth-modal');
-    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+    if (m) { m.classList.add('hidden', 'modal-hidden'); m.style.display = 'none'; m.style.pointerEvents = 'none'; }
+    if (typeof window.closeAllModals === 'function') window.closeAllModals();
+    else if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
   });
   document.getElementById('btn-close-profile-modal')?.addEventListener('click', () => {
     const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
-    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+    if (m) { m.classList.add('hidden', 'modal-hidden'); m.style.display = 'none'; m.style.pointerEvents = 'none'; }
+    if (typeof window.closeAllModals === 'function') window.closeAllModals();
+    else if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
   });
   document.getElementById('btn-close-profile-setup')?.addEventListener('click', () => {
     const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
-    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+    if (m) { m.classList.add('hidden', 'modal-hidden'); m.style.display = 'none'; m.style.pointerEvents = 'none'; }
+    if (typeof window.closeAllModals === 'function') window.closeAllModals();
+    else if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
   });
   document.getElementById('btn-close-earn-modal')?.addEventListener('click', () => {
     const m = document.getElementById('storeModal') || document.getElementById('shopModal');
-    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+    if (m) { m.classList.add('hidden', 'modal-hidden'); m.style.display = 'none'; m.style.pointerEvents = 'none'; }
+    if (typeof window.closeAllModals === 'function') window.closeAllModals();
+    else if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
   });
 }
 window.bindHeaderClickHandlers = bindHeaderClickHandlers;
@@ -2571,10 +2628,25 @@ class Game {
       this.adTimerInterval = null;
     }
     const rewardedModal = document.getElementById('rewarded-ad-modal');
-    if (rewardedModal) rewardedModal.classList.add('hidden');
+    if (rewardedModal) {
+      rewardedModal.classList.add('hidden', 'modal-hidden');
+      rewardedModal.style.display = 'none';
+      rewardedModal.style.pointerEvents = 'none';
+    }
 
     const hubModal = document.getElementById('earn-diamonds-modal');
-    if (hubModal) hubModal.classList.add('hidden');
+    if (hubModal) {
+      hubModal.classList.add('hidden', 'modal-hidden');
+      hubModal.style.display = 'none';
+      hubModal.style.pointerEvents = 'none';
+    }
+
+    const storeModal = document.getElementById('storeModal') || document.getElementById('shopModal');
+    if (storeModal) {
+      storeModal.classList.add('hidden', 'modal-hidden');
+      storeModal.style.display = 'none';
+      storeModal.style.pointerEvents = 'none';
+    }
 
     const claimBtn = document.getElementById('btn-claim-ad-reward');
     if (claimBtn) {
@@ -2585,6 +2657,9 @@ class Game {
 
     const progressBar = document.getElementById('ad-progress-bar');
     if (progressBar) progressBar.style.width = '100%';
+
+    this.cleanupDarkBackdrops();
+    this.ensureGameLoopRunning();
   }
 
   onAdEnd() {
@@ -2678,6 +2753,9 @@ class Game {
       if (e.code === 'KeyP' || e.code === 'Escape') {
         if (this.state === 'PLAYING') this.pauseGame();
         else if (this.state === 'PAUSED') this.resumeGame();
+        else {
+          if (typeof window.closeAllModals === 'function') window.closeAllModals();
+        }
       }
       if (this.state === 'PLAYING') {
         if (e.code === 'Digit1') {
@@ -2918,10 +2996,24 @@ class Game {
 
     // Bank Purchase Confirmation Modal Listeners
     document.getElementById('btn-close-buy-modal')?.addEventListener('click', () => {
-      document.getElementById('bank-purchase-modal')?.classList.add('hidden');
+      const modal = document.getElementById('bank-purchase-modal');
+      if (modal) {
+        modal.classList.add('hidden', 'modal-hidden');
+        modal.style.display = 'none';
+        modal.style.pointerEvents = 'none';
+      }
+      this.cleanupDarkBackdrops();
+      this.ensureGameLoopRunning();
     });
     document.getElementById('btn-cancel-buy-modal')?.addEventListener('click', () => {
-      document.getElementById('bank-purchase-modal')?.classList.add('hidden');
+      const modal = document.getElementById('bank-purchase-modal');
+      if (modal) {
+        modal.classList.add('hidden', 'modal-hidden');
+        modal.style.display = 'none';
+        modal.style.pointerEvents = 'none';
+      }
+      this.cleanupDarkBackdrops();
+      this.ensureGameLoopRunning();
     });
     document.getElementById('btn-confirm-in-game-purchase')?.addEventListener('click', () => {
       if (this.pendingBankPack) {
@@ -2930,7 +3022,14 @@ class Game {
     });
     document.getElementById('bank-purchase-modal')?.addEventListener('click', (e) => {
       if (e.target.id === 'bank-purchase-modal') {
-        document.getElementById('bank-purchase-modal')?.classList.add('hidden');
+        const modal = document.getElementById('bank-purchase-modal');
+        if (modal) {
+          modal.classList.add('hidden', 'modal-hidden');
+          modal.style.display = 'none';
+          modal.style.pointerEvents = 'none';
+        }
+        this.cleanupDarkBackdrops();
+        this.ensureGameLoopRunning();
       }
     });
 
@@ -2953,16 +3052,49 @@ class Game {
     });
     document.getElementById('btn-close-ad')?.addEventListener('click', () => {
       if (this.adTimerInterval) clearInterval(this.adTimerInterval);
-      document.getElementById('rewarded-ad-modal')?.classList.add('hidden');
+      const modal = document.getElementById('rewarded-ad-modal');
+      if (modal) {
+        modal.classList.add('hidden', 'modal-hidden');
+        modal.style.display = 'none';
+        modal.style.pointerEvents = 'none';
+      }
+      this.cleanupDarkBackdrops();
+      this.ensureGameLoopRunning();
     });
 
     // Earn Diamonds Hub Listeners
     document.getElementById('btn-close-earn-modal')?.addEventListener('click', () => {
-      document.getElementById('earn-diamonds-modal')?.classList.add('hidden');
+      const modal = document.getElementById('storeModal') || document.getElementById('shopModal');
+      if (modal) {
+        modal.classList.add('hidden', 'modal-hidden');
+        modal.style.display = 'none';
+        modal.style.pointerEvents = 'none';
+      }
+      const card = document.getElementById('earn-diamonds-modal');
+      if (card) {
+        card.classList.add('hidden', 'modal-hidden');
+        card.style.display = 'none';
+        card.style.pointerEvents = 'none';
+      }
+      this.cleanupDarkBackdrops();
+      this.ensureGameLoopRunning();
     });
     document.getElementById('earn-diamonds-modal')?.addEventListener('click', (e) => {
-      if (e.target.id === 'earn-diamonds-modal') {
-        document.getElementById('earn-diamonds-modal')?.classList.add('hidden');
+      if (e.target.id === 'earn-diamonds-modal' || e.target.id === 'storeModal') {
+        const modal = document.getElementById('storeModal') || document.getElementById('shopModal');
+        if (modal) {
+          modal.classList.add('hidden', 'modal-hidden');
+          modal.style.display = 'none';
+          modal.style.pointerEvents = 'none';
+        }
+        const card = document.getElementById('earn-diamonds-modal');
+        if (card) {
+          card.classList.add('hidden', 'modal-hidden');
+          card.style.display = 'none';
+          card.style.pointerEvents = 'none';
+        }
+        this.cleanupDarkBackdrops();
+        this.ensureGameLoopRunning();
       }
     });
     document.getElementById('btn-goto-missions-hub')?.addEventListener('click', () => {
@@ -3184,12 +3316,73 @@ class Game {
 
     // Optional Google Account & Cloud Sync Modal Events
     document.getElementById('btn-close-google-modal')?.addEventListener('click', () => {
-      document.getElementById('google-auth-modal')?.classList.add('hidden');
+      const modal = document.getElementById('google-auth-modal');
+      if (modal) {
+        modal.classList.add('hidden', 'modal-hidden');
+        modal.style.display = 'none';
+        modal.style.pointerEvents = 'none';
+      }
+      this.cleanupDarkBackdrops();
+      this.ensureGameLoopRunning();
     });
 
     document.getElementById('google-auth-modal')?.addEventListener('click', (e) => {
       if (e.target.id === 'google-auth-modal') {
-        document.getElementById('google-auth-modal')?.classList.add('hidden');
+        const modal = document.getElementById('google-auth-modal');
+        if (modal) {
+          modal.classList.add('hidden', 'modal-hidden');
+          modal.style.display = 'none';
+          modal.style.pointerEvents = 'none';
+        }
+        this.cleanupDarkBackdrops();
+        this.ensureGameLoopRunning();
+      }
+    });
+
+    // Private Match & Join Room Modal Listeners
+    document.getElementById('btn-close-private-modal')?.addEventListener('click', () => {
+      const modal = document.getElementById('private-room-modal');
+      if (modal) {
+        modal.classList.add('hidden', 'modal-hidden');
+        modal.style.display = 'none';
+        modal.style.pointerEvents = 'none';
+      }
+      this.cleanupDarkBackdrops();
+      this.ensureGameLoopRunning();
+    });
+    document.getElementById('private-room-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'private-room-modal') {
+        const modal = document.getElementById('private-room-modal');
+        if (modal) {
+          modal.classList.add('hidden', 'modal-hidden');
+          modal.style.display = 'none';
+          modal.style.pointerEvents = 'none';
+        }
+        this.cleanupDarkBackdrops();
+        this.ensureGameLoopRunning();
+      }
+    });
+
+    document.getElementById('btn-close-join-modal')?.addEventListener('click', () => {
+      const modal = document.getElementById('join-room-modal');
+      if (modal) {
+        modal.classList.add('hidden', 'modal-hidden');
+        modal.style.display = 'none';
+        modal.style.pointerEvents = 'none';
+      }
+      this.cleanupDarkBackdrops();
+      this.ensureGameLoopRunning();
+    });
+    document.getElementById('join-room-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'join-room-modal') {
+        const modal = document.getElementById('join-room-modal');
+        if (modal) {
+          modal.classList.add('hidden', 'modal-hidden');
+          modal.style.display = 'none';
+          modal.style.pointerEvents = 'none';
+        }
+        this.cleanupDarkBackdrops();
+        this.ensureGameLoopRunning();
       }
     });
 
@@ -8983,9 +9176,19 @@ class Game {
     this.renderAvatarModal();
     modal.style.zIndex = '99999';
     modal.style.display = 'flex';
-    modal.classList.remove('hidden');
-    modal.classList.remove('modal-hidden');
+    modal.style.opacity = '1';
+    modal.style.visibility = 'visible';
+    modal.classList.remove('hidden', 'modal-hidden');
     modal.style.pointerEvents = 'auto';
+    const card = modal.querySelector('.avatar-modal-card, .modal-card');
+    if (card) {
+      card.classList.remove('hidden', 'modal-hidden');
+      card.style.display = 'block';
+      card.style.opacity = '1';
+      card.style.visibility = 'visible';
+      card.style.pointerEvents = 'auto';
+      card.style.zIndex = '100000';
+    }
     if (this.audio) this.audio.playDeflect();
     this.ensureGameLoopRunning();
   }
@@ -8993,10 +9196,15 @@ class Game {
   closeAvatarModal() {
     const modal = document.getElementById('avatarModal');
     if (modal) {
-      modal.classList.add('hidden');
-      modal.classList.add('modal-hidden');
+      modal.classList.add('hidden', 'modal-hidden');
       modal.style.display = 'none';
       modal.style.pointerEvents = 'none';
+      const card = modal.querySelector('.avatar-modal-card, .modal-card');
+      if (card) {
+        card.classList.add('hidden', 'modal-hidden');
+        card.style.display = 'none';
+        card.style.pointerEvents = 'none';
+      }
     }
     this.cleanupDarkBackdrops();
     this.ensureGameLoopRunning();
@@ -9424,13 +9632,18 @@ class Game {
       backdrop.classList.remove('hidden', 'modal-hidden');
       backdrop.style.zIndex = '99999';
       backdrop.style.display = 'flex';
+      backdrop.style.opacity = '1';
+      backdrop.style.visibility = 'visible';
       backdrop.style.pointerEvents = 'auto';
     }
     const card = document.getElementById('earn-diamonds-modal');
     if (card && card !== backdrop) {
       card.classList.remove('hidden', 'modal-hidden');
       card.style.display = 'flex';
+      card.style.opacity = '1';
+      card.style.visibility = 'visible';
       card.style.pointerEvents = 'auto';
+      card.style.zIndex = '100000';
     }
     if (typeof this.switchTab === 'function') {
       this.switchTab('tab-store');
@@ -9547,6 +9760,39 @@ class Game {
       backdrop.classList.add('modal-hidden');
       backdrop.style.display = 'none';
       backdrop.style.pointerEvents = 'none';
+    }
+    this.cleanupDarkBackdrops();
+    this.ensureGameLoopRunning();
+  }
+
+  closeStoreModal() {
+    const backdrop = document.getElementById('storeModal') || document.getElementById('shopModal');
+    if (backdrop) {
+      backdrop.classList.add('hidden');
+      backdrop.classList.add('modal-hidden');
+      backdrop.style.display = 'none';
+      backdrop.style.pointerEvents = 'none';
+    }
+    const card = document.getElementById('earn-diamonds-modal');
+    if (card) {
+      card.classList.add('hidden');
+      card.classList.add('modal-hidden');
+      card.style.display = 'none';
+      card.style.pointerEvents = 'none';
+    }
+    this.cleanupDarkBackdrops();
+    this.ensureGameLoopRunning();
+  }
+
+  closeAllModals() {
+    if (typeof window !== 'undefined' && typeof window.closeAllModals === 'function') {
+      window.closeAllModals();
+    } else {
+      this.closeCallsignModal();
+      this.closeProfileModal();
+      this.closeStoreModal();
+      this.closeAvatarModal();
+      this.closeSquadLobbyModal();
     }
     this.cleanupDarkBackdrops();
     this.ensureGameLoopRunning();
@@ -10474,6 +10720,20 @@ class Game {
   cleanupDarkBackdrops() {
     if (typeof window !== 'undefined' && typeof window.cleanupDarkBackdrops === 'function') {
       try { window.cleanupDarkBackdrops(); } catch (e) {}
+    }
+    const canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
+    if (canvas) canvas.style.pointerEvents = 'auto';
+    const canvasContainer = document.getElementById('canvas-container');
+    if (canvasContainer) canvasContainer.style.pointerEvents = 'auto';
+    const uiLayer = document.querySelector('.ui-layer') || document.getElementById('ui-layer') || document.getElementById('game-container');
+    if (uiLayer) uiLayer.style.pointerEvents = 'auto';
+    const hud = document.getElementById('game-hud');
+    if (hud) hud.style.pointerEvents = 'auto';
+    if (typeof document !== 'undefined' && document.body) document.body.style.pointerEvents = 'auto';
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab').forEach(b => {
+        b.style.pointerEvents = 'auto';
+      });
     }
   }
 

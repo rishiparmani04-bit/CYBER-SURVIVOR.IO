@@ -76,16 +76,20 @@
     window.openCallsignModal = function() {
       var m = document.getElementById('callsignModal') || document.getElementById('profileModal');
       if (m) {
-        m.classList.remove('hidden');
+        m.classList.remove('hidden', 'modal-hidden');
         m.style.display = 'flex';
         m.style.zIndex = '99999';
         m.style.visibility = 'visible';
         m.style.opacity = '1';
+        m.style.pointerEvents = 'auto';
       }
       var c = document.getElementById('profile-setup-modal');
       if (c && c !== m) {
-        c.classList.remove('hidden');
+        c.classList.remove('hidden', 'modal-hidden');
         c.style.display = 'flex';
+        c.style.opacity = '1';
+        c.style.visibility = 'visible';
+        c.style.pointerEvents = 'auto';
       }
       if (window.gameInstance && typeof window.gameInstance.openCallsignModal === 'function') {
         try { window.gameInstance.openCallsignModal(); } catch (e) {}
@@ -96,7 +100,19 @@
       var m = document.getElementById('callsignModal') || document.getElementById('profileModal');
       if (m) {
         m.classList.add('hidden');
+        m.classList.add('modal-hidden');
         m.style.display = 'none';
+        m.style.pointerEvents = 'none';
+      }
+      var c = document.getElementById('profile-setup-modal');
+      if (c && c !== m) {
+        c.classList.add('hidden');
+        c.classList.add('modal-hidden');
+        c.style.display = 'none';
+        c.style.pointerEvents = 'none';
+      }
+      if (typeof window.cleanupDarkBackdrops === 'function') {
+        window.cleanupDarkBackdrops();
       }
       if (window.gameInstance && typeof window.gameInstance.closeProfileModal === 'function') {
         try { window.gameInstance.closeProfileModal(); } catch (e) {}
@@ -106,14 +122,20 @@
     window.openStoreModal = function() {
       var m = document.getElementById('storeModal') || document.getElementById('shopModal');
       if (m) {
-        m.classList.remove('hidden');
+        m.classList.remove('hidden', 'modal-hidden');
         m.style.display = 'flex';
         m.style.zIndex = '99999';
+        m.style.visibility = 'visible';
+        m.style.opacity = '1';
+        m.style.pointerEvents = 'auto';
       }
       var c = document.getElementById('earn-diamonds-modal');
       if (c && c !== m) {
-        c.classList.remove('hidden');
+        c.classList.remove('hidden', 'modal-hidden');
         c.style.display = 'flex';
+        c.style.opacity = '1';
+        c.style.visibility = 'visible';
+        c.style.pointerEvents = 'auto';
       }
       if (window.gameInstance && typeof window.gameInstance.openStoreModal === 'function') {
         try { window.gameInstance.openStoreModal(); } catch (e) {}
@@ -123,16 +145,79 @@
     window.openAvatarModal = function() {
       var m = document.getElementById('avatarModal');
       if (m) {
-        m.classList.remove('hidden');
+        m.classList.remove('hidden', 'modal-hidden');
         m.style.display = 'flex';
         m.style.zIndex = '99999';
+        m.style.visibility = 'visible';
+        m.style.opacity = '1';
+        m.style.pointerEvents = 'auto';
+      }
+      var c = m ? m.querySelector('.avatar-modal-card, .modal-card') : null;
+      if (c) {
+        c.classList.remove('hidden', 'modal-hidden');
+        c.style.display = 'block';
+        c.style.opacity = '1';
+        c.style.visibility = 'visible';
+        c.style.pointerEvents = 'auto';
       }
       if (window.gameInstance && typeof window.gameInstance.openAvatarModal === 'function') {
         try { window.gameInstance.openAvatarModal(); } catch (e) {}
       }
     };
 
+    window.closeAllModals = function() {
+      try {
+        var backdropIds = [
+          'authModal', 'callsignModal', 'loginModal', 'profileModal',
+          'storeModal', 'shopModal', 'avatarModal', 'squad-invite-modal',
+          'levelup-modal', 'pause-modal', 'gameover-modal', 'victory-modal',
+          'google-auth-modal', 'private-room-modal', 'join-room-modal',
+          'bank-purchase-modal', 'rewarded-ad-modal', 'cyber-alert-modal'
+        ];
+        backdropIds.forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) {
+            el.classList.add('hidden', 'modal-hidden');
+            el.style.display = 'none';
+            el.style.pointerEvents = 'none';
+          }
+        });
+        var cardSelectors = [
+          '#callsign-auth-modal', '#profile-setup-modal', '#earn-diamonds-modal',
+          '.avatar-modal-card', '.google-auth-card', '.squad-lobby-card',
+          '.private-room-card', '.join-room-card', '.bank-purchase-card',
+          '.rewarded-ad-card', '.cyber-alert-card'
+        ];
+        cardSelectors.forEach(function(sel) {
+          document.querySelectorAll(sel).forEach(function(card) {
+            card.classList.add('hidden', 'modal-hidden');
+            card.style.display = 'none';
+            card.style.pointerEvents = 'none';
+          });
+        });
+        if (typeof window.cleanupDarkBackdrops === 'function') {
+          window.cleanupDarkBackdrops(true);
+        }
+        var canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
+        if (canvas) canvas.style.pointerEvents = 'auto';
+        var canvasContainer = document.getElementById('canvas-container');
+        if (canvasContainer) canvasContainer.style.pointerEvents = 'auto';
+        var uiLayer = document.querySelector('.ui-layer') || document.getElementById('ui-layer') || document.getElementById('game-container');
+        if (uiLayer) uiLayer.style.pointerEvents = 'auto';
+        var hud = document.getElementById('game-hud');
+        if (hud) hud.style.pointerEvents = 'auto';
+        if (document.body) document.body.style.pointerEvents = 'auto';
+        document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab').forEach(function(b) {
+          b.style.pointerEvents = 'auto';
+        });
+        if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+          try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+        }
+      } catch (err) {}
+    };
+
     window.cleanupDarkBackdrops = function() {
+      var force = arguments[0];
       try {
         var backdropIds = [
           'authModal', 'callsignModal', 'loginModal', 'profileModal',
@@ -142,22 +227,31 @@
           'bank-purchase-modal', 'rewarded-ad-modal'
         ];
         var hasActive = false;
-        for (var i = 0; i < backdropIds.length; i++) {
-          var el = document.getElementById(backdropIds[i]);
-          if (el && !el.classList.contains('hidden') && !el.classList.contains('modal-hidden') && el.style.display !== 'none' && el.style.display !== '') {
+        if (!force) {
+          for (var i = 0; i < backdropIds.length; i++) {
+            var el = document.getElementById(backdropIds[i]);
+            if (el && !el.classList.contains('hidden') && !el.classList.contains('modal-hidden') && el.style.display !== 'none' && el.style.display !== '') {
+              var inner = el.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .bank-purchase-card, .rewarded-ad-card');
+              if (inner && (inner.classList.contains('hidden') || inner.classList.contains('modal-hidden') || inner.style.display === 'none')) {
+                el.classList.add('hidden', 'modal-hidden');
+                el.style.display = 'none';
+                el.style.pointerEvents = 'none';
+                continue;
+              }
+              hasActive = true;
+              break;
+            }
+          }
+          var squadLobby = document.getElementById('squad-lobby-modal');
+          if (squadLobby && !squadLobby.classList.contains('hidden') && squadLobby.style.display !== 'none') {
             hasActive = true;
-            break;
           }
         }
-        var squadLobby = document.getElementById('squad-lobby-modal');
-        if (squadLobby && !squadLobby.classList.contains('hidden') && squadLobby.style.display !== 'none') {
-          hasActive = true;
-        }
-        if (!hasActive) {
+        if (!hasActive || force) {
           var backdrops = document.querySelectorAll('.modal-backdrop, .auth-modal');
           for (var j = 0; j < backdrops.length; j++) {
             var b = backdrops[j];
-            if (b.id === 'squad-lobby-modal' && !b.classList.contains('hidden')) continue;
+            if (!force && b.id === 'squad-lobby-modal' && !b.classList.contains('hidden')) continue;
             b.classList.add('hidden');
             b.classList.add('modal-hidden');
             b.style.display = 'none';
@@ -171,14 +265,49 @@
           if (uiLayer) uiLayer.style.pointerEvents = 'auto';
           var hud = document.getElementById('game-hud');
           if (hud) hud.style.pointerEvents = 'auto';
+          if (document.body) document.body.style.pointerEvents = 'auto';
+          document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab').forEach(function(b) {
+            b.style.pointerEvents = 'auto';
+          });
         }
       } catch (e) {}
     };
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', window.cleanupDarkBackdrops);
-    } else {
-      window.cleanupDarkBackdrops();
+    // Global Escape Key Listener: dismiss active modal, remove dark overlay, restore mouse interactions
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.code === 'Escape') {
+          if (window.gameInstance && (window.gameInstance.state === 'PLAYING' || window.gameInstance.state === 'PAUSED')) {
+            if (window.gameInstance.state === 'PAUSED') window.gameInstance.resumeGame();
+            else if (window.gameInstance.state === 'PLAYING') window.gameInstance.pauseGame();
+            return;
+          }
+          window.closeAllModals();
+        }
+      });
+    }
+
+    // Global Click Listener: clicking outside modal on dark backdrop or clicking close buttons immediately dismisses
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+      document.addEventListener('click', function(e) {
+        var target = e.target;
+        if (!target) return;
+        if (target.classList && (target.classList.contains('modal-backdrop') || target.classList.contains('auth-modal'))) {
+          if (target.id === 'levelup-modal') return;
+          window.closeAllModals();
+        }
+        if (target.closest && target.closest('.alert-close-btn, .btn-close-modal, .btn-avatar-cancel, [data-dismiss], #btn-cancel-buy-modal, #btn-close-alert, #btn-close-google-modal, #btn-close-squad-modal, #btn-close-private-modal, #btn-close-join-modal, #btn-close-buy-modal, #btn-close-earn-modal, #btn-close-ad, #btn-close-avatar-modal, #btn-close-callsign-modal, #btn-close-profile-modal, #btn-close-profile-setup, #btn-close-invite-modal')) {
+          window.closeAllModals();
+        }
+      });
+    }
+
+    if (typeof document !== 'undefined') {
+      if (document.readyState === 'loading' && typeof document.addEventListener === 'function') {
+        document.addEventListener('DOMContentLoaded', function() { window.cleanupDarkBackdrops(); });
+      } else {
+        window.cleanupDarkBackdrops();
+      }
     }
   </script>
 
@@ -1466,7 +1595,7 @@
   </div>
 
   <!-- Modal: Google Account / Cloud Sync -->
-  <div id="google-auth-modal" class="modal-backdrop hidden">
+  <div id="google-auth-modal" class="modal-backdrop hidden" onclick="if(event.target===this){window.closeAllModals();}">
     <div class="google-auth-card">
       <div class="google-card-header">
         <div class="google-logo-pill">
@@ -1537,7 +1666,7 @@
   </div>
 
   <!-- Modal: 4-Player Real-Time Squad Room Management -->
-  <div id="squad-lobby-modal" class="modal-backdrop hidden">
+  <div id="squad-lobby-modal" class="modal-backdrop hidden" onclick="if(event.target===this){window.closeAllModals();}">
     <div class="squad-lobby-card">
       <div class="squad-modal-header">
         <div class="squad-header-badge">
@@ -1698,7 +1827,7 @@
   </div>
 
   <!-- Modal: Create Private Match / Lobby -->
-  <div id="private-room-modal" class="modal-backdrop hidden">
+  <div id="private-room-modal" class="modal-backdrop hidden" onclick="if(event.target===this){window.closeAllModals();}">
     <div class="google-auth-card private-room-card">
       <div class="google-card-header">
         <div class="google-logo-pill">
@@ -1751,7 +1880,7 @@
   </div>
 
   <!-- Modal: Join Multiplayer Room -->
-  <div id="join-room-modal" class="modal-backdrop hidden">
+  <div id="join-room-modal" class="modal-backdrop hidden" onclick="if(event.target===this){window.closeAllModals();}">
     <div class="google-auth-card join-room-card">
       <div class="google-card-header">
         <div class="google-logo-pill">
@@ -1811,7 +1940,7 @@
   </div>
 
   <!-- In-Game Currency Bank Purchase Confirmation Modal -->
-  <div id="bank-purchase-modal" class="modal-backdrop hidden">
+  <div id="bank-purchase-modal" class="modal-backdrop hidden" onclick="if(event.target===this){window.closeAllModals();}">
     <div class="bank-purchase-card">
       <div class="bank-buy-header">
         <span class="bp-icon" id="bp-icon">💎</span>
@@ -1833,7 +1962,7 @@
   </div>
 
   <!-- Earn Free Diamonds Hub Modal / In-Game Store -->
-  <div id="storeModal" class="modal-backdrop hidden" data-alias="shopModal earn-diamonds-modal">
+  <div id="storeModal" class="modal-backdrop hidden" data-alias="shopModal earn-diamonds-modal" onclick="if(event.target===this){window.closeAllModals();}">
     <div id="shopModal" class="hidden" style="display:none;" aria-hidden="true"></div>
     <div id="earn-diamonds-modal" class="earn-diamonds-card">
       <div class="earn-diamonds-header">
@@ -1891,7 +2020,7 @@
   </div>
 
   <!-- High-Tech Rewarded Video Ad Player Modal -->
-  <div id="rewarded-ad-modal" class="modal-backdrop hidden">
+  <div id="rewarded-ad-modal" class="modal-backdrop hidden" onclick="if(event.target===this){window.closeAllModals();}">
     <div class="rewarded-ad-player">
       <div class="ad-player-header">
         <div class="ad-tag-badge">
@@ -1950,7 +2079,7 @@
   </div>
 
   <!-- Operative Avatar Protocol Modal -->
-  <div id="avatarModal" class="modal-backdrop hidden">
+  <div id="avatarModal" class="modal-backdrop hidden" onclick="if(event.target===this){window.closeAllModals();}">
     <div class="modal-card avatar-modal-card">
       <div class="avatar-modal-header">
         <div class="avatar-modal-title-group">
@@ -2047,7 +2176,7 @@
   </div>
 
   <!-- STEP 2: Operative Profile Setup & Customization Modal (Profile Second) -->
-  <div id="callsignModal" class="modal-backdrop hidden" data-alias="profileModal profile-setup-modal">
+  <div id="callsignModal" class="modal-backdrop hidden" data-alias="profileModal profile-setup-modal" onclick="if(event.target===this){window.closeAllModals();}">
     <div id="profileModal" class="hidden" style="display:none;" aria-hidden="true"></div>
     <div id="profile-setup-modal" class="modal-card profile-setup-card">
       <div class="profile-card-header">
@@ -2114,7 +2243,7 @@
   </div>
 
   <!-- Squad Comm-Link Invitation Modal -->
-  <div id="squad-invite-modal" class="modal-backdrop hidden">
+  <div id="squad-invite-modal" class="modal-backdrop hidden" onclick="if(event.target===this){window.closeAllModals();}">
     <div class="modal-card squad-invite-card">
       <div class="invite-header">
         <span class="invite-icon-pulse">📡</span>

@@ -144,10 +144,25 @@ class AdManager {
     // 3. Reset and hide any in-game ad modal overlays
     try {
       const rewardedModal = document.getElementById('rewarded-ad-modal');
-      if (rewardedModal) rewardedModal.classList.add('hidden');
+      if (rewardedModal) {
+        rewardedModal.classList.add('hidden', 'modal-hidden');
+        rewardedModal.style.display = 'none';
+        rewardedModal.style.pointerEvents = 'none';
+      }
 
       const hubModal = document.getElementById('earn-diamonds-modal');
-      if (hubModal) hubModal.classList.add('hidden');
+      if (hubModal) {
+        hubModal.classList.add('hidden', 'modal-hidden');
+        hubModal.style.display = 'none';
+        hubModal.style.pointerEvents = 'none';
+      }
+
+      const storeModal = document.getElementById('storeModal') || document.getElementById('shopModal');
+      if (storeModal) {
+        storeModal.classList.add('hidden', 'modal-hidden');
+        storeModal.style.display = 'none';
+        storeModal.style.pointerEvents = 'none';
+      }
 
       const claimBtn = document.getElementById('btn-claim-ad-reward');
       if (claimBtn) {
@@ -158,6 +173,10 @@ class AdManager {
 
       const progressBar = document.getElementById('ad-progress-bar');
       if (progressBar) progressBar.style.width = '100%';
+
+      if (typeof window.cleanupDarkBackdrops === 'function') {
+        window.cleanupDarkBackdrops();
+      }
     } catch (e) {}
 
     // 4. Remove any aria-hidden locks

@@ -418,17 +418,82 @@ header {
 
 #authModal:not(.hidden) .callsign-auth-card,
 #authModal[style*="display: flex"] .callsign-auth-card,
+#authModal[style*="display:flex"] .callsign-auth-card,
 #authModal:not(.hidden) #callsign-auth-modal,
 #authModal[style*="display: flex"] #callsign-auth-modal,
+#authModal[style*="display:flex"] #callsign-auth-modal,
 .auth-modal:not(.hidden) .callsign-auth-card,
 .auth-modal[style*="display: flex"] .callsign-auth-card,
+.auth-modal[style*="display:flex"] .callsign-auth-card,
 #callsign-auth-modal.modal-card,
-#callsign-auth-modal {
+#callsign-auth-modal,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .modal-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .callsign-auth-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .profile-setup-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .earn-diamonds-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .avatar-modal-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .google-auth-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .private-room-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .join-room-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .bank-purchase-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .rewarded-ad-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .gameover-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .victory-card,
+.modal-backdrop[style*="display: flex"] .modal-card,
+.modal-backdrop[style*="display: flex"] .callsign-auth-card,
+.modal-backdrop[style*="display: flex"] .profile-setup-card,
+.modal-backdrop[style*="display: flex"] .earn-diamonds-card,
+.modal-backdrop[style*="display: flex"] .avatar-modal-card,
+.modal-backdrop[style*="display: flex"] .google-auth-card,
+.modal-backdrop[style*="display: flex"] .private-room-card,
+.modal-backdrop[style*="display: flex"] .join-room-card,
+.modal-backdrop[style*="display: flex"] .bank-purchase-card,
+.modal-backdrop[style*="display: flex"] .rewarded-ad-card,
+.modal-backdrop[style*="display: flex"] .gameover-card,
+.modal-backdrop[style*="display: flex"] .victory-card,
+.modal-backdrop[style*="display:flex"] .modal-card,
+.modal-backdrop[style*="display:flex"] .callsign-auth-card,
+.modal-backdrop[style*="display:flex"] .profile-setup-card,
+.modal-backdrop[style*="display:flex"] .earn-diamonds-card,
+.modal-backdrop[style*="display:flex"] .avatar-modal-card,
+.modal-backdrop[style*="display:flex"] .google-auth-card,
+.modal-backdrop[style*="display:flex"] .private-room-card,
+.modal-backdrop[style*="display:flex"] .join-room-card,
+.modal-backdrop[style*="display:flex"] .bank-purchase-card,
+.modal-backdrop[style*="display:flex"] .rewarded-ad-card,
+.modal-backdrop[style*="display:flex"] .gameover-card,
+.modal-backdrop[style*="display:flex"] .victory-card,
+#callsignModal:not(.hidden):not(.modal-hidden) #profile-setup-modal,
+#callsignModal[style*="display: flex"] #profile-setup-modal,
+#callsignModal[style*="display:flex"] #profile-setup-modal,
+#storeModal:not(.hidden):not(.modal-hidden) #earn-diamonds-modal,
+#storeModal[style*="display: flex"] #earn-diamonds-modal,
+#storeModal[style*="display:flex"] #earn-diamonds-modal,
+#avatarModal:not(.hidden):not(.modal-hidden) .avatar-modal-card,
+#avatarModal[style*="display: flex"] .avatar-modal-card,
+#avatarModal[style*="display:flex"] .avatar-modal-card {
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
   z-index: 100000 !important;
   pointer-events: auto !important;
+  background: #0d1122 !important;
+  color: #ffffff !important;
+}
+
+.modal-backdrop:not(.hidden):not(.modal-hidden) .profile-setup-card,
+.modal-backdrop[style*="display: flex"] .profile-setup-card,
+.modal-backdrop[style*="display:flex"] .profile-setup-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .earn-diamonds-card,
+.modal-backdrop[style*="display: flex"] .earn-diamonds-card,
+.modal-backdrop[style*="display:flex"] .earn-diamonds-card,
+#callsignModal:not(.hidden):not(.modal-hidden) #profile-setup-modal,
+#callsignModal[style*="display: flex"] #profile-setup-modal,
+#callsignModal[style*="display:flex"] #profile-setup-modal,
+#storeModal:not(.hidden):not(.modal-hidden) #earn-diamonds-modal,
+#storeModal[style*="display: flex"] #earn-diamonds-modal,
+#storeModal[style*="display:flex"] #earn-diamonds-modal {
+  display: flex !important;
 }
 
 .deadshot-topbar,
