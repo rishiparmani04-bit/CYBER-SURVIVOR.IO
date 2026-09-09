@@ -61,6 +61,11 @@ class AuthManager {
     // Load any existing cached session immediately (synchronous, 0ms)
     this.loadSavedUser();
 
+    // If no authenticated user exists, immediately continue in guest mode so game features and presence do not hang
+    if (!this.currentUser) {
+      this.continueInGuestMode();
+    }
+
     // Make GIS initialization completely non-blocking and asynchronous.
     // Defer GIS setup so constructor finishes immediately, allowing script.js,
     // lobby rendering, and game loop to proceed with zero wait time.
@@ -69,6 +74,18 @@ class AuthManager {
         this.initGisAsync();
       }, 0);
     }
+  }
+
+  /**
+   * Continue execution immediately in guest mode so game features, lobbies, and presence do not hang
+   */
+  continueInGuestMode() {
+    try {
+      console.info('[AuthManager] GIS deferred or unavailable. Continuing execution immediately in guest mode so game features and presence do not hang.');
+      if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
+    } catch (e) {}
   }
 
   /**
@@ -84,9 +101,12 @@ class AuthManager {
         return;
       }
 
+      // If GIS script hasn't finished loading yet, continue in guest mode and poll briefly in background
+      this.continueInGuestMode();
+
       // If GIS script hasn't finished loading yet, poll asynchronously without blocking execution
       let attempts = 0;
-      const maxAttempts = 15; // 15 * 200ms = 3.0s maximum
+      const maxAttempts = 10; // 10 * 200ms = 2.0s maximum
       const pollInterval = setInterval(() => {
         attempts++;
         try {
@@ -95,17 +115,20 @@ class AuthManager {
             this.setupGis();
           } else if (attempts >= maxAttempts) {
             clearInterval(pollInterval);
-            console.warn('[AuthManager] Google Identity Services script load timed out or is blocked by adblocker/browser security. Falling back gracefully to Callsign / Guest mode.');
+            console.warn('[AuthManager] Google Identity Services script load timed out or is blocked by adblocker/browser security. Continuing execution immediately in guest mode.');
+            this.continueInGuestMode();
             this.resetSignInButtonState();
           }
         } catch (pollErr) {
           clearInterval(pollInterval);
-          console.warn('[AuthManager] Non-blocking GIS poll caught exception:', pollErr);
+          console.warn('[AuthManager] Non-blocking GIS poll caught exception. Continuing in guest mode:', pollErr);
+          this.continueInGuestMode();
           this.resetSignInButtonState();
         }
       }, 200);
     } catch (err) {
-      console.warn('[AuthManager] Non-blocking async GIS init error:', err);
+      console.warn('[AuthManager] Non-blocking async GIS init error. Continuing in guest mode:', err);
+      this.continueInGuestMode();
       this.resetSignInButtonState();
     }
   }
@@ -118,7 +141,8 @@ class AuthManager {
 
     // Wrap in a check to ensure window.google?.accounts?.id exists before calling initialize
     if (typeof window === 'undefined' || !window.google?.accounts?.id || typeof window.google.accounts.id.initialize !== 'function') {
-      console.warn('[AuthManager] Google Identity Services (window.google?.accounts?.id) is not available or blocked by adblocker/browser security. Falling back gracefully to Callsign / Guest mode.');
+      console.warn('[AuthManager] Google Identity Services (window.google?.accounts?.id) is not available or blocked by adblocker/browser security. Continuing execution immediately in guest mode.');
+      this.continueInGuestMode();
       this.resetSignInButtonState();
       return;
     }
@@ -157,7 +181,8 @@ class AuthManager {
       // Render official Google button if container exists
       this.renderGisButton();
     } catch (err) {
-      console.warn('[AuthManager] Google Identity Services initialization failed or was blocked by browser security. Falling back gracefully:', err);
+      console.warn('[AuthManager] Google Identity Services initialization failed or was blocked by browser security. Continuing execution immediately in guest mode:', err);
+      this.continueInGuestMode();
       this.handleAuthError('Google Sign-In unavailable on this domain or blocked by adblocker. Enter a Callsign below or click Continue to play as Guest.');
     } finally {
       this.resetSignInButtonState();

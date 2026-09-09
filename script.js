@@ -10014,34 +10014,8 @@ class Game {
       }
     } catch (e) {}
 
-    // 2. Background PeerJS Presence Peer for cross-device / remote Wi-Fi presence
-    if (typeof Peer !== 'undefined') {
-      try {
-        this.presencePeer = new Peer(this.userPresenceId, {
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-          }
-        });
-
-        this.presencePeer.on('open', (id) => {
-          console.log('[Presence] Persistent presence registered:', id);
-          this.checkFriendsPresence();
-        });
-
-        this.presencePeer.on('connection', (conn) => {
-          conn.on('data', (data) => this.handlePresencePacket(data, conn));
-        });
-
-        this.presencePeer.on('error', (err) => {
-          console.warn('[Presence] Peer notice:', err.type);
-        });
-      } catch (err) {
-        console.warn('[Presence] Peer exception:', err);
-      }
-    }
+    // 2. Background PeerJS Presence Peer with unique timestamp + random suffix and auto-retry
+    this.initPresencePeer();
 
     // Initial check
     this.checkFriendsPresence();
@@ -10051,6 +10025,150 @@ class Game {
     this.presenceInterval = setInterval(() => {
       this.checkFriendsPresence();
     }, 10000);
+  }
+
+  generateUniquePresencePeerId() {
+    const baseId = this.userPresenceId || ('cyber_usr_' + Math.random().toString(36).substring(2, 9));
+    const timestamp = Date.now().toString(36);
+    const rand = Math.random().toString(36).substring(2, 8);
+    return `${baseId}_${timestamp}_${rand}`;
+  }
+
+  initPresencePeer() {
+    if (typeof Peer === 'undefined') return;
+
+    // Clean up any existing failed or pending presence peer instance
+    if (this.presencePeer) {
+      try {
+        if (!this.presencePeer.destroyed) {
+          this.presencePeer.destroy();
+        }
+      } catch (e) {}
+      this.presencePeer = null;
+    }
+
+    this.isPresencePeerReady = false;
+
+    // Append unique timestamp and random string suffix to Peer ID on every connection attempt
+    const uniquePeerId = this.generateUniquePresencePeerId();
+    console.log('[Presence] Initializing PeerJS instance with unique dynamic ID:', uniquePeerId);
+
+    try {
+      const peerInstance = new Peer(uniquePeerId, {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      // Register player presence and allow squad invites only inside the Peer open callback once broker confirms assigned ID is active
+      peerInstance.on('open', (assignedId) => {
+        if (this.presencePeer !== peerInstance) return;
+        console.log('[Presence] PeerJS broker confirmed active presence ID:', assignedId);
+        this.currentPresencePeerId = assignedId;
+        this.isPresencePeerReady = true;
+        this.presenceRetryAttempts = 0;
+
+        // Register player presence now that broker confirmed assigned ID is active
+        this.registerPlayerPresence(assignedId);
+
+        // Check friends presence
+        this.checkFriendsPresence();
+
+        // Refresh friends drawer to unlock squad invites
+        this.renderFriendsDrawer();
+      });
+
+      peerInstance.on('connection', (conn) => {
+        conn.on('data', (data) => this.handlePresencePacket(data, conn));
+      });
+
+      // Attach explicit error handler to Peer instance. If unavailable-id or any connection error is caught,
+      // cleanly destroy failed instance and automatically retry with newly generated random ID rather than aborting.
+      peerInstance.on('error', (err) => {
+        const errType = err?.type || err?.message || 'peer_error';
+        console.warn('[Presence] Peer error caught:', errType);
+
+        if (this.presencePeer === peerInstance) {
+          try {
+            if (!peerInstance.destroyed) {
+              peerInstance.destroy();
+            }
+          } catch (e) {}
+          this.presencePeer = null;
+          this.isPresencePeerReady = false;
+
+          // Automatically retry with newly generated random ID
+          if (this.presenceRetryTimeout) clearTimeout(this.presenceRetryTimeout);
+          this.presenceRetryAttempts = (this.presenceRetryAttempts || 0) + 1;
+          const retryDelay = Math.min(800 * Math.pow(1.3, this.presenceRetryAttempts - 1), 5000);
+          console.info(`[Presence] Automatically retrying presence peer with newly generated ID in ${Math.round(retryDelay)}ms (attempt ${this.presenceRetryAttempts})...`);
+          this.presenceRetryTimeout = setTimeout(() => {
+            this.initPresencePeer();
+          }, retryDelay);
+        }
+      });
+
+      peerInstance.on('close', () => {
+        if (this.presencePeer === peerInstance) {
+          this.isPresencePeerReady = false;
+        }
+      });
+
+      peerInstance.on('disconnected', () => {
+        if (this.presencePeer === peerInstance && !peerInstance.destroyed) {
+          try {
+            peerInstance.reconnect();
+          } catch (e) {
+            this.initPresencePeer();
+          }
+        }
+      });
+
+      this.presencePeer = peerInstance;
+    } catch (err) {
+      console.warn('[Presence] Peer instantiation exception:', err);
+      if (this.presenceRetryTimeout) clearTimeout(this.presenceRetryTimeout);
+      this.presenceRetryTimeout = setTimeout(() => {
+        this.initPresencePeer();
+      }, 1500);
+    }
+  }
+
+  registerPlayerPresence(assignedId) {
+    this.isPresencePeerReady = true;
+    this.currentPresencePeerId = assignedId || (this.presencePeer && this.presencePeer.id) || this.userPresenceId;
+
+    const presencePayload = {
+      type: 'PRESENCE_PONG',
+      fromPresenceId: this.userPresenceId,
+      presencePeerId: this.currentPresencePeerId,
+      fromSocketId: this.socketId || this.userId,
+      fromUserId: this.userId,
+      socketId: this.socketId || this.userId,
+      userId: this.userId,
+      fromName: this.saveData.playerName || 'Cyber Operative',
+      avatar: this.getUserAvatar(),
+      status: 'ONLINE_IN_LOBBY',
+      lastSeen: Date.now()
+    };
+
+    if (this.presenceBus) {
+      try { this.presenceBus.postMessage(presencePayload); } catch (e) {}
+    }
+
+    if (this.socket && typeof this.socket.emit === 'function') {
+      try {
+        this.socket.emit('player_presence_active', {
+          presenceId: this.userPresenceId,
+          peerId: this.currentPresencePeerId,
+          playerName: this.saveData.playerName,
+          socketId: this.socketId
+        });
+      } catch (e) {}
+    }
   }
 
   handlePresencePacket(data, conn) {
@@ -10173,6 +10291,13 @@ class Game {
 
   sendSquadInvite(friendTarget, friendName, btnEl, optSocketId, optUserId) {
     this.ensureGameLoopRunning();
+
+    // Register player presence and allow squad invites only inside the Peer open callback once the broker confirms the assigned ID is active
+    if (typeof Peer !== 'undefined' && (!this.presencePeer || !this.isPresencePeerReady || this.presencePeer.destroyed)) {
+      this.showNotification('Squad signaling broker is connecting... Please wait for broker confirmation.', 'BROKER CONNECTING', 'yellow');
+      return;
+    }
+
     let targetSocketId = optSocketId;
     let targetUserId = optUserId;
     let targetPeerId = null;
@@ -10949,6 +11074,8 @@ class Game {
       const targetPeerId = f.presenceId || f.peerId || '';
       const inviteKey = targetSocketId || targetUserId || targetPeerId || f.name;
       const isPending = Boolean(this.pendingInvites && this.pendingInvites.has(inviteKey));
+      const isBrokerActive = (typeof Peer === 'undefined' || this.isPresencePeerReady);
+      const canInvite = isOnline && !isPending && isBrokerActive;
 
       const row = document.createElement('div');
       row.className = 'friend-item-row';
@@ -10969,15 +11096,15 @@ class Game {
           </div>
         </div>
         <div class="friend-item-actions">
-          <button class="btn-squad-invite ${isOnline ? '' : 'disabled'} ${isPending ? 'pending' : ''}" ${isOnline && !isPending ? '' : 'disabled'} data-socketid="${targetSocketId}" data-userid="${targetUserId}" data-peerid="${targetPeerId}" data-name="${f.name}" title="${isOnline ? (isPending ? 'Invite pending...' : 'Invite to Squad') : 'Friend is currently offline'}">
-            ${isPending ? 'Pending' : '[+ INVITE TO SQUAD]'}
+          <button class="btn-squad-invite ${canInvite ? '' : 'disabled'} ${isPending ? 'pending' : ''}" ${canInvite ? '' : 'disabled'} data-socketid="${targetSocketId}" data-userid="${targetUserId}" data-peerid="${targetPeerId}" data-name="${f.name}" title="${isPending ? 'Invite pending...' : (!isBrokerActive ? 'Signaling broker connecting...' : (isOnline ? 'Invite to Squad' : 'Friend is currently offline'))}">
+            ${isPending ? 'Pending' : (!isBrokerActive && isOnline ? 'Connecting...' : '[+ INVITE TO SQUAD]')}
           </button>
           <button class="btn-remove-friend" data-id="${f.peerId || f.name}">REMOVE</button>
         </div>
       `;
 
       const inviteBtn = row.querySelector('.btn-squad-invite');
-      if (inviteBtn && isOnline && !isPending) {
+      if (inviteBtn && canInvite) {
         inviteBtn.onclick = () => {
           this.sendSquadInvite({
             socketId: targetSocketId,
