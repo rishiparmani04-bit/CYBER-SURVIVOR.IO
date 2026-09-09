@@ -249,11 +249,19 @@ window.openAuthModal = function() {
     inner.style.background = '#0d1122';
     inner.style.color = '#ffffff';
   }
-  if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+  if (window.AuthManager && window.AuthManager.isOriginMismatch) {
+    try { window.AuthManager.showOriginMismatchUI(); } catch (e) {}
+  } else if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
     try { window.AuthManager.renderGisButton(); } catch (e) {}
   }
+  const closeBtn = document.getElementById('btn-close-callsign-modal');
+  if (closeBtn) { closeBtn.style.pointerEvents = 'auto'; closeBtn.style.zIndex = '100002'; closeBtn.style.cursor = 'pointer'; }
+  const cancelBtn = document.getElementById('btn-cancel-callsign-modal');
+  if (cancelBtn) { cancelBtn.style.pointerEvents = 'auto'; cancelBtn.style.zIndex = '100002'; cancelBtn.style.cursor = 'pointer'; }
+  const confirmBtn = document.getElementById('btn-confirm-callsign');
+  if (confirmBtn) { confirmBtn.style.pointerEvents = 'auto'; }
   const input = document.getElementById('input-operative-callsign');
-  if (input) setTimeout(() => input.focus(), 100);
+  if (input) { input.style.pointerEvents = 'auto'; setTimeout(() => input.focus(), 100); }
   if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
     try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
   }
@@ -282,6 +290,9 @@ window.closeAuthModal = function() {
     c.style.display = 'none';
     c.style.pointerEvents = 'none';
   }
+  if (window.AuthManager && typeof window.AuthManager.clearAuthError === 'function') {
+    try { window.AuthManager.clearAuthError(); } catch (e) {}
+  }
   if (typeof window.closeAllModals === 'function') {
     window.closeAllModals();
   } else if (typeof window.cleanupDarkBackdrops === 'function') {
@@ -290,6 +301,15 @@ window.closeAuthModal = function() {
   if (window.gameInstance && typeof window.gameInstance.closeCallsignModal === 'function') {
     try { window.gameInstance.closeCallsignModal(); } catch (e) {}
   }
+  // Restore lobby pointer events
+  try {
+    const canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
+    if (canvas) canvas.style.pointerEvents = 'auto';
+    const canvasContainer = document.getElementById('canvas-container');
+    if (canvasContainer) canvasContainer.style.pointerEvents = 'auto';
+    const uiLayer = document.querySelector('.ui-layer') || document.getElementById('ui-layer') || document.getElementById('game-container');
+    if (uiLayer) uiLayer.style.pointerEvents = 'auto';
+  } catch (e) {}
   if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
     try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
   }
@@ -3346,7 +3366,10 @@ class Game {
         if (window.AuthManager && typeof window.AuthManager.signIn === 'function') {
           Promise.resolve(window.AuthManager.signIn()).catch((err) => {
             console.warn('[Google Sign-In] Handled async GIS rejection:', err);
-            if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
+            const errStr = String(err?.message || err || '');
+            if (/origin|400|not allowed|gsi_logger/i.test(errStr) && window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
+              window.AuthManager.handleOriginMismatch(errStr);
+            } else if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
               window.AuthManager.handleAuthError('Google Sign-In was interrupted. Enter a Callsign below or click Continue to play as Guest.');
             }
             this.ensureGameLoopRunning();
@@ -3355,15 +3378,22 @@ class Game {
           const container = document.getElementById('g_id_signin_container');
           if (container) {
             container.innerHTML = '';
-            window.google.accounts.id.renderButton(container, {
-              theme: 'filled_black',
-              size: 'large',
-              shape: 'pill',
-              text: 'signin_with',
-              logo_alignment: 'left',
-              width: 280
-            });
-            container.style.display = 'block';
+            try {
+              window.google.accounts.id.renderButton(container, {
+                theme: 'filled_black',
+                size: 'large',
+                shape: 'pill',
+                text: 'signin_with',
+                logo_alignment: 'left',
+                width: 280
+              });
+              container.style.display = 'block';
+            } catch (renderErr) {
+              const errStr = String(renderErr?.message || renderErr || '');
+              if (/origin|400|not allowed|gsi_logger/i.test(errStr) && window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
+                window.AuthManager.handleOriginMismatch(errStr);
+              }
+            }
           }
         } else {
           if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
@@ -3372,12 +3402,15 @@ class Game {
         }
       } catch (gisErr) {
         console.warn('[Google Sign-In] Handled GIS error without crashing game loop:', gisErr);
-        if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
+        const errStr = String(gisErr?.message || gisErr || '');
+        if (/origin|400|not allowed|gsi_logger/i.test(errStr) && window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
+          window.AuthManager.handleOriginMismatch(errStr);
+        } else if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
           window.AuthManager.handleAuthError('Google Sign-In unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.');
         } else {
           const errEl = document.getElementById('google-auth-error-callsign') || document.getElementById('google-auth-error');
           if (errEl) {
-            errEl.textContent = 'Google Sign-In unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.';
+            errEl.textContent = 'Google auth is misconfigured for this origin. Enter a Callsign below or click Continue to play as Guest.';
             errEl.classList.remove('hidden', 'modal-hidden');
             errEl.style.display = 'block';
           }
@@ -9650,16 +9683,26 @@ class Game {
       card.style.color = '#ffffff';
     }
 
-    if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+    if (window.AuthManager && window.AuthManager.isOriginMismatch) {
+      try { window.AuthManager.showOriginMismatchUI(); } catch (e) {}
+    } else if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
       try {
         window.AuthManager.renderGisButton();
       } catch (e) {}
     }
 
+    const closeBtn = document.getElementById('btn-close-callsign-modal');
+    if (closeBtn) { closeBtn.style.pointerEvents = 'auto'; closeBtn.style.zIndex = '100002'; closeBtn.style.cursor = 'pointer'; }
+    const cancelBtn = document.getElementById('btn-cancel-callsign-modal');
+    if (cancelBtn) { cancelBtn.style.pointerEvents = 'auto'; cancelBtn.style.zIndex = '100002'; cancelBtn.style.cursor = 'pointer'; }
+    const confirmBtn = document.getElementById('btn-confirm-callsign');
+    if (confirmBtn) { confirmBtn.style.pointerEvents = 'auto'; }
+
     const input = document.getElementById('input-operative-callsign');
     const subtitle = document.getElementById('callsign-modal-subtitle');
 
     if (input) {
+      input.style.pointerEvents = 'auto';
       input.value = (this.saveData.playerName && this.saveData.playerName !== 'Guest Operative') ? this.saveData.playerName : '';
     }
 
@@ -9692,8 +9735,22 @@ class Game {
       card.style.display = 'none';
       card.style.pointerEvents = 'none';
     }
+    if (window.AuthManager && typeof window.AuthManager.clearAuthError === 'function') {
+      try { window.AuthManager.clearAuthError(); } catch (e) {}
+    }
     this.pendingFriendAction = null;
     this.cleanupDarkBackdrops();
+
+    // Restore normal input and ensure canvas animation loop continues in the background
+    try {
+      const canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
+      if (canvas) canvas.style.pointerEvents = 'auto';
+      const canvasContainer = document.getElementById('canvas-container');
+      if (canvasContainer) canvasContainer.style.pointerEvents = 'auto';
+      const uiLayer = document.querySelector('.ui-layer') || document.getElementById('ui-layer') || document.getElementById('game-container');
+      if (uiLayer) uiLayer.style.pointerEvents = 'auto';
+    } catch (e) {}
+
     this.ensureGameLoopRunning();
 
     // Restore normal input and ensure canvas animation loop continues in the background
