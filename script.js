@@ -241,16 +241,22 @@ window.openAuthModal = function() {
   if (inner && inner !== m) {
     inner.classList.remove('hidden', 'modal-hidden');
     inner.style.pointerEvents = 'auto';
-    inner.style.display = 'block';
+    inner.style.display = 'flex';
+    inner.style.flexDirection = 'column';
     inner.style.opacity = '1';
     inner.style.visibility = 'visible';
     inner.style.zIndex = '100000';
+    inner.style.background = '#0d1122';
+    inner.style.color = '#ffffff';
   }
   if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
     try { window.AuthManager.renderGisButton(); } catch (e) {}
   }
   const input = document.getElementById('input-operative-callsign');
   if (input) setTimeout(() => input.focus(), 100);
+  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+  }
   if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
     try { window.gameInstance.openAuthModal(); } catch (e) {}
   }
@@ -283,6 +289,9 @@ window.closeAuthModal = function() {
   }
   if (window.gameInstance && typeof window.gameInstance.closeCallsignModal === 'function') {
     try { window.gameInstance.closeCallsignModal(); } catch (e) {}
+  }
+  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
   }
 };
 
@@ -329,10 +338,13 @@ function bindHeaderClickHandlers() {
       if (inner && inner !== modal) {
         inner.classList.remove('hidden', 'modal-hidden');
         inner.style.pointerEvents = 'auto';
-        inner.style.display = 'block';
+        inner.style.display = 'flex';
+        inner.style.flexDirection = 'column';
         inner.style.opacity = '1';
         inner.style.visibility = 'visible';
         inner.style.zIndex = '100000';
+        inner.style.background = '#0d1122';
+        inner.style.color = '#ffffff';
       }
       if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
         try { window.AuthManager.renderGisButton(); } catch (e) {}
@@ -470,7 +482,19 @@ function bindHeaderClickHandlers() {
     if (typeof window.closeAllModals === 'function') window.closeAllModals();
     else if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
   });
+  document.getElementById('btn-cancel-callsign-modal')?.addEventListener('click', () => {
+    const m = document.getElementById('authModal') || document.getElementById('callsign-auth-modal');
+    if (m) { m.classList.add('hidden', 'modal-hidden'); m.style.display = 'none'; m.style.pointerEvents = 'none'; }
+    if (typeof window.closeAllModals === 'function') window.closeAllModals();
+    else if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
+  });
   document.getElementById('btn-close-profile-modal')?.addEventListener('click', () => {
+    const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
+    if (m) { m.classList.add('hidden', 'modal-hidden'); m.style.display = 'none'; m.style.pointerEvents = 'none'; }
+    if (typeof window.closeAllModals === 'function') window.closeAllModals();
+    else if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
+  });
+  document.getElementById('btn-cancel-profile-setup')?.addEventListener('click', () => {
     const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
     if (m) { m.classList.add('hidden', 'modal-hidden'); m.style.display = 'none'; m.style.pointerEvents = 'none'; }
     if (typeof window.closeAllModals === 'function') window.closeAllModals();
@@ -9577,6 +9601,7 @@ class Game {
   // ==========================================================================
   openCallsignModal(pendingAction = null) {
     this.pendingFriendAction = pendingAction;
+    this.ensureGameLoopRunning();
 
     // If user is already authenticated and clicked their profile, open Step 2 directly!
     if (this.isUserAuthenticated() && !pendingAction) {
@@ -9598,10 +9623,13 @@ class Game {
     if (card && card !== backdrop) {
       card.classList.remove('hidden', 'modal-hidden');
       card.style.pointerEvents = 'auto';
-      card.style.display = 'block';
+      card.style.display = 'flex';
+      card.style.flexDirection = 'column';
       card.style.opacity = '1';
       card.style.visibility = 'visible';
       card.style.zIndex = '100000';
+      card.style.background = '#0d1122';
+      card.style.color = '#ffffff';
     }
 
     if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
@@ -9648,6 +9676,7 @@ class Game {
     }
     this.pendingFriendAction = null;
     this.cleanupDarkBackdrops();
+    this.ensureGameLoopRunning();
 
     // Restore normal input and ensure canvas animation loop continues in the background
     if (!this.gameLoopId && !this.isGameOver && this.state !== 'GAMEOVER') {
@@ -9701,10 +9730,13 @@ class Game {
     if (card && card !== backdrop) {
       card.classList.remove('hidden', 'modal-hidden');
       card.style.pointerEvents = 'auto';
-      card.style.display = 'block';
+      card.style.display = 'flex';
+      card.style.flexDirection = 'column';
       card.style.opacity = '1';
       card.style.visibility = 'visible';
       card.style.zIndex = '100000';
+      card.style.background = '#0d1122';
+      card.style.color = '#ffffff';
     }
 
     // Ensure opening auth modal does NOT pause main canvas animation loop; keep rendering in background
@@ -9738,10 +9770,15 @@ class Game {
     }
     const modal = document.getElementById('profile-setup-modal');
     if (!modal) return;
-    modal.style.zIndex = '99999';
+    modal.style.zIndex = '100000';
     modal.style.display = 'flex';
+    modal.style.flexDirection = 'column';
     modal.classList.remove('hidden', 'modal-hidden');
     modal.style.pointerEvents = 'auto';
+    modal.style.opacity = '1';
+    modal.style.visibility = 'visible';
+    modal.style.background = '#0d1122';
+    modal.style.color = '#ffffff';
 
     const user = this.getAuthUser();
     const input = document.getElementById('input-profile-callsign');
@@ -13289,10 +13326,13 @@ function initGameApp() {
         if (inner && inner !== modal) {
           inner.classList.remove('hidden', 'modal-hidden');
           inner.style.pointerEvents = 'auto';
-          inner.style.display = 'block';
+          inner.style.display = 'flex';
+          inner.style.flexDirection = 'column';
           inner.style.opacity = '1';
           inner.style.visibility = 'visible';
           inner.style.zIndex = '100000';
+          inner.style.background = '#0d1122';
+          inner.style.color = '#ffffff';
         }
         if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
           try { window.AuthManager.renderGisButton(); } catch (e) {}

@@ -480,6 +480,15 @@ header {
 .modal-backdrop[style*="display:flex"] .levelup-card,
 .modal-backdrop[style*="display:flex"] .gameover-card,
 .modal-backdrop[style*="display:flex"] .victory-card,
+#authModal:not(.hidden):not(.modal-hidden) .callsign-auth-card,
+#authModal[style*="display: flex"] .callsign-auth-card,
+#authModal[style*="display:flex"] .callsign-auth-card,
+#authModal:not(.hidden):not(.modal-hidden) #callsign-auth-modal,
+#authModal[style*="display: flex"] #callsign-auth-modal,
+#authModal[style*="display:flex"] #callsign-auth-modal,
+#callsignModal:not(.hidden):not(.modal-hidden) .profile-setup-card,
+#callsignModal[style*="display: flex"] .profile-setup-card,
+#callsignModal[style*="display:flex"] .profile-setup-card,
 #callsignModal:not(.hidden):not(.modal-hidden) #profile-setup-modal,
 #callsignModal[style*="display: flex"] #profile-setup-modal,
 #callsignModal[style*="display:flex"] #profile-setup-modal,
@@ -540,6 +549,15 @@ header {
 .modal-backdrop[style*="display:flex"] .levelup-card,
 .modal-backdrop[style*="display:flex"] .rewarded-ad-player,
 .modal-backdrop[style*="display:flex"] .squad-invite-card,
+#authModal:not(.hidden):not(.modal-hidden) .callsign-auth-card,
+#authModal[style*="display: flex"] .callsign-auth-card,
+#authModal[style*="display:flex"] .callsign-auth-card,
+#authModal:not(.hidden):not(.modal-hidden) #callsign-auth-modal,
+#authModal[style*="display: flex"] #callsign-auth-modal,
+#authModal[style*="display:flex"] #callsign-auth-modal,
+#callsignModal:not(.hidden):not(.modal-hidden) .profile-setup-card,
+#callsignModal[style*="display: flex"] .profile-setup-card,
+#callsignModal[style*="display:flex"] .profile-setup-card,
 #callsignModal:not(.hidden):not(.modal-hidden) #profile-setup-modal,
 #callsignModal[style*="display: flex"] #profile-setup-modal,
 #callsignModal[style*="display:flex"] #profile-setup-modal,
@@ -550,6 +568,105 @@ header {
 #avatarModal[style*="display: flex"] .avatar-modal-card,
 #avatarModal[style*="display:flex"] .avatar-modal-card {
   display: flex !important;
+  flex-direction: column !important;
+}
+
+.modal-card > *,
+.callsign-auth-card > *,
+.profile-setup-card > *,
+.callsign-card-header,
+.callsign-card-body,
+.callsign-card-actions,
+.profile-card-header,
+.profile-card-body,
+.profile-card-actions,
+.callsign-header-badge,
+.callsign-title,
+.callsign-sub,
+.auth-google-section,
+.auth-divider,
+.callsign-input-section,
+.callsign-input-wrap,
+.callsign-input-label,
+.callsign-input-hint,
+.callsign-input-tag,
+.profile-account-banner,
+.profile-section-box,
+.profile-input-row,
+.profile-section-header,
+.profile-avatar-grid,
+#googleSignInBtn,
+#googleSignInBtn *,
+#input-operative-callsign,
+#btn-confirm-callsign,
+#btn-cancel-callsign-modal,
+#btn-close-callsign-modal,
+#btn-close-profile-modal,
+#input-profile-callsign,
+#btn-update-profile-callsign,
+#btn-profile-signout,
+#btn-cancel-profile-setup,
+#btn-close-profile-setup {
+  position: relative !important;
+  z-index: 10 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+#googleSignInBtn {
+  display: flex !important;
+  position: relative !important;
+  z-index: 10 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+#input-operative-callsign,
+#input-profile-callsign {
+  display: block !important;
+  position: relative !important;
+  z-index: 10 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+#btn-close-callsign-modal,
+#btn-close-profile-modal,
+#btn-close-profile-setup,
+#btn-cancel-callsign-modal,
+#btn-cancel-profile-setup,
+#btn-confirm-callsign {
+  position: relative !important;
+  z-index: 10 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.btn-cyber-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #e2e8f0;
+  font-family: var(--font-cyber);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-cyber-secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 @supports selector(:has(*)) {
