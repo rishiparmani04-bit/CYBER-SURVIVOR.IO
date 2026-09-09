@@ -196,6 +196,7 @@
 
     window.closeAllModals = function() {
       try {
+        if (typeof document === 'undefined' || !document || !document.body) return;
         var backdropIds = [
           'authModal', 'callsignModal', 'loginModal', 'profileModal',
           'storeModal', 'shopModal', 'avatarModal', 'squad-invite-modal',
@@ -221,11 +222,16 @@
           '.squad-invite-card', '.levelup-card', '.gameover-card', '.victory-card'
         ];
         cardSelectors.forEach(function(sel) {
-          document.querySelectorAll(sel).forEach(function(card) {
-            card.classList.add('hidden', 'modal-hidden');
-            card.style.display = 'none';
-            card.style.pointerEvents = 'none';
-          });
+          var cards = document.querySelectorAll(sel);
+          if (cards && typeof cards.forEach === 'function') {
+            cards.forEach(function(card) {
+              if (card) {
+                card.classList.add('hidden', 'modal-hidden');
+                card.style.display = 'none';
+                card.style.pointerEvents = 'none';
+              }
+            });
+          }
         });
         if (typeof window.cleanupDarkBackdrops === 'function') {
           window.cleanupDarkBackdrops(true);
@@ -243,9 +249,12 @@
         var topbar = document.getElementById('topBar') || document.getElementById('header') || document.querySelector('.deadshot-topbar');
         if (topbar) topbar.style.pointerEvents = 'auto';
         if (document.body) document.body.style.pointerEvents = 'auto';
-        document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab, .play-card, .btn-auth-sm, input, select, a').forEach(function(b) {
-          b.style.pointerEvents = 'auto';
-        });
+        var interactiveEls = document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab, .play-card, .btn-auth-sm, input, select, a');
+        if (interactiveEls && typeof interactiveEls.forEach === 'function') {
+          interactiveEls.forEach(function(b) {
+            if (b) b.style.pointerEvents = 'auto';
+          });
+        }
         if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
           try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
         }
@@ -255,6 +264,7 @@
     window.cleanupDarkBackdrops = function() {
       var force = arguments[0];
       try {
+        if (typeof document === 'undefined' || !document || !document.body) return;
         var backdropIds = [
           'authModal', 'callsignModal', 'loginModal', 'profileModal',
           'storeModal', 'shopModal', 'avatarModal', 'squad-invite-modal',
@@ -292,14 +302,17 @@
         }
         if (!hasActive || force) {
           var backdrops = document.querySelectorAll('.modal-backdrop, .auth-modal, .cyber-alert-container');
-          for (var j = 0; j < backdrops.length; j++) {
-            var b = backdrops[j];
-            if (!force && b.id === 'squad-lobby-modal' && !b.classList.contains('hidden')) continue;
-            b.classList.add('hidden', 'modal-hidden');
-            b.style.display = 'none';
-            b.style.pointerEvents = 'none';
-            b.style.opacity = '0';
-            b.style.visibility = 'hidden';
+          if (backdrops) {
+            for (var j = 0; j < backdrops.length; j++) {
+              var b = backdrops[j];
+              if (!b) continue;
+              if (!force && b.id === 'squad-lobby-modal' && !b.classList.contains('hidden')) continue;
+              b.classList.add('hidden', 'modal-hidden');
+              b.style.display = 'none';
+              b.style.pointerEvents = 'none';
+              b.style.opacity = '0';
+              b.style.visibility = 'hidden';
+            }
           }
           var canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
           if (canvas) canvas.style.pointerEvents = 'auto';
@@ -314,77 +327,90 @@
           var topbar = document.getElementById('topBar') || document.getElementById('header') || document.querySelector('.deadshot-topbar');
           if (topbar) topbar.style.pointerEvents = 'auto';
           if (document.body) document.body.style.pointerEvents = 'auto';
-          document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab, .play-card, .btn-auth-sm, input, select, a').forEach(function(b) {
-            b.style.pointerEvents = 'auto';
-          });
+          var interactiveEls = document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab, .play-card, .btn-auth-sm, input, select, a');
+          if (interactiveEls && typeof interactiveEls.forEach === 'function') {
+            interactiveEls.forEach(function(b) {
+              if (b) b.style.pointerEvents = 'auto';
+            });
+          }
         }
       } catch (e) {}
     };
 
-    // Global Escape Key Listener: dismiss active modal, remove dark overlay, restore mouse interactions
-    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-      window.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
-          if (window.gameInstance && (window.gameInstance.state === 'PLAYING' || window.gameInstance.state === 'PAUSED')) {
-            if (window.gameInstance.state === 'PAUSED') window.gameInstance.resumeGame();
-            else if (window.gameInstance.state === 'PLAYING') window.gameInstance.pauseGame();
-            return;
-          }
+    function initModalGuards() {
+      try {
+        if (typeof window.closeAllModals === 'function') {
           window.closeAllModals();
         }
-      }, true);
-    }
+        if (typeof window.cleanupDarkBackdrops === 'function') {
+          window.cleanupDarkBackdrops(true);
+        }
+      } catch (e) {}
 
-    // Universal Click Dismiss Handler: clicking anywhere on dark backdrop or clicking close buttons immediately dismisses
-    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
-      document.addEventListener('click', function(e) {
-        var target = e.target;
-        if (!target) return;
-
-        // 1. Check if clicking on dark backdrop itself or outside active modal card
-        var activeBackdrop = document.querySelector('.modal-backdrop:not(.hidden):not(.modal-hidden), .auth-modal:not(.hidden):not(.modal-hidden)');
-        if (activeBackdrop && activeBackdrop.style.display !== 'none') {
-          if (activeBackdrop.id !== 'levelup-modal') {
-            var innerCard = activeBackdrop.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card, .cyber-alert-box');
-            if (target === activeBackdrop || (innerCard && !innerCard.contains(target) && target !== innerCard)) {
-              window.closeAllModals();
+      // Global Escape Key Listener: dismiss active modal, remove dark overlay, restore mouse interactions
+      if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && !window._escapeListenerBound) {
+        window._escapeListenerBound = true;
+        window.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
+            if (window.gameInstance && (window.gameInstance.state === 'PLAYING' || window.gameInstance.state === 'PAUSED')) {
+              if (window.gameInstance.state === 'PAUSED') window.gameInstance.resumeGame();
+              else if (window.gameInstance.state === 'PLAYING') window.gameInstance.pauseGame();
               return;
             }
+            window.closeAllModals();
           }
-        }
-        if (target.classList && (target.classList.contains('modal-backdrop') || target.classList.contains('auth-modal'))) {
-          if (target.id === 'levelup-modal') return;
-          window.closeAllModals();
-          return;
-        }
+        }, true);
+      }
 
-        // 2. Check if clicking close / cancel / dismiss buttons
-        if (target.closest && target.closest('.alert-close-btn, .btn-close-modal, .btn-avatar-cancel, [data-dismiss], #btn-cancel-buy-modal, #btn-close-alert, #btn-close-google-modal, #btn-close-squad-modal, #btn-close-private-modal, #btn-close-join-modal, #btn-close-buy-modal, #btn-close-earn-modal, #btn-close-ad, #btn-close-avatar-modal, #btn-close-callsign-modal, #btn-close-profile-modal, #btn-close-profile-setup, #btn-close-invite-modal')) {
-          window.closeAllModals();
-          return;
-        }
-      }, true);
+      // Universal Click Dismiss Handler: clicking anywhere on dark backdrop or clicking close buttons immediately dismisses
+      if (typeof document !== 'undefined' && typeof document.addEventListener === 'function' && !window._universalClickBound) {
+        window._universalClickBound = true;
+        document.addEventListener('click', function(e) {
+          var target = e.target;
+          if (!target) return;
+
+          // 1. Check if clicking on dark backdrop itself or outside active modal card
+          var activeBackdrop = document.querySelector('.modal-backdrop:not(.hidden):not(.modal-hidden), .auth-modal:not(.hidden):not(.modal-hidden)');
+          if (activeBackdrop && !activeBackdrop.classList.contains('hidden') && !activeBackdrop.classList.contains('modal-hidden') && activeBackdrop.style.display !== 'none' && activeBackdrop.style.display !== '') {
+            if (activeBackdrop.id !== 'levelup-modal') {
+              var innerCard = activeBackdrop.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card, .cyber-alert-box');
+              if (target === activeBackdrop || (innerCard && !innerCard.contains(target) && target !== innerCard)) {
+                window.closeAllModals();
+                return;
+              }
+            }
+          }
+          if (target.classList && (target.classList.contains('modal-backdrop') || target.classList.contains('auth-modal'))) {
+            if (target.id === 'levelup-modal') return;
+            window.closeAllModals();
+            return;
+          }
+
+          // 2. Check if clicking close / cancel / dismiss buttons
+          if (target.closest && target.closest('.alert-close-btn, .btn-close-modal, .btn-avatar-cancel, [data-dismiss], #btn-cancel-buy-modal, #btn-close-alert, #btn-close-google-modal, #btn-close-squad-modal, #btn-close-private-modal, #btn-close-join-modal, #btn-close-buy-modal, #btn-close-earn-modal, #btn-close-ad, #btn-close-avatar-modal, #btn-close-callsign-modal, #btn-close-profile-modal, #btn-close-profile-setup, #btn-close-invite-modal')) {
+            window.closeAllModals();
+            return;
+          }
+        }, true);
+      }
     }
-
-    // Force-remove or hide any active modal backdrop on load immediately
-    try {
-      window.closeAllModals();
-      window.cleanupDarkBackdrops(true);
-    } catch (e) {}
 
     if (typeof document !== 'undefined') {
       if (document.readyState === 'loading' && typeof document.addEventListener === 'function') {
         document.addEventListener('DOMContentLoaded', function() {
+          initModalGuards();
           window.closeAllModals();
           window.cleanupDarkBackdrops(true);
         });
       } else {
+        initModalGuards();
         window.closeAllModals();
         window.cleanupDarkBackdrops(true);
       }
     }
     if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       window.addEventListener('load', function() {
+        initModalGuards();
         window.closeAllModals();
         window.cleanupDarkBackdrops(true);
       });

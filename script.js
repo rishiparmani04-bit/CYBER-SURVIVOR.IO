@@ -2599,25 +2599,35 @@ class Game {
     }
 
     // Bindings
-    this.selectedInspectWeapon = this.saveData.primaryWeapon || 'ak47';
-    this.initEvents();
-    this.applySettingsUI();
-    this.renderCyberneticsUI();
-    this.renderRecordsUI();
-    this.renderAchievementsUI();
-    this.renderMissionsUI();
-    this.updateAdQuotaUI();
-    this.renderWeeklyBundleUI();
-    this.renderHeroesGridUI();
-    this.renderWeaponsGridUI();
-    this.updateWeaponInspectPreview();
-    this.updateHeroPreview();
-    this.updateLobbyLoadoutSlots();
-    this.initChallengeTimer();
-    this.initAuthUser();
-    this.updateUserAvatarDisplays();
-    this.initPresenceSystem();
-    this.cleanupDarkBackdrops(true);
+    this.selectedInspectWeapon = (this.saveData && this.saveData.primaryWeapon) || 'ak47';
+    try { this.initEvents(); } catch (e) { console.warn('initEvents notice:', e); }
+    try { this.applySettingsUI(); } catch (e) { console.warn('applySettingsUI notice:', e); }
+    try { this.renderCyberneticsUI(); } catch (e) { console.warn('renderCyberneticsUI notice:', e); }
+    try { this.renderRecordsUI(); } catch (e) { console.warn('renderRecordsUI notice:', e); }
+    try { this.renderAchievementsUI(); } catch (e) { console.warn('renderAchievementsUI notice:', e); }
+    try { this.renderMissionsUI(); } catch (e) { console.warn('renderMissionsUI notice:', e); }
+    try { this.updateAdQuotaUI(); } catch (e) { console.warn('updateAdQuotaUI notice:', e); }
+    try { this.renderWeeklyBundleUI(); } catch (e) { console.warn('renderWeeklyBundleUI notice:', e); }
+    try { this.renderHeroesGridUI(); } catch (e) { console.warn('renderHeroesGridUI notice:', e); }
+    try { this.renderWeaponsGridUI(); } catch (e) { console.warn('renderWeaponsGridUI notice:', e); }
+    try { this.updateWeaponInspectPreview(); } catch (e) { console.warn('updateWeaponInspectPreview notice:', e); }
+    try { this.updateHeroPreview(); } catch (e) { console.warn('updateHeroPreview notice:', e); }
+    try { this.updateLobbyLoadoutSlots(); } catch (e) { console.warn('updateLobbyLoadoutSlots notice:', e); }
+    try { this.initChallengeTimer(); } catch (e) { console.warn('initChallengeTimer notice:', e); }
+    try { this.initAuthUser(); } catch (e) { console.warn('initAuthUser notice:', e); }
+    try { this.updateUserAvatarDisplays(); } catch (e) { console.warn('updateUserAvatarDisplays notice:', e); }
+    try { this.initPresenceSystem(); } catch (e) { console.warn('initPresenceSystem notice:', e); }
+    try { this.cleanupDarkBackdrops(true); } catch (e) {}
+
+    // Ensure main lobby container is active and unblocked immediately
+    try {
+      const menuScreen = document.getElementById('menu-screen') || document.querySelector('.deadshot-lobby-screen');
+      if (menuScreen) {
+        menuScreen.classList.add('active');
+        menuScreen.style.display = 'block';
+        menuScreen.style.pointerEvents = 'auto';
+      }
+    } catch (e) {}
 
     // Game State & Loop Tracking
     this.isGameOver = false;
@@ -2625,9 +2635,12 @@ class Game {
     this.isMultiplayer = false;
     this.gameLoopId = null;
 
-    // Game Loop
+    // Game Loop - Starts immediately without waiting on sockets or external assets
     this.lastTime = performance.now();
-    this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+    this.ensureGameLoopRunning();
+    if (!this.gameLoopId) {
+      this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+    }
   }
 
   onAdStart() {
@@ -13250,72 +13263,94 @@ class Game {
 // ============================================================================
 // INITIALIZATION ON DOM READY (ENCAPSULATED IIFE CLOSURE)
 // ============================================================================
-window.addEventListener('DOMContentLoaded', () => {
-  // Game instance and all core variables (diamonds, coins, score, stats)
-  // are scoped safely within this closure and cannot be modified via window.
-  const gameInstance = new Game();
-  window.gameInstance = gameInstance;
+function initGameApp() {
+  if (window._cyberGameInitialized) return;
+  window._cyberGameInitialized = true;
 
-  const signInBtn = document.getElementById('signInBtn');
-  if (signInBtn) {
-    signInBtn.onclick = () => {
-      console.log('Sign in clicked');
-      const modal = document.getElementById('authModal');
-      if (modal) modal.style.display = 'flex';
-      if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.remove('modal-hidden');
-        modal.style.pointerEvents = 'auto';
-        modal.style.zIndex = '99999';
-      }
-      const inner = document.getElementById('callsign-auth-modal') || (modal && modal.querySelector('.modal-card'));
-      if (inner && inner !== modal) {
-        inner.classList.remove('hidden', 'modal-hidden');
-        inner.style.pointerEvents = 'auto';
-        inner.style.display = 'block';
-        inner.style.opacity = '1';
-        inner.style.visibility = 'visible';
-        inner.style.zIndex = '100000';
-      }
-      if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
-        try { window.AuthManager.renderGisButton(); } catch (e) {}
-      }
-      const input = document.getElementById('input-operative-callsign');
-      if (input) setTimeout(() => input.focus(), 100);
-      if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
-        try { window.gameInstance.openAuthModal(); } catch (e) {}
-      }
+  try {
+    // Game instance and all core variables (diamonds, coins, score, stats)
+    // are scoped safely within this closure and cannot be modified via window.
+    const gameInstance = new Game();
+    window.gameInstance = gameInstance;
+
+    const signInBtn = document.getElementById('signInBtn');
+    if (signInBtn) {
+      signInBtn.onclick = () => {
+        console.log('Sign in clicked');
+        const modal = document.getElementById('authModal');
+        if (modal) modal.style.display = 'flex';
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.remove('modal-hidden');
+          modal.style.pointerEvents = 'auto';
+          modal.style.zIndex = '99999';
+        }
+        const inner = document.getElementById('callsign-auth-modal') || (modal && modal.querySelector('.modal-card'));
+        if (inner && inner !== modal) {
+          inner.classList.remove('hidden', 'modal-hidden');
+          inner.style.pointerEvents = 'auto';
+          inner.style.display = 'block';
+          inner.style.opacity = '1';
+          inner.style.visibility = 'visible';
+          inner.style.zIndex = '100000';
+        }
+        if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+          try { window.AuthManager.renderGisButton(); } catch (e) {}
+        }
+        const input = document.getElementById('input-operative-callsign');
+        if (input) setTimeout(() => input.focus(), 100);
+        if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
+          try { window.gameInstance.openAuthModal(); } catch (e) {}
+        }
+      };
+    }
+
+    const callsignEl = document.getElementById('headerCallsign');
+    if (callsignEl) {
+      callsignEl.onclick = () => {
+        const modal = document.getElementById('callsignModal') || document.getElementById('profileModal');
+        if (modal) modal.style.display = 'flex';
+      };
+    }
+
+    const currencyEls = document.querySelectorAll('#headerCoins, #headerGems, .currency-pill');
+    if (currencyEls && typeof currencyEls.forEach === 'function') {
+      currencyEls.forEach(el => {
+        if (el) {
+          el.onclick = () => {
+            const modal = document.getElementById('storeModal') || document.getElementById('shopModal');
+            if (modal) modal.style.display = 'flex';
+          };
+        }
+      });
+    }
+
+    bindHeaderClickHandlers();
+    window.game = {
+      instance: gameInstance,
+      openAvatarModal: () => window.openAvatarModal(),
+      openCallsignModal: (arg) => window.openCallsignModal(arg),
+      openStoreModal: () => window.openStoreModal(),
+      openAuthModal: () => window.openAuthModal(),
+      removeFriend: (peerIdOrName) => gameInstance.removeFriend(peerIdOrName),
+      sendFriendRequest: (...args) => gameInstance.sendFriendRequest(...args),
+      acceptFriendRequest: (...args) => gameInstance.acceptFriendRequest(...args)
     };
+  } catch (err) {
+    console.warn('Game engine bootstrap warning:', err);
   }
+}
 
-  const callsignEl = document.getElementById('headerCallsign');
-  if (callsignEl) {
-    callsignEl.onclick = () => {
-      const modal = document.getElementById('callsignModal') || document.getElementById('profileModal');
-      if (modal) modal.style.display = 'flex';
-    };
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initGameApp);
+  } else {
+    initGameApp();
   }
-
-  const currencyEls = document.querySelectorAll('#headerCoins, #headerGems, .currency-pill');
-  currencyEls.forEach(el => {
-    el.onclick = () => {
-      const modal = document.getElementById('storeModal') || document.getElementById('shopModal');
-      if (modal) modal.style.display = 'flex';
-    };
-  });
-
-  bindHeaderClickHandlers();
-  window.game = {
-    instance: gameInstance,
-    openAvatarModal: () => window.openAvatarModal(),
-    openCallsignModal: (arg) => window.openCallsignModal(arg),
-    openStoreModal: () => window.openStoreModal(),
-    openAuthModal: () => window.openAuthModal(),
-    removeFriend: (peerIdOrName) => gameInstance.removeFriend(peerIdOrName),
-    sendFriendRequest: (...args) => gameInstance.sendFriendRequest(...args),
-    acceptFriendRequest: (...args) => gameInstance.acceptFriendRequest(...args)
-  };
-});
+}
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('load', initGameApp);
+}
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   bindHeaderClickHandlers();
