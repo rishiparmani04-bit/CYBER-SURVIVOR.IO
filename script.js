@@ -168,23 +168,59 @@ window.handleAvatarImgError = function(img, avatarId) {
 // GLOBAL MODAL ACTION HELPERS (DIRECT TOPBAR & EXTERNAL ACCESS)
 // ============================================================================
 function openAuthModal() {
+  if (window.openAuthModal && window.openAuthModal !== openAuthModal) {
+    window.openAuthModal();
+    return;
+  }
   const m = document.getElementById('authModal');
-  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  if (m) { m.classList.remove('hidden', 'modal-hidden'); m.style.display = 'flex'; m.style.pointerEvents = 'auto'; }
+  if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
+    try { window.gameInstance.openAuthModal(); } catch (e) {}
+  }
+  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+  }
 }
 
 function openCallsignModal(pendingAction = null) {
+  if (window.openCallsignModal && window.openCallsignModal !== openCallsignModal) {
+    window.openCallsignModal(pendingAction);
+    return;
+  }
   const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
-  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  if (m) { m.classList.remove('hidden', 'modal-hidden'); m.style.display = 'flex'; m.style.pointerEvents = 'auto'; }
+  if (window.gameInstance && typeof window.gameInstance.openCallsignModal === 'function') {
+    try { window.gameInstance.openCallsignModal(pendingAction); } catch (e) {}
+  }
+  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+  }
 }
 
 function openStoreModal() {
+  if (window.openStoreModal && window.openStoreModal !== openStoreModal) {
+    window.openStoreModal();
+    return;
+  }
   const m = document.getElementById('storeModal') || document.getElementById('shopModal');
-  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  if (m) { m.classList.remove('hidden', 'modal-hidden'); m.style.display = 'flex'; m.style.pointerEvents = 'auto'; }
+  if (window.gameInstance && typeof window.gameInstance.openStoreModal === 'function') {
+    try { window.gameInstance.openStoreModal(); } catch (e) {}
+  }
+  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+  }
 }
 
 function openAvatarModal() {
   const m = document.getElementById('avatarModal');
-  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  if (m) { m.classList.remove('hidden', 'modal-hidden'); m.style.display = 'flex'; m.style.pointerEvents = 'auto'; }
+  if (window.gameInstance && typeof window.gameInstance.openAvatarModal === 'function') {
+    try { window.gameInstance.openAvatarModal(); } catch (e) {}
+  }
+  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+  }
 }
 
 window.openAuthModal = openAuthModal;
@@ -243,21 +279,27 @@ window.closeAuthModal = function() {
 
 window.openCallsignModal = function() {
   const m = document.getElementById('callsignModal') || document.getElementById('profileModal');
-  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  if (m) { m.classList.remove('hidden', 'modal-hidden'); m.style.display = 'flex'; m.style.pointerEvents = 'auto'; }
   const inner = document.getElementById('profile-setup-modal');
-  if (inner && inner !== m) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+  if (inner && inner !== m) { inner.classList.remove('hidden', 'modal-hidden'); inner.style.display = 'flex'; inner.style.pointerEvents = 'auto'; }
   if (window.gameInstance && typeof window.gameInstance.openCallsignModal === 'function') {
     try { window.gameInstance.openCallsignModal(); } catch (e) {}
+  }
+  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
   }
 };
 
 window.openStoreModal = function() {
   const m = document.getElementById('storeModal') || document.getElementById('shopModal');
-  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+  if (m) { m.classList.remove('hidden', 'modal-hidden'); m.style.display = 'flex'; m.style.pointerEvents = 'auto'; }
   const inner = document.getElementById('earn-diamonds-modal');
-  if (inner && inner !== m) { inner.classList.remove('hidden'); inner.style.display = 'flex'; }
+  if (inner && inner !== m) { inner.classList.remove('hidden', 'modal-hidden'); inner.style.display = 'flex'; inner.style.pointerEvents = 'auto'; }
   if (window.gameInstance && typeof window.gameInstance.openStoreModal === 'function') {
     try { window.gameInstance.openStoreModal(); } catch (e) {}
+  }
+  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
   }
 };
 
@@ -6797,6 +6839,13 @@ class Game {
     }
   }
 
+  ensureGameLoopRunning() {
+    if (!this.gameLoopId && !this.isGameOver && this.state !== 'GAMEOVER' && this.gameState !== 'GAME_OVER') {
+      this.lastTime = performance.now();
+      this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+    }
+  }
+
   // ==========================================================================
   // MAIN UPDATE & RENDER LOOP
   // ==========================================================================
@@ -7943,7 +7992,11 @@ class Game {
     const modal = document.getElementById('squad-lobby-modal');
     if (!modal) return;
     modal.classList.remove('hidden');
+    modal.classList.remove('modal-hidden');
+    modal.style.display = 'flex';
+    modal.style.pointerEvents = 'auto';
 
+    this.ensureGameLoopRunning();
     this.switchSquadLobbyTab(initialTab);
 
     if (initialTab === 'create') {
@@ -7970,6 +8023,7 @@ class Game {
       this.isPrivateMatch = false;
     }
     this.cleanupDarkBackdrops();
+    this.ensureGameLoopRunning();
   }
 
   switchSquadLobbyTab(tabName) {
@@ -8930,7 +8984,10 @@ class Game {
     modal.style.zIndex = '99999';
     modal.style.display = 'flex';
     modal.classList.remove('hidden');
+    modal.classList.remove('modal-hidden');
+    modal.style.pointerEvents = 'auto';
     if (this.audio) this.audio.playDeflect();
+    this.ensureGameLoopRunning();
   }
 
   closeAvatarModal() {
@@ -8942,6 +8999,7 @@ class Game {
       modal.style.pointerEvents = 'none';
     }
     this.cleanupDarkBackdrops();
+    this.ensureGameLoopRunning();
   }
 
   renderAvatarModal() {
@@ -9363,21 +9421,25 @@ class Game {
     this.openEarnDiamondsHub();
     const backdrop = document.getElementById('storeModal') || document.getElementById('shopModal') || document.getElementById('earn-diamonds-modal');
     if (backdrop) {
+      backdrop.classList.remove('hidden', 'modal-hidden');
       backdrop.style.zIndex = '99999';
       backdrop.style.display = 'flex';
-      backdrop.classList.remove('hidden');
+      backdrop.style.pointerEvents = 'auto';
     }
     const card = document.getElementById('earn-diamonds-modal');
     if (card && card !== backdrop) {
+      card.classList.remove('hidden', 'modal-hidden');
       card.style.display = 'flex';
-      card.classList.remove('hidden');
+      card.style.pointerEvents = 'auto';
     }
     if (typeof this.switchTab === 'function') {
       this.switchTab('tab-store');
     }
+    this.ensureGameLoopRunning();
   }
 
   openAuthModal() {
+    this.ensureGameLoopRunning();
     if (this.isUserAuthenticated()) {
       this.openProfileModal();
       return;
@@ -9422,10 +9484,20 @@ class Game {
   // STEP 2: PROFILE SETUP & OPERATIVE SPRITE CUSTOMIZATION (PROFILE SECOND)
   // ==========================================================================
   openProfileModal() {
+    this.ensureGameLoopRunning();
+    const backdrop = document.getElementById('callsignModal') || document.getElementById('profileModal');
+    if (backdrop) {
+      backdrop.classList.remove('hidden', 'modal-hidden');
+      backdrop.style.display = 'flex';
+      backdrop.style.pointerEvents = 'auto';
+      backdrop.style.zIndex = '99999';
+    }
     const modal = document.getElementById('profile-setup-modal');
     if (!modal) return;
     modal.style.zIndex = '99999';
     modal.style.display = 'flex';
+    modal.classList.remove('hidden', 'modal-hidden');
+    modal.style.pointerEvents = 'auto';
 
     const user = this.getAuthUser();
     const input = document.getElementById('input-profile-callsign');
@@ -9456,9 +9528,9 @@ class Game {
 
     this.renderProfileAvatarGrid();
 
-    modal.classList.remove('hidden');
     if (this.audio) this.audio.playDeflect();
     if (input) setTimeout(() => input.focus(), 150);
+    this.ensureGameLoopRunning();
   }
 
   closeProfileModal() {
@@ -9477,6 +9549,7 @@ class Game {
       backdrop.style.pointerEvents = 'none';
     }
     this.cleanupDarkBackdrops();
+    this.ensureGameLoopRunning();
   }
 
   updateProfileCallsign() {
@@ -9767,6 +9840,7 @@ class Game {
   }
 
   sendSquadInvite(friendTarget, friendName, btnEl, optSocketId, optUserId) {
+    this.ensureGameLoopRunning();
     let targetSocketId = optSocketId;
     let targetUserId = optUserId;
     let targetPeerId = null;
@@ -9914,6 +9988,7 @@ class Game {
 
     this.showNotification(`Squad invite transmitted to ${friendName}!`, 'INVITE DISPATCHED', 'cyan');
     if (this.audio && typeof this.audio.playDeflect === 'function') this.audio.playDeflect();
+    this.ensureGameLoopRunning();
   }
 
   handleSquadInvite(data) {
@@ -9922,6 +9997,7 @@ class Game {
 
   handleSquadInviteReceived(data) {
     try {
+      this.ensureGameLoopRunning();
       if (!data || !data.roomCode) return;
 
       const myUniqueIds = [
@@ -10000,6 +10076,8 @@ class Game {
         if (this.audio && typeof this.audio.playLevelUp === 'function') this.audio.playLevelUp();
       } catch (e) {}
 
+      this.ensureGameLoopRunning();
+
       if (this.inviteBannerTimeout) clearTimeout(this.inviteBannerTimeout);
       this.inviteBannerTimeout = setTimeout(() => {
         try { this.declineSquadInvite(true); } catch (e) {}
@@ -10047,6 +10125,7 @@ class Game {
 
   acceptSquadInvite() {
     try {
+      this.ensureGameLoopRunning();
       if (this.inviteBannerTimeout) clearTimeout(this.inviteBannerTimeout);
       const invite = this.currentSquadInvite;
       const roomCode = this.pendingSquadInviteCode || invite?.roomCode;
@@ -10140,6 +10219,7 @@ class Game {
       try {
         if (this.audio && typeof this.audio.playLevelUp === 'function') this.audio.playLevelUp();
       } catch (e) {}
+      this.ensureGameLoopRunning();
       this.currentSquadInvite = null;
     } catch (err) {
       console.warn('[Squad] Accept invite error caught safely:', err);
@@ -10255,6 +10335,7 @@ class Game {
 
   declineSquadInvite(isTimeout = false) {
     try {
+      this.ensureGameLoopRunning();
       if (this.inviteBannerTimeout) clearTimeout(this.inviteBannerTimeout);
       const banner = document.getElementById('squad-invite-banner');
       if (banner) {
@@ -10315,6 +10396,7 @@ class Game {
       }
       this.currentSquadInvite = null;
       this.pendingSquadInviteCode = null;
+      this.ensureGameLoopRunning();
     } catch (err) {
       console.warn('[Squad] declineSquadInvite error caught safely:', err);
     }
@@ -12828,8 +12910,58 @@ class Game {
 
   drawMenuBackground() {
     const ctx = this.ctx;
+    const w = this.camera.width;
+    const h = this.camera.height;
+    const now = performance.now();
+
     ctx.fillStyle = '#070913';
-    ctx.fillRect(0, 0, this.camera.width, this.camera.height);
+    ctx.fillRect(0, 0, w, h);
+
+    // Dynamic smooth animated background cyber grid
+    ctx.save();
+    const gridSize = 75;
+    const offsetX = (now * 0.012) % gridSize;
+    const offsetY = (now * 0.008) % gridSize;
+
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.04)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = -gridSize + offsetX; x < w + gridSize; x += gridSize) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+    }
+    for (let y = -gridSize + offsetY; y < h + gridSize; y += gridSize) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+    }
+    ctx.stroke();
+
+    // Subtle drifting ambient cyber particles
+    if (!this.menuMotes || this.menuMotes.length === 0) {
+      this.menuMotes = Array.from({ length: 30 }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        speed: 0.15 + Math.random() * 0.35,
+        size: 1 + Math.random() * 2,
+        alpha: 0.2 + Math.random() * 0.4,
+        pulseSpeed: 0.002 + Math.random() * 0.002
+      }));
+    }
+
+    this.menuMotes.forEach((mote) => {
+      mote.y -= mote.speed;
+      if (mote.y < -10) {
+        mote.y = h + 10;
+        mote.x = Math.random() * w;
+      }
+      const pulse = 0.5 + 0.5 * Math.sin(now * mote.pulseSpeed);
+      ctx.fillStyle = `rgba(0, 240, 255, ${mote.alpha * pulse * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(mote.x, mote.y, mote.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.restore();
   }
 }
 
