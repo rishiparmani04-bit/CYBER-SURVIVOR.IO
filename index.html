@@ -59,14 +59,22 @@
     window.closeAuthModal = function() {
       var m = document.getElementById('authModal') || document.querySelector('.auth-modal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
       if (m) {
-        m.classList.add('hidden');
-        m.classList.add('modal-hidden');
+        m.classList.add('hidden', 'modal-hidden');
         m.style.display = 'none';
         m.style.pointerEvents = 'none';
+        m.style.opacity = '0';
+        m.style.visibility = 'hidden';
       }
       var c = document.getElementById('callsign-auth-modal');
       if (c && c !== m) {
+        c.classList.add('hidden', 'modal-hidden');
         c.style.display = 'none';
+        c.style.pointerEvents = 'none';
+      }
+      if (typeof window.closeAllModals === 'function') {
+        try { window.closeAllModals(); } catch (e) {}
+      } else if (typeof window.cleanupDarkBackdrops === 'function') {
+        window.cleanupDarkBackdrops(true);
       }
       if (window.gameInstance && typeof window.gameInstance.closeCallsignModal === 'function') {
         try { window.gameInstance.closeCallsignModal(); } catch (e) {}
@@ -90,6 +98,7 @@
         c.style.opacity = '1';
         c.style.visibility = 'visible';
         c.style.pointerEvents = 'auto';
+        c.style.zIndex = '100000';
       }
       if (window.gameInstance && typeof window.gameInstance.openCallsignModal === 'function') {
         try { window.gameInstance.openCallsignModal(); } catch (e) {}
@@ -99,20 +108,22 @@
     window.closeCallsignModal = function() {
       var m = document.getElementById('callsignModal') || document.getElementById('profileModal');
       if (m) {
-        m.classList.add('hidden');
-        m.classList.add('modal-hidden');
+        m.classList.add('hidden', 'modal-hidden');
         m.style.display = 'none';
         m.style.pointerEvents = 'none';
+        m.style.opacity = '0';
+        m.style.visibility = 'hidden';
       }
       var c = document.getElementById('profile-setup-modal');
       if (c && c !== m) {
-        c.classList.add('hidden');
-        c.classList.add('modal-hidden');
+        c.classList.add('hidden', 'modal-hidden');
         c.style.display = 'none';
         c.style.pointerEvents = 'none';
       }
-      if (typeof window.cleanupDarkBackdrops === 'function') {
-        window.cleanupDarkBackdrops();
+      if (typeof window.closeAllModals === 'function') {
+        try { window.closeAllModals(); } catch (e) {}
+      } else if (typeof window.cleanupDarkBackdrops === 'function') {
+        window.cleanupDarkBackdrops(true);
       }
       if (window.gameInstance && typeof window.gameInstance.closeProfileModal === 'function') {
         try { window.gameInstance.closeProfileModal(); } catch (e) {}
@@ -136,9 +147,18 @@
         c.style.opacity = '1';
         c.style.visibility = 'visible';
         c.style.pointerEvents = 'auto';
+        c.style.zIndex = '100000';
       }
       if (window.gameInstance && typeof window.gameInstance.openStoreModal === 'function') {
         try { window.gameInstance.openStoreModal(); } catch (e) {}
+      }
+    };
+
+    window.closeStoreModal = function() {
+      if (typeof window.closeAllModals === 'function') {
+        window.closeAllModals();
+      } else if (typeof window.cleanupDarkBackdrops === 'function') {
+        window.cleanupDarkBackdrops(true);
       }
     };
 
@@ -155,13 +175,22 @@
       var c = m ? m.querySelector('.avatar-modal-card, .modal-card') : null;
       if (c) {
         c.classList.remove('hidden', 'modal-hidden');
-        c.style.display = 'block';
+        c.style.display = 'flex';
         c.style.opacity = '1';
         c.style.visibility = 'visible';
         c.style.pointerEvents = 'auto';
+        c.style.zIndex = '100000';
       }
       if (window.gameInstance && typeof window.gameInstance.openAvatarModal === 'function') {
         try { window.gameInstance.openAvatarModal(); } catch (e) {}
+      }
+    };
+
+    window.closeAvatarModal = function() {
+      if (typeof window.closeAllModals === 'function') {
+        window.closeAllModals();
+      } else if (typeof window.cleanupDarkBackdrops === 'function') {
+        window.cleanupDarkBackdrops(true);
       }
     };
 
@@ -180,13 +209,16 @@
             el.classList.add('hidden', 'modal-hidden');
             el.style.display = 'none';
             el.style.pointerEvents = 'none';
+            el.style.opacity = '0';
+            el.style.visibility = 'hidden';
           }
         });
         var cardSelectors = [
           '#callsign-auth-modal', '#profile-setup-modal', '#earn-diamonds-modal',
           '.avatar-modal-card', '.google-auth-card', '.squad-lobby-card',
           '.private-room-card', '.join-room-card', '.bank-purchase-card',
-          '.rewarded-ad-card', '.cyber-alert-card'
+          '.rewarded-ad-player', '.rewarded-ad-card', '.cyber-alert-card',
+          '.squad-invite-card', '.levelup-card', '.gameover-card', '.victory-card'
         ];
         cardSelectors.forEach(function(sel) {
           document.querySelectorAll(sel).forEach(function(card) {
@@ -206,8 +238,12 @@
         if (uiLayer) uiLayer.style.pointerEvents = 'auto';
         var hud = document.getElementById('game-hud');
         if (hud) hud.style.pointerEvents = 'auto';
+        var lobby = document.getElementById('deadshot-lobby') || document.querySelector('.deadshot-lobby-screen');
+        if (lobby) lobby.style.pointerEvents = 'auto';
+        var topbar = document.getElementById('topBar') || document.getElementById('header') || document.querySelector('.deadshot-topbar');
+        if (topbar) topbar.style.pointerEvents = 'auto';
         if (document.body) document.body.style.pointerEvents = 'auto';
-        document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab').forEach(function(b) {
+        document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab, .play-card, .btn-auth-sm, input, select, a').forEach(function(b) {
           b.style.pointerEvents = 'auto';
         });
         if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
@@ -224,38 +260,46 @@
           'storeModal', 'shopModal', 'avatarModal', 'squad-invite-modal',
           'levelup-modal', 'pause-modal', 'gameover-modal', 'victory-modal',
           'google-auth-modal', 'private-room-modal', 'join-room-modal',
-          'bank-purchase-modal', 'rewarded-ad-modal'
+          'bank-purchase-modal', 'rewarded-ad-modal', 'cyber-alert-modal'
         ];
         var hasActive = false;
         if (!force) {
           for (var i = 0; i < backdropIds.length; i++) {
             var el = document.getElementById(backdropIds[i]);
             if (el && !el.classList.contains('hidden') && !el.classList.contains('modal-hidden') && el.style.display !== 'none' && el.style.display !== '') {
-              var inner = el.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .bank-purchase-card, .rewarded-ad-card');
-              if (inner && (inner.classList.contains('hidden') || inner.classList.contains('modal-hidden') || inner.style.display === 'none')) {
+              var inner = el.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card, .cyber-alert-box');
+              if (!inner || inner.classList.contains('hidden') || inner.classList.contains('modal-hidden') || inner.style.display === 'none' || inner.style.visibility === 'hidden' || inner.style.opacity === '0') {
                 el.classList.add('hidden', 'modal-hidden');
                 el.style.display = 'none';
                 el.style.pointerEvents = 'none';
                 continue;
               }
+              inner.style.opacity = '1';
+              inner.style.visibility = 'visible';
+              inner.style.pointerEvents = 'auto';
+              inner.style.zIndex = '100000';
               hasActive = true;
               break;
             }
           }
           var squadLobby = document.getElementById('squad-lobby-modal');
           if (squadLobby && !squadLobby.classList.contains('hidden') && squadLobby.style.display !== 'none') {
-            hasActive = true;
+            var squadCard = squadLobby.querySelector('.squad-lobby-card');
+            if (squadCard && !squadCard.classList.contains('hidden') && squadCard.style.display !== 'none') {
+              hasActive = true;
+            }
           }
         }
         if (!hasActive || force) {
-          var backdrops = document.querySelectorAll('.modal-backdrop, .auth-modal');
+          var backdrops = document.querySelectorAll('.modal-backdrop, .auth-modal, .cyber-alert-container');
           for (var j = 0; j < backdrops.length; j++) {
             var b = backdrops[j];
             if (!force && b.id === 'squad-lobby-modal' && !b.classList.contains('hidden')) continue;
-            b.classList.add('hidden');
-            b.classList.add('modal-hidden');
+            b.classList.add('hidden', 'modal-hidden');
             b.style.display = 'none';
             b.style.pointerEvents = 'none';
+            b.style.opacity = '0';
+            b.style.visibility = 'hidden';
           }
           var canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
           if (canvas) canvas.style.pointerEvents = 'auto';
@@ -265,8 +309,12 @@
           if (uiLayer) uiLayer.style.pointerEvents = 'auto';
           var hud = document.getElementById('game-hud');
           if (hud) hud.style.pointerEvents = 'auto';
+          var lobby = document.getElementById('deadshot-lobby') || document.querySelector('.deadshot-lobby-screen');
+          if (lobby) lobby.style.pointerEvents = 'auto';
+          var topbar = document.getElementById('topBar') || document.getElementById('header') || document.querySelector('.deadshot-topbar');
+          if (topbar) topbar.style.pointerEvents = 'auto';
           if (document.body) document.body.style.pointerEvents = 'auto';
-          document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab').forEach(function(b) {
+          document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab, .play-card, .btn-auth-sm, input, select, a').forEach(function(b) {
             b.style.pointerEvents = 'auto';
           });
         }
@@ -276,7 +324,7 @@
     // Global Escape Key Listener: dismiss active modal, remove dark overlay, restore mouse interactions
     if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       window.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' || e.code === 'Escape') {
+        if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
           if (window.gameInstance && (window.gameInstance.state === 'PLAYING' || window.gameInstance.state === 'PAUSED')) {
             if (window.gameInstance.state === 'PAUSED') window.gameInstance.resumeGame();
             else if (window.gameInstance.state === 'PLAYING') window.gameInstance.pauseGame();
@@ -284,30 +332,62 @@
           }
           window.closeAllModals();
         }
-      });
+      }, true);
     }
 
-    // Global Click Listener: clicking outside modal on dark backdrop or clicking close buttons immediately dismisses
+    // Universal Click Dismiss Handler: clicking anywhere on dark backdrop or clicking close buttons immediately dismisses
     if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
       document.addEventListener('click', function(e) {
         var target = e.target;
         if (!target) return;
+
+        // 1. Check if clicking on dark backdrop itself or outside active modal card
+        var activeBackdrop = document.querySelector('.modal-backdrop:not(.hidden):not(.modal-hidden), .auth-modal:not(.hidden):not(.modal-hidden)');
+        if (activeBackdrop && activeBackdrop.style.display !== 'none') {
+          if (activeBackdrop.id !== 'levelup-modal') {
+            var innerCard = activeBackdrop.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card, .cyber-alert-box');
+            if (target === activeBackdrop || (innerCard && !innerCard.contains(target) && target !== innerCard)) {
+              window.closeAllModals();
+              return;
+            }
+          }
+        }
         if (target.classList && (target.classList.contains('modal-backdrop') || target.classList.contains('auth-modal'))) {
           if (target.id === 'levelup-modal') return;
           window.closeAllModals();
+          return;
         }
+
+        // 2. Check if clicking close / cancel / dismiss buttons
         if (target.closest && target.closest('.alert-close-btn, .btn-close-modal, .btn-avatar-cancel, [data-dismiss], #btn-cancel-buy-modal, #btn-close-alert, #btn-close-google-modal, #btn-close-squad-modal, #btn-close-private-modal, #btn-close-join-modal, #btn-close-buy-modal, #btn-close-earn-modal, #btn-close-ad, #btn-close-avatar-modal, #btn-close-callsign-modal, #btn-close-profile-modal, #btn-close-profile-setup, #btn-close-invite-modal')) {
           window.closeAllModals();
+          return;
         }
-      });
+      }, true);
     }
+
+    // Force-remove or hide any active modal backdrop on load immediately
+    try {
+      window.closeAllModals();
+      window.cleanupDarkBackdrops(true);
+    } catch (e) {}
 
     if (typeof document !== 'undefined') {
       if (document.readyState === 'loading' && typeof document.addEventListener === 'function') {
-        document.addEventListener('DOMContentLoaded', function() { window.cleanupDarkBackdrops(); });
+        document.addEventListener('DOMContentLoaded', function() {
+          window.closeAllModals();
+          window.cleanupDarkBackdrops(true);
+        });
       } else {
-        window.cleanupDarkBackdrops();
+        window.closeAllModals();
+        window.cleanupDarkBackdrops(true);
       }
+    }
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('load', function() {
+        window.closeAllModals();
+        window.cleanupDarkBackdrops(true);
+      });
     }
   </script>
 

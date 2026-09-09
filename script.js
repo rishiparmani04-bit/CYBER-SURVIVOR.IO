@@ -267,10 +267,19 @@ window.closeAuthModal = function() {
     m.classList.add('hidden', 'modal-hidden');
     m.style.display = 'none';
     m.style.pointerEvents = 'none';
+    m.style.opacity = '0';
+    m.style.visibility = 'hidden';
   }
   const c = document.getElementById('callsign-auth-modal');
   if (c && c !== m) {
+    c.classList.add('hidden', 'modal-hidden');
     c.style.display = 'none';
+    c.style.pointerEvents = 'none';
+  }
+  if (typeof window.closeAllModals === 'function') {
+    window.closeAllModals();
+  } else if (typeof window.cleanupDarkBackdrops === 'function') {
+    window.cleanupDarkBackdrops(true);
   }
   if (window.gameInstance && typeof window.gameInstance.closeCallsignModal === 'function') {
     try { window.gameInstance.closeCallsignModal(); } catch (e) {}
@@ -392,24 +401,31 @@ function bindHeaderClickHandlers() {
   if (typeof MutationObserver !== 'undefined') {
     const modalObserver = new MutationObserver((mutations) => {
       mutations.forEach((m) => {
-        if (m.attributeName === 'style') {
+        if (m.attributeName === 'style' || m.attributeName === 'class') {
           const target = m.target;
-          if (target.style.display === 'flex') {
+          if (target.style.display === 'flex' || (!target.classList.contains('hidden') && !target.classList.contains('modal-hidden') && target.style.display !== 'none' && target.style.display !== '')) {
             target.classList.remove('hidden', 'modal-hidden');
-            target.style.pointerEvents = 'auto';
-            const inner = target.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .bank-purchase-card, .rewarded-ad-card');
+            const inner = target.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card, .cyber-alert-box');
             if (inner) {
               inner.classList.remove('hidden', 'modal-hidden');
               inner.style.opacity = '1';
               inner.style.visibility = 'visible';
               inner.style.pointerEvents = 'auto';
-              if (inner.id === 'profile-setup-modal' || inner.id === 'earn-diamonds-modal') {
+              inner.style.zIndex = '100000';
+              inner.style.position = 'relative';
+              inner.style.background = '#0d1122';
+              inner.style.color = '#ffffff';
+              if (inner.id === 'profile-setup-modal' || inner.id === 'earn-diamonds-modal' || inner.classList.contains('avatar-modal-card') || inner.classList.contains('squad-lobby-card') || inner.classList.contains('rewarded-ad-player') || inner.classList.contains('squad-invite-card') || inner.classList.contains('levelup-card') || inner.classList.contains('callsign-auth-card')) {
                 inner.style.display = 'flex';
+                inner.style.flexDirection = 'column';
               } else {
                 inner.style.display = 'block';
               }
+              target.style.pointerEvents = 'auto';
+            } else {
+              target.style.pointerEvents = 'none';
             }
-          } else if (target.style.display === 'none') {
+          } else if (target.style.display === 'none' || target.classList.contains('hidden') || target.classList.contains('modal-hidden')) {
             target.classList.add('hidden', 'modal-hidden');
             target.style.pointerEvents = 'none';
             if (typeof window.cleanupDarkBackdrops === 'function') {
@@ -423,7 +439,7 @@ function bindHeaderClickHandlers() {
       const el = document.getElementById(id);
       if (el && !el.dataset.observerBound) {
         el.dataset.observerBound = 'true';
-        modalObserver.observe(el, { attributes: true, attributeFilter: ['style'] });
+        modalObserver.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
       }
     });
   }
@@ -433,14 +449,15 @@ function bindHeaderClickHandlers() {
     if (el && !el.dataset.dismissBound) {
       el.dataset.dismissBound = 'true';
       el.addEventListener('click', (e) => {
-        if (e.target === el) {
+        const inner = el.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card, .cyber-alert-box');
+        if (e.target === el || (inner && !inner.contains(e.target) && e.target !== inner)) {
           if (typeof window.closeAllModals === 'function') {
             window.closeAllModals();
           } else {
             el.classList.add('hidden', 'modal-hidden');
             el.style.display = 'none';
             el.style.pointerEvents = 'none';
-            if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops();
+            if (typeof window.cleanupDarkBackdrops === 'function') window.cleanupDarkBackdrops(true);
           }
         }
       });
@@ -2600,6 +2617,7 @@ class Game {
     this.initAuthUser();
     this.updateUserAvatarDisplays();
     this.initPresenceSystem();
+    this.cleanupDarkBackdrops(true);
 
     // Game State & Loop Tracking
     this.isGameOver = false;
@@ -10717,9 +10735,9 @@ class Game {
     }
   }
 
-  cleanupDarkBackdrops() {
+  cleanupDarkBackdrops(force = false) {
     if (typeof window !== 'undefined' && typeof window.cleanupDarkBackdrops === 'function') {
-      try { window.cleanupDarkBackdrops(); } catch (e) {}
+      try { window.cleanupDarkBackdrops(force); } catch (e) {}
     }
     const canvas = document.getElementById('gameCanvas') || document.getElementById('game-canvas');
     if (canvas) canvas.style.pointerEvents = 'auto';
@@ -10729,9 +10747,13 @@ class Game {
     if (uiLayer) uiLayer.style.pointerEvents = 'auto';
     const hud = document.getElementById('game-hud');
     if (hud) hud.style.pointerEvents = 'auto';
+    const lobby = document.getElementById('deadshot-lobby') || document.querySelector('.deadshot-lobby-screen');
+    if (lobby) lobby.style.pointerEvents = 'auto';
+    const topbar = document.getElementById('topBar') || document.getElementById('header') || document.querySelector('.deadshot-topbar');
+    if (topbar) topbar.style.pointerEvents = 'auto';
     if (typeof document !== 'undefined' && document.body) document.body.style.pointerEvents = 'auto';
     if (typeof document !== 'undefined') {
-      document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab').forEach(b => {
+      document.querySelectorAll('button, .btn-cyber-primary, .btn-cyber-action, .btn-primary, .btn-secondary, .hud-btn, .action-card, .loadout-tab, .play-card, .btn-auth-sm, input, select, a').forEach(b => {
         b.style.pointerEvents = 'auto';
       });
     }

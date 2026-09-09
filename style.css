@@ -267,6 +267,11 @@ button,
   align-items: center;
   padding: 1.5rem;
   animation: fadeIn 0.25s ease-out forwards;
+  pointer-events: none;
+}
+
+.modal-backdrop:not(.hidden):not(.modal-hidden) {
+  pointer-events: auto;
 }
 
 .modal-backdrop.hidden,
@@ -433,10 +438,14 @@ header {
 .modal-backdrop:not(.hidden):not(.modal-hidden) .earn-diamonds-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .avatar-modal-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .google-auth-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .squad-lobby-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .private-room-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .join-room-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .bank-purchase-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .rewarded-ad-player,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .rewarded-ad-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .squad-invite-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .levelup-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .gameover-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .victory-card,
 .modal-backdrop[style*="display: flex"] .modal-card,
@@ -445,10 +454,14 @@ header {
 .modal-backdrop[style*="display: flex"] .earn-diamonds-card,
 .modal-backdrop[style*="display: flex"] .avatar-modal-card,
 .modal-backdrop[style*="display: flex"] .google-auth-card,
+.modal-backdrop[style*="display: flex"] .squad-lobby-card,
 .modal-backdrop[style*="display: flex"] .private-room-card,
 .modal-backdrop[style*="display: flex"] .join-room-card,
 .modal-backdrop[style*="display: flex"] .bank-purchase-card,
+.modal-backdrop[style*="display: flex"] .rewarded-ad-player,
 .modal-backdrop[style*="display: flex"] .rewarded-ad-card,
+.modal-backdrop[style*="display: flex"] .squad-invite-card,
+.modal-backdrop[style*="display: flex"] .levelup-card,
 .modal-backdrop[style*="display: flex"] .gameover-card,
 .modal-backdrop[style*="display: flex"] .victory-card,
 .modal-backdrop[style*="display:flex"] .modal-card,
@@ -457,10 +470,14 @@ header {
 .modal-backdrop[style*="display:flex"] .earn-diamonds-card,
 .modal-backdrop[style*="display:flex"] .avatar-modal-card,
 .modal-backdrop[style*="display:flex"] .google-auth-card,
+.modal-backdrop[style*="display:flex"] .squad-lobby-card,
 .modal-backdrop[style*="display:flex"] .private-room-card,
 .modal-backdrop[style*="display:flex"] .join-room-card,
 .modal-backdrop[style*="display:flex"] .bank-purchase-card,
+.modal-backdrop[style*="display:flex"] .rewarded-ad-player,
 .modal-backdrop[style*="display:flex"] .rewarded-ad-card,
+.modal-backdrop[style*="display:flex"] .squad-invite-card,
+.modal-backdrop[style*="display:flex"] .levelup-card,
 .modal-backdrop[style*="display:flex"] .gameover-card,
 .modal-backdrop[style*="display:flex"] .victory-card,
 #callsignModal:not(.hidden):not(.modal-hidden) #profile-setup-modal,
@@ -472,28 +489,74 @@ header {
 #avatarModal:not(.hidden):not(.modal-hidden) .avatar-modal-card,
 #avatarModal[style*="display: flex"] .avatar-modal-card,
 #avatarModal[style*="display:flex"] .avatar-modal-card {
-  display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
   z-index: 100000 !important;
+  position: relative !important;
   pointer-events: auto !important;
   background: #0d1122 !important;
   color: #ffffff !important;
 }
 
+.modal-backdrop:not(.hidden):not(.modal-hidden) .modal-card:not(.callsign-auth-card):not(.profile-setup-card):not(.avatar-modal-card):not(.squad-invite-card),
+.modal-backdrop:not(.hidden):not(.modal-hidden) .google-auth-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .bank-purchase-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .gameover-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .victory-card,
+.modal-backdrop[style*="display: flex"] .modal-card:not(.callsign-auth-card):not(.profile-setup-card):not(.avatar-modal-card):not(.squad-invite-card),
+.modal-backdrop[style*="display: flex"] .google-auth-card,
+.modal-backdrop[style*="display: flex"] .bank-purchase-card,
+.modal-backdrop[style*="display: flex"] .gameover-card,
+.modal-backdrop[style*="display: flex"] .victory-card,
+.modal-backdrop[style*="display:flex"] .modal-card:not(.callsign-auth-card):not(.profile-setup-card):not(.avatar-modal-card):not(.squad-invite-card),
+.modal-backdrop[style*="display:flex"] .google-auth-card,
+.modal-backdrop[style*="display:flex"] .bank-purchase-card,
+.modal-backdrop[style*="display:flex"] .gameover-card,
+.modal-backdrop[style*="display:flex"] .victory-card {
+  display: block !important;
+}
+
+.modal-backdrop:not(.hidden):not(.modal-hidden) .callsign-auth-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .profile-setup-card,
-.modal-backdrop[style*="display: flex"] .profile-setup-card,
-.modal-backdrop[style*="display:flex"] .profile-setup-card,
 .modal-backdrop:not(.hidden):not(.modal-hidden) .earn-diamonds-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .avatar-modal-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .squad-lobby-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .levelup-card,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .rewarded-ad-player,
+.modal-backdrop:not(.hidden):not(.modal-hidden) .squad-invite-card,
+.modal-backdrop[style*="display: flex"] .callsign-auth-card,
+.modal-backdrop[style*="display: flex"] .profile-setup-card,
 .modal-backdrop[style*="display: flex"] .earn-diamonds-card,
+.modal-backdrop[style*="display: flex"] .avatar-modal-card,
+.modal-backdrop[style*="display: flex"] .squad-lobby-card,
+.modal-backdrop[style*="display: flex"] .levelup-card,
+.modal-backdrop[style*="display: flex"] .rewarded-ad-player,
+.modal-backdrop[style*="display: flex"] .squad-invite-card,
+.modal-backdrop[style*="display:flex"] .callsign-auth-card,
+.modal-backdrop[style*="display:flex"] .profile-setup-card,
 .modal-backdrop[style*="display:flex"] .earn-diamonds-card,
+.modal-backdrop[style*="display:flex"] .avatar-modal-card,
+.modal-backdrop[style*="display:flex"] .squad-lobby-card,
+.modal-backdrop[style*="display:flex"] .levelup-card,
+.modal-backdrop[style*="display:flex"] .rewarded-ad-player,
+.modal-backdrop[style*="display:flex"] .squad-invite-card,
 #callsignModal:not(.hidden):not(.modal-hidden) #profile-setup-modal,
 #callsignModal[style*="display: flex"] #profile-setup-modal,
 #callsignModal[style*="display:flex"] #profile-setup-modal,
 #storeModal:not(.hidden):not(.modal-hidden) #earn-diamonds-modal,
 #storeModal[style*="display: flex"] #earn-diamonds-modal,
-#storeModal[style*="display:flex"] #earn-diamonds-modal {
+#storeModal[style*="display:flex"] #earn-diamonds-modal,
+#avatarModal:not(.hidden):not(.modal-hidden) .avatar-modal-card,
+#avatarModal[style*="display: flex"] .avatar-modal-card,
+#avatarModal[style*="display:flex"] .avatar-modal-card {
   display: flex !important;
+}
+
+@supports selector(:has(*)) {
+  .modal-backdrop:not(:has(.modal-card, .callsign-auth-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card)) {
+    pointer-events: none !important;
+    display: none !important;
+  }
 }
 
 .deadshot-topbar,
