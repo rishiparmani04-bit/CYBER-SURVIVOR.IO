@@ -3342,8 +3342,15 @@ class Game {
     document.getElementById('googleSignInBtn')?.addEventListener('click', (e) => {
       e?.preventDefault();
       try {
+        this.ensureGameLoopRunning();
         if (window.AuthManager && typeof window.AuthManager.signIn === 'function') {
-          window.AuthManager.signIn();
+          Promise.resolve(window.AuthManager.signIn()).catch((err) => {
+            console.warn('[Google Sign-In] Handled async GIS rejection:', err);
+            if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
+              window.AuthManager.handleAuthError('Google Sign-In was interrupted. Enter a Callsign below or click Continue to play as Guest.');
+            }
+            this.ensureGameLoopRunning();
+          });
         } else if (typeof window.google !== 'undefined' && window.google?.accounts?.id && typeof window.google.accounts.id.renderButton === 'function') {
           const container = document.getElementById('g_id_signin_container');
           if (container) {
@@ -3358,14 +3365,25 @@ class Game {
             });
             container.style.display = 'block';
           }
+        } else {
+          if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
+            window.AuthManager.handleAuthError('Google Sign-In unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.');
+          }
         }
       } catch (gisErr) {
         console.warn('[Google Sign-In] Handled GIS error without crashing game loop:', gisErr);
-        const errEl = document.getElementById('google-auth-error-callsign') || document.getElementById('google-auth-error');
-        if (errEl) {
-          errEl.textContent = 'Google Sign-In unavailable. Please continue with your Callsign.';
-          errEl.classList.remove('hidden');
+        if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
+          window.AuthManager.handleAuthError('Google Sign-In unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.');
+        } else {
+          const errEl = document.getElementById('google-auth-error-callsign') || document.getElementById('google-auth-error');
+          if (errEl) {
+            errEl.textContent = 'Google Sign-In unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.';
+            errEl.classList.remove('hidden', 'modal-hidden');
+            errEl.style.display = 'block';
+          }
         }
+      } finally {
+        this.ensureGameLoopRunning();
       }
     });
 

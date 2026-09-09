@@ -3,17 +3,22 @@
  * GOOGLE IDENTITY SERVICES (GIS) / OAUTH 2.0 AUTHENTICATION MANAGER
  * ============================================================================
  * 
- * SETUP INSTRUCTIONS:
+ * SETUP INSTRUCTIONS FOR GOOGLE CLOUD CONSOLE:
  * 1. Visit Google Cloud Console: https://console.cloud.google.com/apis/credentials
  * 2. Create a project (or select an existing one) and configure the "OAuth Consent Screen".
  * 3. Go to "Credentials" -> "Create Credentials" -> "OAuth client ID".
  * 4. Application type: "Web application".
- * 5. Under "Authorized JavaScript origins", add your origins:
+ * 5. Under "Authorized JavaScript origins", add exact origin URLs WITHOUT trailing slashes:
  *    - http://localhost
  *    - http://localhost:8080
  *    - http://127.0.0.1:5500
- *    - (and your production domain once deployed)
- * 6. Copy your Client ID and replace GOOGLE_CLIENT_ID below:
+ *    - https://<your-project>.vercel.app (e.g. your active Vercel domain)
+ * 6. Under "Authorized redirect URIs", add:
+ *    - https://<your-project>.vercel.app
+ * 7. Copy your Client ID and replace GOOGLE_CLIENT_ID below.
+ * 
+ * NOTE: If Google Sign-In encounters domain mismatch, popup blocker, or cancellation,
+ * the Callsign / Guest login fallback inside the modal is always active and unblocked.
  */
 
 const GOOGLE_CLIENT_ID = '1021532607267-2b815nvlp44h57bn092tbue56edok0on.apps.googleusercontent.com'; // <-- REPLACE WITH YOUR CLIENT ID
@@ -29,6 +34,20 @@ class AuthManager {
   }
 
   /**
+   * Log active origin and alert if trailing slash exists or on Vercel
+   */
+  logOriginStatus() {
+    if (typeof window !== 'undefined' && window.location) {
+      try {
+        const origin = window.location.origin;
+        if (origin && origin.includes('vercel.app')) {
+          console.info(`[AuthManager] Active Vercel domain: "${origin}". Ensure "${origin}" (without trailing slash) is registered in Google Cloud Console -> Credentials -> OAuth 2.0 Client IDs -> Authorized JavaScript origins.`);
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
    * Check whether a real Client ID has been configured
    */
   isConfigured() {
@@ -36,45 +55,99 @@ class AuthManager {
   }
 
   /**
-   * Initialize Google Identity Services SDK
+   * Initialize Google Identity Services SDK (completely non-blocking)
    */
   init() {
-    // Check if GIS script has loaded
-    if (typeof window.google !== 'undefined' && window.google.accounts && window.google.accounts.id) {
-      this.setupGis();
-    } else {
-      // Poll briefly for script load
-      let attempts = 0;
-      const pollInterval = setInterval(() => {
-        attempts++;
-        if (typeof window.google !== 'undefined' && window.google.accounts && window.google.accounts.id) {
-          clearInterval(pollInterval);
-          this.setupGis();
-        } else if (attempts > 30) {
-          clearInterval(pollInterval);
-          console.warn('[AuthManager] Google Identity Services script load timed out or is blocked.');
-        }
-      }, 200);
-    }
-
-    // Load any existing cached session
+    // Load any existing cached session immediately (synchronous, 0ms)
     this.loadSavedUser();
+
+    // Make GIS initialization completely non-blocking and asynchronous.
+    // Defer GIS setup so constructor finishes immediately, allowing script.js,
+    // lobby rendering, and game loop to proceed with zero wait time.
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        this.initGisAsync();
+      }, 0);
+    }
   }
 
   /**
-   * Configure Google Identity Services client & render button
+   * Non-blocking asynchronous GIS initialization & script detection
+   */
+  initGisAsync() {
+    try {
+      if (this.isGisLoaded) return;
+
+      // Wrap in a check to ensure window.google?.accounts?.id exists before calling initialize
+      if (typeof window !== 'undefined' && window.google?.accounts?.id && typeof window.google.accounts.id.initialize === 'function') {
+        this.setupGis();
+        return;
+      }
+
+      // If GIS script hasn't finished loading yet, poll asynchronously without blocking execution
+      let attempts = 0;
+      const maxAttempts = 15; // 15 * 200ms = 3.0s maximum
+      const pollInterval = setInterval(() => {
+        attempts++;
+        try {
+          if (typeof window !== 'undefined' && window.google?.accounts?.id && typeof window.google.accounts.id.initialize === 'function') {
+            clearInterval(pollInterval);
+            this.setupGis();
+          } else if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            console.warn('[AuthManager] Google Identity Services script load timed out or is blocked by adblocker/browser security. Falling back gracefully to Callsign / Guest mode.');
+            this.resetSignInButtonState();
+          }
+        } catch (pollErr) {
+          clearInterval(pollInterval);
+          console.warn('[AuthManager] Non-blocking GIS poll caught exception:', pollErr);
+          this.resetSignInButtonState();
+        }
+      }, 200);
+    } catch (err) {
+      console.warn('[AuthManager] Non-blocking async GIS init error:', err);
+      this.resetSignInButtonState();
+    }
+  }
+
+  /**
+   * Configure Google Identity Services client & render button (completely non-blocking)
    */
   setupGis() {
     if (this.isGisLoaded) return;
+
+    // Wrap in a check to ensure window.google?.accounts?.id exists before calling initialize
+    if (typeof window === 'undefined' || !window.google?.accounts?.id || typeof window.google.accounts.id.initialize !== 'function') {
+      console.warn('[AuthManager] Google Identity Services (window.google?.accounts?.id) is not available or blocked by adblocker/browser security. Falling back gracefully to Callsign / Guest mode.');
+      this.resetSignInButtonState();
+      return;
+    }
+
     this.isGisLoaded = true;
-    console.log('[AuthManager] Initializing Google Identity Services...');
+    console.log('[AuthManager] Initializing Google Identity Services (non-blocking)...');
+    this.logOriginStatus();
 
     try {
       window.google.accounts.id.initialize({
         client_id: this.clientId,
-        callback: (response) => this.handleCredentialResponse(response),
+        callback: (response) => {
+          try {
+            this.handleCredentialResponse(response);
+          } catch (cbErr) {
+            console.warn('[AuthManager] Exception in GIS credential callback:', cbErr);
+            this.handleAuthError('Google Sign-In encountered an error. Enter a Callsign below or click Continue to play as Guest.');
+          }
+        },
         error_callback: (err) => {
-          console.warn('[AuthManager] GIS initialization notice:', err);
+          console.warn('[AuthManager] GIS initialization/error callback notice:', err);
+          const errType = (err && (err.type || err.message)) ? String(err.type || err.message) : '';
+          let msg = 'Google Sign-In unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.';
+          if (errType.includes('popup_closed') || errType.includes('user_cancel')) {
+            msg = 'Google Sign-In popup closed. Enter a Callsign below or click Continue to play as Guest.';
+          } else if (errType.includes('origin')) {
+            msg = 'Google OAuth domain mismatch. Enter a Callsign below or click Continue to play as Guest.';
+          }
+          this.handleAuthError(msg);
         },
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -84,7 +157,13 @@ class AuthManager {
       // Render official Google button if container exists
       this.renderGisButton();
     } catch (err) {
-      console.warn('[AuthManager] GIS initialization notice:', err);
+      console.warn('[AuthManager] Google Identity Services initialization failed or was blocked by browser security. Falling back gracefully:', err);
+      this.handleAuthError('Google Sign-In unavailable on this domain or blocked by adblocker. Enter a Callsign below or click Continue to play as Guest.');
+    } finally {
+      this.resetSignInButtonState();
+      if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
     }
   }
 
@@ -93,7 +172,7 @@ class AuthManager {
    */
   renderGisButton() {
     const container = document.getElementById('g_id_signin_container');
-    if (!container || !window.google?.accounts?.id) return;
+    if (!container || !window.google?.accounts?.id || typeof window.google.accounts.id.renderButton !== 'function') return;
 
     // Clear prior content
     container.innerHTML = '';
@@ -145,31 +224,41 @@ class AuthManager {
    * @param {Object} response Credential response containing ID Token
    */
   handleCredentialResponse(response) {
-    console.log('[AuthManager] Received Google credential response.');
-    this.clearAuthError();
+    try {
+      console.log('[AuthManager] Received Google credential response.');
+      this.clearAuthError();
 
-    if (!response || !response.credential) {
-      console.warn('[AuthManager] No credential received from Google GIS, completing with login fallback.');
-      this.simulateDevSignIn();
-      return;
+      if (!response || !response.credential) {
+        console.warn('[AuthManager] No credential received from Google GIS.');
+        this.handleAuthError('Google Sign-In was cancelled. Enter a Callsign below or click Continue to play as Guest.');
+        return;
+      }
+
+      const payload = this.parseJwt(response.credential);
+      if (!payload || !payload.email) {
+        console.warn('[AuthManager] Failed to decode user profile from Google token.');
+        this.handleAuthError('Google profile could not be read. Enter a Callsign below or click Continue to play as Guest.');
+        return;
+      }
+
+      this.applyAuthenticatedUser({
+        id: payload.sub,
+        email: payload.email,
+        name: payload.name || payload.given_name || 'Operative',
+        picture: payload.picture || null,
+        emailVerified: !!payload.email_verified,
+        lastSync: new Date().toLocaleTimeString(),
+        token: response.credential
+      });
+    } catch (err) {
+      console.warn('[AuthManager] Error in credential response handler:', err);
+      this.handleAuthError('Google Sign-In encountered an issue. Enter a Callsign below or click Continue to play as Guest.');
+    } finally {
+      this.resetSignInButtonState();
+      if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
     }
-
-    const payload = this.parseJwt(response.credential);
-    if (!payload || !payload.email) {
-      console.warn('[AuthManager] Failed to decode user profile from Google token, completing with login fallback.');
-      this.simulateDevSignIn();
-      return;
-    }
-
-    this.applyAuthenticatedUser({
-      id: payload.sub,
-      email: payload.email,
-      name: payload.name || payload.given_name || 'Operative',
-      picture: payload.picture || null,
-      emailVerified: !!payload.email_verified,
-      lastSync: new Date().toLocaleTimeString(),
-      token: response.credential
-    });
   }
 
   /**
@@ -178,7 +267,17 @@ class AuthManager {
   signIn() {
     this.clearAuthError();
 
+    const btn = document.getElementById('googleSignInBtn');
+    if (btn) {
+      const span = btn.querySelector('span');
+      if (span) span.textContent = 'CONNECTING TO GOOGLE...';
+    }
+
     try {
+      if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
+
       // Explicitly render GIS button in container
       this.renderGisButton();
 
@@ -189,8 +288,16 @@ class AuthManager {
       if (renderedBtn) {
         try {
           renderedBtn.click();
+          setTimeout(() => this.resetSignInButtonState(), 1000);
           return;
         } catch (e) {}
+      }
+
+      // If Google Identity Services is not available or blocked by adblocker
+      if (!window.google?.accounts?.id) {
+        console.warn('[AuthManager] Google Identity Services is not loaded or blocked by adblocker. Falling back gracefully to Callsign / Guest mode.');
+        this.handleAuthError('Google Sign-In is unavailable or blocked by adblocker. Enter a Callsign below or click Continue to play as Guest.');
+        return;
       }
 
       // If real client ID is configured and GIS is available, use non-blocking prompt with watchdog
@@ -199,34 +306,57 @@ class AuthManager {
           let promptHandled = false;
           window.google.accounts.id.prompt((notification) => {
             promptHandled = true;
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              console.warn('[AuthManager] One-Tap prompt unavailable on this domain. Completing authentication directly.');
-              this.simulateDevSignIn();
-            } else if (notification.isDismissedMoment()) {
-              console.log('[AuthManager] User dismissed prompt.');
+            try {
+              if (notification.isNotDisplayed()) {
+                const reason = typeof notification.getNotDisplayedReason === 'function' ? notification.getNotDisplayedReason() : '';
+                console.warn('[AuthManager] GIS prompt not displayed on this domain:', reason);
+                this.handleAuthError('Google Sign-In unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.');
+              } else if (notification.isSkippedMoment()) {
+                const reason = typeof notification.getSkippedReason === 'function' ? notification.getSkippedReason() : '';
+                console.warn('[AuthManager] GIS prompt skipped:', reason);
+                this.handleAuthError('Google Sign-In was skipped. Enter a Callsign below or click Continue to play as Guest.');
+              } else if (notification.isDismissedMoment()) {
+                const reason = typeof notification.getDismissedReason === 'function' ? notification.getDismissedReason() : '';
+                console.log('[AuthManager] User dismissed Google popup/prompt:', reason);
+                this.handleAuthError('Google Sign-In popup closed. Enter a Callsign below or click Continue to play as Guest.');
+              }
+            } catch (notifErr) {
+              console.warn('[AuthManager] Error in GIS notification handler:', notifErr);
+              this.handleAuthError('Google Sign-In unavailable. Enter a Callsign below or click Continue to play as Guest.');
+            } finally {
+              this.resetSignInButtonState();
+              if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+                try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+              }
             }
           });
 
           // Fast Watchdog: prevent browser hang if One-Tap is suppressed or blocked
           setTimeout(() => {
             if (!promptHandled && !this.currentUser) {
-              console.warn('[AuthManager] GIS prompt watchdog timeout. Proceeding with fallback sign-in.');
-              this.simulateDevSignIn();
+              console.warn('[AuthManager] GIS prompt watchdog timeout.');
+              this.handleAuthError('Google Sign-In timed out or unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.');
             }
-          }, 400);
+            this.resetSignInButtonState();
+          }, 800);
           return;
         } catch (err) {
           console.warn('[AuthManager] Prompt error, falling back:', err);
-          this.simulateDevSignIn();
+          this.handleAuthError('Google Sign-In error. Enter a Callsign below or click Continue to play as Guest.');
           return;
         }
       }
 
-      // Interactive Local Fallback
-      this.simulateDevSignIn();
+      // Interactive Local Fallback if unconfigured
+      this.handleAuthError('Google Sign-In unavailable. Enter a Callsign below or click Continue to play as Guest.');
     } catch (outerErr) {
       console.warn('[AuthManager] Safe sign-in fallback on error:', outerErr);
-      this.simulateDevSignIn();
+      this.handleAuthError('Google Sign-In error. Enter a Callsign below or click Continue to play as Guest.');
+    } finally {
+      this.resetSignInButtonState();
+      if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
     }
   }
 
@@ -431,22 +561,103 @@ class AuthManager {
     }
   }
 
+  resetSignInButtonState() {
+    try {
+      const btn = document.getElementById('googleSignInBtn');
+      if (btn) {
+        btn.disabled = false;
+        btn.style.pointerEvents = 'auto';
+        btn.style.opacity = '1';
+        const span = btn.querySelector('span');
+        if (span) span.textContent = 'SIGN IN WITH GOOGLE';
+      }
+      const topSignInBtn = document.getElementById('signInBtn');
+      if (topSignInBtn) {
+        topSignInBtn.disabled = false;
+        topSignInBtn.style.pointerEvents = 'auto';
+        topSignInBtn.style.opacity = '1';
+      }
+      if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
   showAuthError(message) {
-    const errEl = document.getElementById('google-auth-error');
-    if (errEl) {
-      errEl.textContent = message;
-      errEl.classList.remove('hidden');
+    const ids = ['google-auth-error-callsign', 'google-auth-error'];
+    ids.forEach((id) => {
+      const errEl = document.getElementById(id);
+      if (errEl) {
+        errEl.textContent = message;
+        errEl.classList.remove('hidden', 'modal-hidden');
+        errEl.style.display = 'block';
+        errEl.style.color = '#ff4d6d';
+        errEl.style.background = 'rgba(255, 77, 109, 0.12)';
+        errEl.style.border = '1px solid rgba(255, 77, 109, 0.4)';
+        errEl.style.borderRadius = '6px';
+        errEl.style.padding = '8px 12px';
+        errEl.style.marginTop = '6px';
+        errEl.style.textAlign = 'center';
+        errEl.style.fontSize = '0.78rem';
+        errEl.style.fontFamily = 'monospace';
+        errEl.style.lineHeight = '1.4';
+        errEl.style.wordBreak = 'break-word';
+        errEl.style.boxSizing = 'border-box';
+        errEl.style.position = 'relative';
+        errEl.style.zIndex = '10';
+        errEl.style.opacity = '1';
+        errEl.style.visibility = 'visible';
+      }
+    });
+    this.resetSignInButtonState();
+    if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+      try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
     }
   }
 
   clearAuthError() {
-    const errEl = document.getElementById('google-auth-error');
-    if (errEl) {
-      errEl.textContent = '';
-      errEl.classList.add('hidden');
+    const ids = ['google-auth-error-callsign', 'google-auth-error'];
+    ids.forEach((id) => {
+      const errEl = document.getElementById(id);
+      if (errEl) {
+        errEl.textContent = '';
+        errEl.classList.add('hidden', 'modal-hidden');
+        errEl.style.display = 'none';
+      }
+    });
+    this.resetSignInButtonState();
+  }
+
+  handleAuthError(message) {
+    console.warn('[AuthManager] Auth notice/error:', message);
+    this.showAuthError(message);
+    this.resetSignInButtonState();
+    if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+      try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
     }
   }
 }
 
 // Global Singleton Instance
 window.AuthManager = new AuthManager();
+
+// Global Unhandled Promise Rejection Guard for Google Auth & Async Failures
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && !window._authUnhandledRejectionBound) {
+  window._authUnhandledRejectionBound = true;
+  window.addEventListener('unhandledrejection', function(event) {
+    try {
+      const reasonStr = event && event.reason ? (event.reason.message || String(event.reason)) : '';
+      const isAuthRelated = /google|gis|idpiframe|popup|oauth|origin_mismatch|token/i.test(reasonStr);
+      if (isAuthRelated) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        console.warn('[AuthManager] Handled unhandled Google OAuth rejection:', reasonStr);
+        if (window.AuthManager && typeof window.AuthManager.handleAuthError === 'function') {
+          window.AuthManager.handleAuthError('Google Sign-In was interrupted or unavailable. Enter a Callsign below or click Continue to play as Guest.');
+        }
+      }
+      if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
+    } catch (e) {}
+  });
+}
