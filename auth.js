@@ -274,8 +274,12 @@ class AuthManager {
         context: 'signin'
       });
 
-      // Render official Google button if container exists
-      this.renderGisButton();
+      // Do NOT render GIS button iframe eagerly on page load.
+      // Eager rendering creates cross-origin iframes while the auth modal is hidden.
+      // If the origin is unverified (such as Vercel preview URLs or local dev),
+      // the iframe network request hangs or fails with 403, keeping the browser tab
+      // loading spinner active indefinitely.
+      // The button will be rendered on-demand when openAuthModal() is invoked.
       // Initialize OAuth 2.0 token client for custom button click
       this.initTokenClient();
     } catch (err) {
@@ -302,6 +306,15 @@ class AuthManager {
     if (this.isOriginMismatch) {
       this.showOriginMismatchUI();
       return;
+    }
+    const modal = document.getElementById('authModal') || document.querySelector('.auth-modal');
+    if (modal) {
+      const isVisible = modal.style.display === 'flex' ||
+                        modal.style.display === 'block' ||
+                        (modal.classList.contains('active') && !modal.classList.contains('hidden') && !modal.classList.contains('modal-hidden'));
+      if (!isVisible) {
+        return; // Defer until modal is explicitly opened
+      }
     }
     const container = document.getElementById('g_id_signin_container');
     if (!container || !window.google?.accounts?.id || typeof window.google.accounts.id.renderButton !== 'function') return;
@@ -969,6 +982,13 @@ class AuthManager {
           confirmBtn.disabled = false;
           confirmBtn.style.pointerEvents = 'auto';
           confirmBtn.textContent = 'CONFIRM & PLAY AS GUEST';
+        }
+        const gisContainer = document.getElementById('g_id_signin_container');
+        if (gisContainer) {
+          gisContainer.style.pointerEvents = 'none';
+          if (gisContainer.hasChildNodes()) {
+            gisContainer.innerHTML = '';
+          }
         }
       } catch (e) {}
 
