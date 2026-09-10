@@ -23,7 +23,7 @@
 
 const GOOGLE_CLIENT_ID = '1021532607267-3bggltjfaaesvrhdkh6adllfaf2bv42m.apps.googleusercontent.com'; // <-- NEW CLIENT ID
 
-// Safe Console logger interceptor for [GSI_LOGGER] origin / status 400 errors
+// Safe Console logger interceptor for [GSI_LOGGER] origin, status 400, and 403 Forbidden errors
 let _inLoggerInterceptor = false;
 if (typeof console !== 'undefined' && !console._gisOriginLoggerBound) {
   console._gisOriginLoggerBound = true;
@@ -34,13 +34,21 @@ if (typeof console !== 'undefined' && !console._gisOriginLoggerBound) {
       if (!_inLoggerInterceptor) {
         _inLoggerInterceptor = true;
         const combined = args.map(a => (a && typeof a === 'object' ? (a.message || (typeof a.toString === 'function' ? a.toString() : '')) : String(a))).join(' ');
-        if (/\[GSI_LOGGER\]/i.test(combined) && (/origin/i.test(combined) || /400/i.test(combined) || /not allowed/i.test(combined))) {
-          if (window.AuthManager && !window.AuthManager.isOriginMismatch && typeof window.AuthManager.handleOriginMismatch === 'function') {
-            window.AuthManager.handleOriginMismatch(combined);
+        if (/\[GSI_LOGGER\]|accounts\.google\.com|googleapis\.com/i.test(combined)) {
+          if (/403|access_denied|forbidden/i.test(combined)) {
+            if (window.AuthManager && typeof window.AuthManager.handleAuth403 === 'function') {
+              window.AuthManager.handleAuth403(combined);
+            }
+            _inLoggerInterceptor = false;
+            return;
           }
-          _inLoggerInterceptor = false;
-          // Suppress unhandled [GSI_LOGGER] red error in console since we handle it gracefully with guest fallback
-          return;
+          if (/origin/i.test(combined) || /400/i.test(combined) || /not allowed/i.test(combined)) {
+            if (window.AuthManager && !window.AuthManager.isOriginMismatch && typeof window.AuthManager.handleOriginMismatch === 'function') {
+              window.AuthManager.handleOriginMismatch(combined);
+            }
+            _inLoggerInterceptor = false;
+            return;
+          }
         }
         _inLoggerInterceptor = false;
       }
@@ -54,12 +62,21 @@ if (typeof console !== 'undefined' && !console._gisOriginLoggerBound) {
       if (!_inLoggerInterceptor) {
         _inLoggerInterceptor = true;
         const combined = args.map(a => (a && typeof a === 'object' ? (a.message || (typeof a.toString === 'function' ? a.toString() : '')) : String(a))).join(' ');
-        if (/\[GSI_LOGGER\]/i.test(combined) && (/origin/i.test(combined) || /400/i.test(combined) || /not allowed/i.test(combined))) {
-          if (window.AuthManager && !window.AuthManager.isOriginMismatch && typeof window.AuthManager.handleOriginMismatch === 'function') {
-            window.AuthManager.handleOriginMismatch(combined);
+        if (/\[GSI_LOGGER\]|accounts\.google\.com|googleapis\.com/i.test(combined)) {
+          if (/403|access_denied|forbidden/i.test(combined)) {
+            if (window.AuthManager && typeof window.AuthManager.handleAuth403 === 'function') {
+              window.AuthManager.handleAuth403(combined);
+            }
+            _inLoggerInterceptor = false;
+            return;
           }
-          _inLoggerInterceptor = false;
-          return;
+          if (/origin/i.test(combined) || /400/i.test(combined) || /not allowed/i.test(combined)) {
+            if (window.AuthManager && !window.AuthManager.isOriginMismatch && typeof window.AuthManager.handleOriginMismatch === 'function') {
+              window.AuthManager.handleOriginMismatch(combined);
+            }
+            _inLoggerInterceptor = false;
+            return;
+          }
         }
         _inLoggerInterceptor = false;
       }
@@ -76,6 +93,7 @@ class AuthManager {
     this.isGisLoaded = false;
     this.isOriginMismatch = false;
     this._isHandlingMismatch = false;
+    this._isHandling403 = false;
     this._originMismatchRendered = false;
 
     // Check if current origin was previously detected as unauthorized for this specific client ID
@@ -237,6 +255,10 @@ class AuthManager {
         error_callback: (err) => {
           console.warn('[AuthManager] GIS initialization/error callback notice:', err);
           const errType = (err && (err.type || err.message || err.status || (typeof err === 'object' ? JSON.stringify(err) : String(err)))) ? String(err.type || err.message || err.status || JSON.stringify(err)) : '';
+          if (/403|access_denied|forbidden/i.test(errType)) {
+            this.handleAuth403(errType);
+            return;
+          }
           if (/origin|400|not allowed|misconfigured|mismatch|gsi_logger/i.test(errType)) {
             this.handleOriginMismatch(errType);
             return;
@@ -392,6 +414,8 @@ class AuthManager {
             console.warn('[AuthManager] OAuth token error:', tokenResponse.error);
             if (tokenResponse.error === 'popup_closed_by_user') {
               this.handleAuthError('Google Sign-In popup closed. Enter a Callsign below or click Continue to play as Guest.');
+            } else if (/403|access_denied|unauthorized_client|forbidden/i.test(tokenResponse.error)) {
+              this.handleAuth403(tokenResponse.error);
             } else if (/origin|400|not allowed/i.test(tokenResponse.error)) {
               this.handleOriginMismatch(tokenResponse.error);
             } else {
@@ -416,9 +440,17 @@ class AuthManager {
                 });
                 this.closeModal();
                 return;
+              } else if (res.status === 403) {
+                console.warn('[AuthManager] Google userinfo fetch returned HTTP 403 Forbidden');
+                this.handleAuth403('HTTP 403 Forbidden on userinfo');
+                return;
               }
             } catch (fetchErr) {
               console.warn('[AuthManager] Failed to fetch Google userinfo:', fetchErr);
+              if (/403|access_denied|forbidden/i.test(String(fetchErr))) {
+                this.handleAuth403(String(fetchErr));
+                return;
+              }
             }
             // Fallback if userinfo fetch fails
             this.applyAuthenticatedUser({
@@ -434,8 +466,10 @@ class AuthManager {
         error_callback: (err) => {
           this.resetSignInButtonState();
           console.warn('[AuthManager] Token client error callback:', err);
-          const errStr = String(err?.message || err || '');
-          if (/origin|400|not allowed|mismatch/i.test(errStr)) {
+          const errStr = String(err?.message || err?.error || err || '');
+          if (/403|access_denied|unauthorized_client|forbidden/i.test(errStr)) {
+            this.handleAuth403(errStr);
+          } else if (/origin|400|not allowed|mismatch/i.test(errStr)) {
             this.handleOriginMismatch(errStr);
           } else {
             this.handleAuthError('Google Sign-In popup closed or unavailable. Enter a Callsign below or click Continue to play as Guest.');
@@ -498,7 +532,9 @@ class AuthManager {
               if (notification.isNotDisplayed()) {
                 const reason = typeof notification.getNotDisplayedReason === 'function' ? notification.getNotDisplayedReason() : '';
                 console.warn('[AuthManager] GIS prompt not displayed on this domain:', reason);
-                if (/origin|400|not allowed|mismatch/i.test(reason)) {
+                if (/403|access_denied|forbidden/i.test(reason)) {
+                  this.handleAuth403(reason);
+                } else if (/origin|400|not allowed|mismatch/i.test(reason)) {
                   this.handleOriginMismatch(reason);
                 } else {
                   this.handleAuthError('Google Sign-In unavailable on this domain. Enter a Callsign below or click Continue to play as Guest.');
@@ -515,7 +551,9 @@ class AuthManager {
             } catch (notifErr) {
               console.warn('[AuthManager] Error in GIS notification handler:', notifErr);
               const errStr = String(notifErr?.message || notifErr || '');
-              if (/origin|400|not allowed|mismatch/i.test(errStr)) {
+              if (/403|access_denied|forbidden/i.test(errStr)) {
+                this.handleAuth403(errStr);
+              } else if (/origin|400|not allowed|mismatch/i.test(errStr)) {
                 this.handleOriginMismatch(errStr);
               } else {
                 this.handleAuthError('Google Sign-In unavailable. Enter a Callsign below or click Continue to play as Guest.');
@@ -847,6 +885,7 @@ class AuthManager {
 
   clearAuthError() {
     this._originMismatchRendered = false;
+    this._isHandling403 = false;
     const ids = ['google-auth-error-callsign', 'google-auth-error'];
     ids.forEach((id) => {
       const errEl = document.getElementById(id);
@@ -862,6 +901,10 @@ class AuthManager {
   handleAuthError(message) {
     console.warn('[AuthManager] Auth notice/error:', message);
     const msgStr = String(message || '');
+    if (/403|access_denied|forbidden/i.test(msgStr)) {
+      this.handleAuth403(msgStr);
+      return;
+    }
     if (/origin|400|not allowed|misconfigured|mismatch|gsi_logger/i.test(msgStr)) {
       this.handleOriginMismatch(msgStr);
       return;
@@ -870,6 +913,61 @@ class AuthManager {
     this.resetSignInButtonState();
     if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
       try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+    }
+  }
+
+  /**
+   * Handle Google OAuth 403 Forbidden / Permission Denied gracefully.
+   * Occurs when Google Cloud project OAuth consent screen is in "Testing" mode
+   * and the current Google account is not added to "Test users", or when origin/CORS is forbidden.
+   */
+  handleAuth403(detailMsg) {
+    if (this._isHandling403) return;
+    this._isHandling403 = true;
+    try {
+      console.warn('[AuthManager] Google Auth 403 Forbidden detected:', detailMsg);
+      const msg = 'Google Auth 403 (Permission Denied): If this app is in "Testing" mode, add your email under Google Cloud Console -> OAuth consent screen -> Test users, or enter a Callsign below to play as Guest.';
+      this.showAuthError(msg);
+
+      // Immediately activate manual Callsign / Guest input field and confirm button
+      try {
+        const section = document.querySelector('.callsign-input-section');
+        if (section) {
+          section.style.display = 'block';
+          section.style.visibility = 'visible';
+          section.style.opacity = '1';
+          section.style.pointerEvents = 'auto';
+        }
+        const label = document.querySelector('.callsign-input-label');
+        if (label) {
+          label.textContent = 'ENTER CALLSIGN / GUEST SIGN-IN';
+          label.style.color = '#00f0ff';
+        }
+        const input = document.getElementById('input-operative-callsign');
+        if (input) {
+          input.disabled = false;
+          input.style.pointerEvents = 'auto';
+          input.placeholder = 'Enter Callsign / Guest Name';
+          setTimeout(() => {
+            try { input.focus(); } catch (e) {}
+          }, 50);
+        }
+        const confirmBtn = document.getElementById('btn-confirm-callsign');
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.style.pointerEvents = 'auto';
+          confirmBtn.textContent = 'CONFIRM & PLAY AS GUEST';
+        }
+      } catch (e) {}
+
+      // Ensure modal close controls and backdrop remain fully functional
+      this.ensureCloseControlsActive();
+    } finally {
+      this._isHandling403 = false;
+      this.resetSignInButtonState();
+      if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+        try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+      }
     }
   }
 
