@@ -792,12 +792,15 @@ class AuthManager {
       return;
     }
     this.isOriginMismatch = true;
+    const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';
     try {
-      if (typeof sessionStorage !== 'undefined' && typeof window !== 'undefined' && window.location?.origin) {
-        sessionStorage.setItem('cyber_gis_origin_mismatch', window.location.origin);
+      if (typeof sessionStorage !== 'undefined' && origin) {
+        sessionStorage.setItem('cyber_gis_origin_mismatch', origin);
       }
     } catch (e) {}
-    const cleanMsg = 'Google auth is misconfigured for this origin. Enter a Callsign below or click Continue to play as Guest.';
+    const cleanMsg = origin
+      ? `Google auth is misconfigured for this origin (${origin}). Enter a Callsign below or click Continue to play as Guest.`
+      : 'Google auth is misconfigured for this origin. Enter a Callsign below or click Continue to play as Guest.';
     this.showOriginMismatchUI(cleanMsg);
   }
 
@@ -805,7 +808,11 @@ class AuthManager {
    * Render clean origin mismatch message and immediately provide manual Callsign / Guest Sign-In
    */
   showOriginMismatchUI(message) {
-    const cleanMsg = message || 'Google auth is misconfigured for this origin. Enter a Callsign below or click Continue to play as Guest.';
+    const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';
+    const defaultMsg = origin
+      ? `Google auth is misconfigured for this origin (${origin}). Enter a Callsign below or click Continue to play as Guest.`
+      : 'Google auth is misconfigured for this origin. Enter a Callsign below or click Continue to play as Guest.';
+    const cleanMsg = message || defaultMsg;
     this.showAuthError(cleanMsg);
 
     // Immediately provide manual Callsign / Guest input field and confirm button
