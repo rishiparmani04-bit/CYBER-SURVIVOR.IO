@@ -35,6 +35,8 @@ if (typeof console !== 'undefined' && !console._gisOriginLoggerBound) {
         if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
           window.AuthManager.handleOriginMismatch(combined);
         }
+        // Suppress unhandled [GSI_LOGGER] red error in console since we handle it gracefully with guest fallback
+        return;
       }
     } catch (e) {}
     _origConsoleError.apply(console, args);
@@ -46,6 +48,7 @@ if (typeof console !== 'undefined' && !console._gisOriginLoggerBound) {
         if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
           window.AuthManager.handleOriginMismatch(combined);
         }
+        return;
       }
     } catch (e) {}
     _origConsoleWarn.apply(console, args);
@@ -57,6 +60,16 @@ class AuthManager {
     this.clientId = GOOGLE_CLIENT_ID;
     this.isGisLoaded = false;
     this.isOriginMismatch = false;
+
+    // Check if current origin was previously detected as unauthorized to avoid repeat 400 iframe requests
+    try {
+      if (typeof sessionStorage !== 'undefined' && typeof window !== 'undefined' && window.location?.origin) {
+        if (sessionStorage.getItem('cyber_gis_origin_mismatch') === window.location.origin) {
+          this.isOriginMismatch = true;
+        }
+      }
+    } catch (e) {}
+
     this.currentUser = null;
     this.tokenClient = null;
 
@@ -774,9 +787,17 @@ class AuthManager {
    * Handle Google Identity Services Origin Mismatch or Status 400 errors gracefully
    */
   handleOriginMismatch(detailMsg) {
+    if (this.isOriginMismatch) {
+      this.showOriginMismatchUI();
+      return;
+    }
     this.isOriginMismatch = true;
+    try {
+      if (typeof sessionStorage !== 'undefined' && typeof window !== 'undefined' && window.location?.origin) {
+        sessionStorage.setItem('cyber_gis_origin_mismatch', window.location.origin);
+      }
+    } catch (e) {}
     const cleanMsg = 'Google auth is misconfigured for this origin. Enter a Callsign below or click Continue to play as Guest.';
-    console.warn('[AuthManager] Google Sign-In Origin Mismatch / 400 caught gracefully:', detailMsg || cleanMsg);
     this.showOriginMismatchUI(cleanMsg);
   }
 
@@ -819,6 +840,7 @@ class AuthManager {
       const gisContainer = document.getElementById('g_id_signin_container');
       if (gisContainer) {
         gisContainer.style.pointerEvents = 'none';
+        gisContainer.innerHTML = '';
       }
     } catch (e) {}
 
