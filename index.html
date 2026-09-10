@@ -20,6 +20,80 @@
     window.adConfig = window.adConfig || function(o) { adsbygoogle.push(o); };
   </script>
 
+  <!-- Early Console & Error Interceptor for Google Identity Services -->
+  <script>
+    (function() {
+      if (typeof console !== 'undefined' && !console._gisOriginEarlyBound) {
+        console._gisOriginEarlyBound = true;
+        var origErr = console.error;
+        var origWarn = console.warn;
+        var inInterceptor = false;
+        var isGisMismatch = function(s) {
+          return /\[GSI_LOGGER\]|accounts\.google\.com|googleapis\.com/i.test(s) &&
+                 (/origin/i.test(s) || /400/i.test(s) || /403/i.test(s) || /not allowed/i.test(s) || /access_denied/i.test(s) || /forbidden/i.test(s));
+        };
+        console.error = function() {
+          try {
+            if (!inInterceptor) {
+              inInterceptor = true;
+              var args = Array.prototype.slice.call(arguments);
+              var combined = args.map(function(a) {
+                return (a && typeof a === 'object') ? (a.message || (typeof a.toString === 'function' ? a.toString() : '')) : String(a);
+              }).join(' ');
+              if (isGisMismatch(combined)) {
+                if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
+                  window.AuthManager.handleOriginMismatch(combined);
+                }
+                inInterceptor = false;
+                return;
+              }
+              inInterceptor = false;
+            }
+          } catch (e) {
+            inInterceptor = false;
+          }
+          origErr.apply(console, arguments);
+        };
+        console.warn = function() {
+          try {
+            if (!inInterceptor) {
+              inInterceptor = true;
+              var args = Array.prototype.slice.call(arguments);
+              var combined = args.map(function(a) {
+                return (a && typeof a === 'object') ? (a.message || (typeof a.toString === 'function' ? a.toString() : '')) : String(a);
+              }).join(' ');
+              if (isGisMismatch(combined)) {
+                if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
+                  window.AuthManager.handleOriginMismatch(combined);
+                }
+                inInterceptor = false;
+                return;
+              }
+              inInterceptor = false;
+            }
+          } catch (e) {
+            inInterceptor = false;
+          }
+          origWarn.apply(console, arguments);
+        };
+      }
+      if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        window.addEventListener('error', function(event) {
+          try {
+            var target = event && event.target;
+            var src = (target && (target.src || target.currentSrc)) ? String(target.src || target.currentSrc) : '';
+            if (src && /accounts\.google\.com/i.test(src)) {
+              if (typeof event.preventDefault === 'function') event.preventDefault();
+              if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
+                window.AuthManager.handleOriginMismatch('GIS resource error on: ' + src);
+              }
+            }
+          } catch (e) {}
+        }, true);
+      }
+    })();
+  </script>
+
   <!-- Google Identity Services (GIS) OAuth SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -2412,7 +2486,7 @@
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="ads.js?v=1.0"></script>
-  <script src="auth.js?v=1.1"></script>
+  <script src="auth.js?v=1.2"></script>
   <script src="script.js?v=6.6"></script>
 </body>
 </html>
