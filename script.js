@@ -2675,7 +2675,7 @@ class Game {
       const menuScreen = document.getElementById('menu-screen') || document.querySelector('.deadshot-lobby-screen');
       if (menuScreen) {
         menuScreen.classList.add('active');
-        menuScreen.style.display = 'block';
+        menuScreen.style.display = 'flex';
         menuScreen.style.pointerEvents = 'auto';
       }
     } catch (e) {}
@@ -2794,9 +2794,9 @@ class Game {
   }
 
   resizeCanvas() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = window.innerWidth || document.documentElement.clientWidth || 1280;
-    const h = window.innerHeight || document.documentElement.clientHeight || 720;
+    const dpr = Math.min((typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1, 2);
+    const w = (typeof window !== 'undefined' && window.innerWidth) || (typeof document !== 'undefined' && document.documentElement?.clientWidth) || 1280;
+    const h = (typeof window !== 'undefined' && window.innerHeight) || (typeof document !== 'undefined' && document.documentElement?.clientHeight) || 720;
     if (this.canvas) {
       this.canvas.width = w * dpr;
       this.canvas.height = h * dpr;
@@ -5898,7 +5898,12 @@ class Game {
     this.audio.startMusic();
 
     // Hide menus & modals
-    document.getElementById('menu-screen')?.classList.remove('active');
+    const menuScreen = document.getElementById('menu-screen') || document.querySelector('.deadshot-lobby-screen');
+    if (menuScreen) {
+      menuScreen.classList.remove('active');
+      menuScreen.style.display = 'none';
+      menuScreen.style.pointerEvents = 'none';
+    }
     document.getElementById('pause-modal')?.classList.add('hidden');
     document.getElementById('gameover-modal')?.classList.add('hidden');
     document.getElementById('gameOverModal')?.classList.add('hidden');
@@ -6095,7 +6100,12 @@ class Game {
     document.getElementById('deathScreen')?.classList.add('hidden');
     document.getElementById('victory-modal')?.classList.add('hidden');
     document.getElementById('levelup-modal')?.classList.add('hidden');
-    document.getElementById('menu-screen')?.classList.add('active');
+    const menuScreen = document.getElementById('menu-screen') || document.querySelector('.deadshot-lobby-screen');
+    if (menuScreen) {
+      menuScreen.classList.add('active');
+      menuScreen.style.display = 'flex';
+      menuScreen.style.pointerEvents = 'auto';
+    }
 
     // Clean up 4-Player Co-Op Squad network & panels
     this.cleanupSquadNetwork();
