@@ -21,7 +21,7 @@
  * the Callsign / Guest login fallback inside the modal is always active and unblocked.
  */
 
-const GOOGLE_CLIENT_ID = '1021532607267-2b815nvlp44h57bn092tbue56edok0on.apps.googleusercontent.com'; // <-- REPLACE WITH YOUR CLIENT ID
+const GOOGLE_CLIENT_ID = '1021532607267-3bggltjfaaesvrhdkh6adllfaf2bv42m.apps.googleusercontent.com'; // <-- NEW CLIENT ID
 
 // Safe Console logger interceptor for [GSI_LOGGER] origin / status 400 errors
 if (typeof console !== 'undefined' && !console._gisOriginLoggerBound) {
@@ -61,11 +61,15 @@ class AuthManager {
     this.isGisLoaded = false;
     this.isOriginMismatch = false;
 
-    // Check if current origin was previously detected as unauthorized to avoid repeat 400 iframe requests
+    // Check if current origin was previously detected as unauthorized for this specific client ID
     try {
       if (typeof sessionStorage !== 'undefined' && typeof window !== 'undefined' && window.location?.origin) {
-        if (sessionStorage.getItem('cyber_gis_origin_mismatch') === window.location.origin) {
+        if (sessionStorage.getItem('cyber_gis_mismatch_client_id') === this.clientId &&
+            sessionStorage.getItem('cyber_gis_origin_mismatch') === window.location.origin) {
           this.isOriginMismatch = true;
+        } else {
+          sessionStorage.removeItem('cyber_gis_origin_mismatch');
+          sessionStorage.removeItem('cyber_gis_mismatch_client_id');
         }
       }
     } catch (e) {}
@@ -796,6 +800,7 @@ class AuthManager {
     try {
       if (typeof sessionStorage !== 'undefined' && origin) {
         sessionStorage.setItem('cyber_gis_origin_mismatch', origin);
+        sessionStorage.setItem('cyber_gis_mismatch_client_id', this.clientId);
       }
     } catch (e) {}
     const cleanMsg = origin
