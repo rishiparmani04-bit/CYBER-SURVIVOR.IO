@@ -43,7 +43,7 @@ if (typeof console !== 'undefined' && !console._gisOriginLoggerBound) {
             return;
           }
           if (/origin/i.test(combined) || /400/i.test(combined) || /not allowed/i.test(combined)) {
-            if (window.AuthManager && !window.AuthManager.isOriginMismatch && typeof window.AuthManager.handleOriginMismatch === 'function') {
+            if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
               window.AuthManager.handleOriginMismatch(combined);
             }
             _inLoggerInterceptor = false;
@@ -71,7 +71,7 @@ if (typeof console !== 'undefined' && !console._gisOriginLoggerBound) {
             return;
           }
           if (/origin/i.test(combined) || /400/i.test(combined) || /not allowed/i.test(combined)) {
-            if (window.AuthManager && !window.AuthManager.isOriginMismatch && typeof window.AuthManager.handleOriginMismatch === 'function') {
+            if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
               window.AuthManager.handleOriginMismatch(combined);
             }
             _inLoggerInterceptor = false;
@@ -318,6 +318,18 @@ class AuthManager {
         logo_alignment: 'left',
         width: 280
       });
+
+      // Detect button iframe load failure asynchronously
+      setTimeout(() => {
+        try {
+          const iframe = container.querySelector('iframe');
+          if (iframe) {
+            iframe.addEventListener('error', () => {
+              this.handleOriginMismatch('Google button iframe failed to load on this origin');
+            });
+          }
+        } catch (e) {}
+      }, 50);
     } catch (e) {
       console.warn('[AuthManager] Could not render GIS button widget:', e);
       const errStr = String(e?.message || e || '');
@@ -1247,6 +1259,21 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   window._authGlobalErrorBound = true;
   window.addEventListener('error', function(event) {
     try {
+      const target = event && event.target;
+      const src = (target && (target.src || target.currentSrc)) ? String(target.src || target.currentSrc) : '';
+      if (src && /accounts\.google\.com/i.test(src)) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        try {
+          if (typeof _origConsoleWarn === 'function') {
+            _origConsoleWarn.call(console, '[AuthManager] Intercepted Google resource load error on origin:', src);
+          }
+        } catch (e) {}
+        if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
+          window.AuthManager.handleOriginMismatch('Google Identity resource error: ' + src);
+        }
+        return;
+      }
+
       const errStr = (event && (event.message || event.filename || (event.error && event.error.message)))
         ? String(event.message || event.filename || event.error?.message)
         : '';
@@ -1268,7 +1295,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
             _origConsoleWarn.call(console, '[AuthManager] Intercepted GIS origin/status 400 error event.');
           }
         } catch (e) {}
-        if (window.AuthManager && !window.AuthManager.isOriginMismatch && typeof window.AuthManager.handleOriginMismatch === 'function') {
+        if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
           window.AuthManager.handleOriginMismatch(errStr);
         }
       }
@@ -1276,7 +1303,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
         try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
       }
     } catch (e) {}
-  });
+  }, true);
 }
 
 // Global Unhandled Promise Rejection Guard for Google Auth & Async Failures
