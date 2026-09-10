@@ -438,41 +438,49 @@ function bindHeaderClickHandlers() {
 
   // Automatically sync hidden class when modal style.display is changed
   if (typeof MutationObserver !== 'undefined') {
+    let _inModalObserver = false;
     const modalObserver = new MutationObserver((mutations) => {
-      mutations.forEach((m) => {
-        if (m.attributeName === 'style' || m.attributeName === 'class') {
-          const target = m.target;
-          if (target.style.display === 'flex' || (!target.classList.contains('hidden') && !target.classList.contains('modal-hidden') && target.style.display !== 'none' && target.style.display !== '')) {
-            target.classList.remove('hidden', 'modal-hidden');
-            const inner = target.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card, .cyber-alert-box');
-            if (inner) {
-              inner.classList.remove('hidden', 'modal-hidden');
-              inner.style.opacity = '1';
-              inner.style.visibility = 'visible';
-              inner.style.pointerEvents = 'auto';
-              inner.style.zIndex = '100000';
-              inner.style.position = 'relative';
-              inner.style.background = '#0d1122';
-              inner.style.color = '#ffffff';
-              if (inner.id === 'profile-setup-modal' || inner.id === 'earn-diamonds-modal' || inner.classList.contains('avatar-modal-card') || inner.classList.contains('squad-lobby-card') || inner.classList.contains('rewarded-ad-player') || inner.classList.contains('squad-invite-card') || inner.classList.contains('levelup-card') || inner.classList.contains('callsign-auth-card')) {
-                inner.style.display = 'flex';
-                inner.style.flexDirection = 'column';
+      if (_inModalObserver) return;
+      _inModalObserver = true;
+      try {
+        mutations.forEach((m) => {
+          if (m.attributeName === 'style' || m.attributeName === 'class') {
+            const target = m.target;
+            const isShown = target.style.display === 'flex' || (!target.classList.contains('hidden') && !target.classList.contains('modal-hidden') && target.style.display !== 'none' && target.style.display !== '');
+            if (isShown) {
+              target.classList.remove('hidden', 'modal-hidden');
+              const inner = target.querySelector('.modal-card, .profile-setup-card, .earn-diamonds-card, .avatar-modal-card, .google-auth-card, .squad-lobby-card, .private-room-card, .join-room-card, .bank-purchase-card, .rewarded-ad-player, .rewarded-ad-card, .squad-invite-card, .levelup-card, .gameover-card, .victory-card, .cyber-alert-box');
+              if (inner) {
+                inner.classList.remove('hidden', 'modal-hidden');
+                inner.style.opacity = '1';
+                inner.style.visibility = 'visible';
+                inner.style.pointerEvents = 'auto';
+                inner.style.zIndex = '100000';
+                inner.style.position = 'relative';
+                inner.style.background = '#0d1122';
+                inner.style.color = '#ffffff';
+                if (inner.id === 'profile-setup-modal' || inner.id === 'earn-diamonds-modal' || inner.classList.contains('avatar-modal-card') || inner.classList.contains('squad-lobby-card') || inner.classList.contains('rewarded-ad-player') || inner.classList.contains('squad-invite-card') || inner.classList.contains('levelup-card') || inner.classList.contains('callsign-auth-card')) {
+                  if (inner.style.display !== 'flex') {
+                    inner.style.display = 'flex';
+                    inner.style.flexDirection = 'column';
+                  }
+                } else if (inner.style.display !== 'block') {
+                  inner.style.display = 'block';
+                }
+                target.style.pointerEvents = 'auto';
               } else {
-                inner.style.display = 'block';
+                target.style.pointerEvents = 'none';
               }
-              target.style.pointerEvents = 'auto';
             } else {
+              if (!target.classList.contains('hidden')) target.classList.add('hidden');
+              if (!target.classList.contains('modal-hidden')) target.classList.add('modal-hidden');
               target.style.pointerEvents = 'none';
             }
-          } else if (target.style.display === 'none' || target.classList.contains('hidden') || target.classList.contains('modal-hidden')) {
-            target.classList.add('hidden', 'modal-hidden');
-            target.style.pointerEvents = 'none';
-            if (typeof window.cleanupDarkBackdrops === 'function') {
-              window.cleanupDarkBackdrops();
-            }
           }
-        }
-      });
+        });
+      } finally {
+        _inModalObserver = false;
+      }
     });
     ['authModal', 'loginModal', 'callsignModal', 'profileModal', 'storeModal', 'shopModal', 'avatarModal', 'squad-lobby-modal', 'squad-invite-modal', 'google-auth-modal', 'private-room-modal', 'join-room-modal', 'bank-purchase-modal', 'rewarded-ad-modal', 'cyber-alert-modal'].forEach(id => {
       const el = document.getElementById(id);
