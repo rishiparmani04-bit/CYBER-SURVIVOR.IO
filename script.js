@@ -229,49 +229,56 @@ window.openStoreModal = openStoreModal;
 window.openAvatarModal = openAvatarModal;
 
 // Attach modal display functions directly to window and force styles so hidden classes cannot override them:
+let _isOpeningAuthModal = false;
 window.openAuthModal = function() {
-  const m = document.getElementById('authModal');
-  if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
-  if (m) {
-    m.classList.remove('modal-hidden');
-    m.style.pointerEvents = 'auto';
-    m.style.zIndex = '99999';
-  }
-  const inner = document.getElementById('callsign-auth-modal') || (m && m.querySelector('.modal-card'));
-  if (inner && inner !== m) {
-    inner.classList.remove('hidden', 'modal-hidden');
-    inner.style.pointerEvents = 'auto';
-    inner.style.display = 'flex';
-    inner.style.flexDirection = 'column';
-    inner.style.opacity = '1';
-    inner.style.visibility = 'visible';
-    inner.style.zIndex = '100000';
-    inner.style.background = '#0d1122';
-    inner.style.color = '#ffffff';
-  }
-  if (window.AuthManager && window.AuthManager.isOriginMismatch) {
-    try { window.AuthManager.showOriginMismatchUI(); } catch (e) {}
-  } else if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
-    try { window.AuthManager.renderGisButton(); } catch (e) {}
-  }
-  const closeBtn = document.getElementById('btn-close-callsign-modal');
-  if (closeBtn) { closeBtn.style.pointerEvents = 'auto'; closeBtn.style.zIndex = '100002'; closeBtn.style.cursor = 'pointer'; }
-  const cancelBtn = document.getElementById('btn-cancel-callsign-modal');
-  if (cancelBtn) { cancelBtn.style.pointerEvents = 'auto'; cancelBtn.style.zIndex = '100002'; cancelBtn.style.cursor = 'pointer'; }
-  const confirmBtn = document.getElementById('btn-confirm-callsign');
-  if (confirmBtn) { confirmBtn.style.pointerEvents = 'auto'; }
-  const input = document.getElementById('input-operative-callsign');
-  if (input) { input.style.pointerEvents = 'auto'; setTimeout(() => input.focus(), 100); }
-  if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
-    try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
-  }
-  if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
-    try { window.gameInstance.openAuthModal(); } catch (e) {}
-  }
-  // Ensure opening the auth modal does NOT pause the main canvas animation loop; keep rendering in the background
-  if (window.gameInstance && !window.gameInstance.gameLoopId && !window.gameInstance.isGameOver && window.gameInstance.state !== 'GAMEOVER') {
-    window.gameInstance.lastTime = performance.now();
-    window.gameInstance.gameLoopId = requestAnimationFrame((t) => window.gameInstance.gameLoop(t));
+  if (_isOpeningAuthModal) return;
+  _isOpeningAuthModal = true;
+  try {
+    const m = document.getElementById('authModal');
+    if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+    if (m) {
+      m.classList.remove('modal-hidden');
+      m.style.pointerEvents = 'auto';
+      m.style.zIndex = '99999';
+    }
+    const inner = document.getElementById('callsign-auth-modal') || (m && m.querySelector('.modal-card'));
+    if (inner && inner !== m) {
+      inner.classList.remove('hidden', 'modal-hidden');
+      inner.style.pointerEvents = 'auto';
+      inner.style.display = 'flex';
+      inner.style.flexDirection = 'column';
+      inner.style.opacity = '1';
+      inner.style.visibility = 'visible';
+      inner.style.zIndex = '100000';
+      inner.style.background = '#0d1122';
+      inner.style.color = '#ffffff';
+    }
+    if (window.AuthManager && window.AuthManager.isOriginMismatch) {
+      try { window.AuthManager.showOriginMismatchUI(); } catch (e) {}
+    } else if (window.AuthManager && typeof window.AuthManager.renderGisButton === 'function') {
+      try { window.AuthManager.renderGisButton(); } catch (e) {}
+    }
+    const closeBtn = document.getElementById('btn-close-callsign-modal');
+    if (closeBtn) { closeBtn.style.pointerEvents = 'auto'; closeBtn.style.zIndex = '100002'; closeBtn.style.cursor = 'pointer'; }
+    const cancelBtn = document.getElementById('btn-cancel-callsign-modal');
+    if (cancelBtn) { cancelBtn.style.pointerEvents = 'auto'; cancelBtn.style.zIndex = '100002'; cancelBtn.style.cursor = 'pointer'; }
+    const confirmBtn = document.getElementById('btn-confirm-callsign');
+    if (confirmBtn) { confirmBtn.style.pointerEvents = 'auto'; }
+    const input = document.getElementById('input-operative-callsign');
+    if (input) { input.style.pointerEvents = 'auto'; setTimeout(() => input.focus(), 100); }
+    if (window.gameInstance && typeof window.gameInstance.ensureGameLoopRunning === 'function') {
+      try { window.gameInstance.ensureGameLoopRunning(); } catch (e) {}
+    }
+    if (window.gameInstance && typeof window.gameInstance.openAuthModal === 'function') {
+      try { window.gameInstance.openAuthModal(); } catch (e) {}
+    }
+    // Ensure opening the auth modal does NOT pause the main canvas animation loop; keep rendering in the background
+    if (window.gameInstance && !window.gameInstance.gameLoopId && !window.gameInstance.isGameOver && window.gameInstance.state !== 'GAMEOVER') {
+      window.gameInstance.lastTime = performance.now();
+      window.gameInstance.gameLoopId = requestAnimationFrame((t) => window.gameInstance.gameLoop(t));
+    }
+  } finally {
+    _isOpeningAuthModal = false;
   }
 };
 
@@ -9787,39 +9794,45 @@ class Game {
   }
 
   openAuthModal() {
-    this.ensureGameLoopRunning();
-    if (this.isUserAuthenticated()) {
-      this.openProfileModal();
-      return;
-    }
-    const backdrop = document.getElementById('authModal') || document.querySelector('.auth-modal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
-    if (backdrop) {
-      backdrop.classList.remove('hidden', 'modal-hidden');
-      backdrop.style.pointerEvents = 'auto';
-      backdrop.style.zIndex = '99999';
-      backdrop.style.display = 'flex';
-      backdrop.style.visibility = 'visible';
-      backdrop.style.opacity = '1';
-    }
-    const card = document.getElementById('callsign-auth-modal') || (backdrop && backdrop.querySelector('.modal-card'));
-    if (card && card !== backdrop) {
-      card.classList.remove('hidden', 'modal-hidden');
-      card.style.pointerEvents = 'auto';
-      card.style.display = 'flex';
-      card.style.flexDirection = 'column';
-      card.style.opacity = '1';
-      card.style.visibility = 'visible';
-      card.style.zIndex = '100000';
-      card.style.background = '#0d1122';
-      card.style.color = '#ffffff';
-    }
+    if (this._isOpeningAuthModal) return;
+    this._isOpeningAuthModal = true;
+    try {
+      this.ensureGameLoopRunning();
+      if (this.isUserAuthenticated()) {
+        this.openProfileModal();
+        return;
+      }
+      const backdrop = document.getElementById('authModal') || document.querySelector('.auth-modal') || document.getElementById('callsign-auth-modal') || document.getElementById('loginModal');
+      if (backdrop) {
+        backdrop.classList.remove('hidden', 'modal-hidden');
+        backdrop.style.pointerEvents = 'auto';
+        backdrop.style.zIndex = '99999';
+        backdrop.style.display = 'flex';
+        backdrop.style.visibility = 'visible';
+        backdrop.style.opacity = '1';
+      }
+      const card = document.getElementById('callsign-auth-modal') || (backdrop && backdrop.querySelector('.modal-card'));
+      if (card && card !== backdrop) {
+        card.classList.remove('hidden', 'modal-hidden');
+        card.style.pointerEvents = 'auto';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.opacity = '1';
+        card.style.visibility = 'visible';
+        card.style.zIndex = '100000';
+        card.style.background = '#0d1122';
+        card.style.color = '#ffffff';
+      }
 
-    // Ensure opening auth modal does NOT pause main canvas animation loop; keep rendering in background
-    if (!this.gameLoopId && !this.isGameOver && this.state !== 'GAMEOVER') {
-      this.lastTime = performance.now();
-      this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+      // Ensure opening auth modal does NOT pause main canvas animation loop; keep rendering in background
+      if (!this.gameLoopId && !this.isGameOver && this.state !== 'GAMEOVER') {
+        this.lastTime = performance.now();
+        this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+      }
+      this.openCallsignModal();
+    } finally {
+      this._isOpeningAuthModal = false;
     }
-    this.openCallsignModal();
   }
 
   confirmCallsignInput() {
@@ -10098,6 +10111,7 @@ class Game {
     if (this.presencePeer) {
       try {
         if (!this.presencePeer.destroyed) {
+          this.presencePeer._isDestroying = true;
           this.presencePeer.destroy();
         }
       } catch (e) {}
@@ -10122,7 +10136,7 @@ class Game {
 
       // Register player presence and allow squad invites only inside the Peer open callback once broker confirms assigned ID is active
       peerInstance.on('open', (assignedId) => {
-        if (this.presencePeer !== peerInstance) return;
+        if (this.presencePeer !== peerInstance || peerInstance._isDestroying || peerInstance.destroyed) return;
         console.log('[Presence] PeerJS broker confirmed active presence ID:', assignedId);
         this.currentPresencePeerId = assignedId;
         this.isPresencePeerReady = true;
@@ -10139,6 +10153,7 @@ class Game {
       });
 
       peerInstance.on('connection', (conn) => {
+        if (peerInstance._isDestroying || peerInstance.destroyed) return;
         conn.on('data', (data) => this.handlePresencePacket(data, conn));
       });
 
@@ -10149,10 +10164,10 @@ class Game {
         console.warn('[Presence] Peer error caught:', errType);
 
         if (this.presencePeer === peerInstance) {
+          if (peerInstance._isDestroying || peerInstance.destroyed) return;
+          peerInstance._isDestroying = true;
           try {
-            if (!peerInstance.destroyed) {
-              peerInstance.destroy();
-            }
+            peerInstance.destroy();
           } catch (e) {}
           this.presencePeer = null;
           this.isPresencePeerReady = false;
@@ -10164,7 +10179,7 @@ class Game {
           try { sessionStorage.setItem('cyber_tab_socket_id', newSocketId); } catch (e) {}
           this.registerPlayerPresence();
 
-          // Automatically retry with newly generated random ID
+          // Automatically retry with newly generated random ID (strictly debounced)
           if (this.presenceRetryTimeout) clearTimeout(this.presenceRetryTimeout);
           this.presenceRetryAttempts = (this.presenceRetryAttempts || 0) + 1;
           const retryDelay = Math.min(800 * Math.pow(1.3, this.presenceRetryAttempts - 1), 5000);
@@ -10182,6 +10197,8 @@ class Game {
       });
 
       peerInstance.on('disconnected', () => {
+        if (peerInstance._isDestroying || peerInstance.destroyed) return;
+
         // When disconnected or reconnecting, update the active presence registry with new auto-generated socket ID immediately
         const newSocketId = 'sock_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
         this.clientSocketId = newSocketId;
@@ -10189,11 +10206,20 @@ class Game {
         try { sessionStorage.setItem('cyber_tab_socket_id', newSocketId); } catch (e) {}
         this.registerPlayerPresence();
 
-        if (this.presencePeer === peerInstance && !peerInstance.destroyed) {
+        if (this.presencePeer === peerInstance && !peerInstance._isDestroying && !peerInstance.destroyed) {
           try {
             peerInstance.reconnect();
           } catch (e) {
-            this.initPresencePeer();
+            peerInstance._isDestroying = true;
+            try { peerInstance.destroy(); } catch (err) {}
+            this.presencePeer = null;
+            this.isPresencePeerReady = false;
+            if (this.presenceRetryTimeout) clearTimeout(this.presenceRetryTimeout);
+            this.presenceRetryAttempts = (this.presenceRetryAttempts || 0) + 1;
+            const retryDelay = Math.min(1000 * Math.pow(1.3, this.presenceRetryAttempts - 1), 6000);
+            this.presenceRetryTimeout = setTimeout(() => {
+              this.initPresencePeer();
+            }, retryDelay);
           }
         }
       });
