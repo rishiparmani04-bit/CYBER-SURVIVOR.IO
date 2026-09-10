@@ -1242,7 +1242,7 @@ class AuthManager {
 // Global Singleton Instance
 window.AuthManager = new AuthManager();
 
-// Global Unhandled Error Guard for GIS Script / Status 400
+// Global Unhandled Error Guard for GIS Script / Status 400 / Status 403
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && !window._authGlobalErrorBound) {
   window._authGlobalErrorBound = true;
   window.addEventListener('error', function(event) {
@@ -1250,7 +1250,18 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
       const errStr = (event && (event.message || event.filename || (event.error && event.error.message)))
         ? String(event.message || event.filename || event.error?.message)
         : '';
-      if (/\[GSI_LOGGER\]|accounts\.google\.com.*origin|origin.*not allowed|status.*400|origin_mismatch/i.test(errStr)) {
+      const isGoogleErr = /google|accounts\.google|oauth|gis|gsi/i.test(errStr);
+      if (/403|access_denied|forbidden/i.test(errStr) && isGoogleErr) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        try {
+          if (typeof _origConsoleWarn === 'function') {
+            _origConsoleWarn.call(console, '[AuthManager] Intercepted Google 403 Forbidden error event.');
+          }
+        } catch (e) {}
+        if (window.AuthManager && typeof window.AuthManager.handleAuth403 === 'function') {
+          window.AuthManager.handleAuth403(errStr);
+        }
+      } else if (/\[GSI_LOGGER\]|accounts\.google\.com.*origin|origin.*not allowed|status.*400|origin_mismatch/i.test(errStr)) {
         if (typeof event.preventDefault === 'function') event.preventDefault();
         try {
           if (typeof _origConsoleWarn === 'function') {
@@ -1274,9 +1285,20 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   window.addEventListener('unhandledrejection', function(event) {
     try {
       const reasonStr = event && event.reason ? (event.reason.message || String(event.reason)) : '';
+      const is403Error = (/403|forbidden|access_denied/i.test(reasonStr)) && (/google|accounts\.google|oauth|gis|userinfo/i.test(reasonStr));
       const isOriginError = /origin|400|not allowed|\[GSI_LOGGER\]|origin_mismatch/i.test(reasonStr);
       const isAuthRelated = /google|gis|idpiframe|popup|oauth|token/i.test(reasonStr);
-      if (isOriginError) {
+      if (is403Error) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        try {
+          if (typeof _origConsoleWarn === 'function') {
+            _origConsoleWarn.call(console, '[AuthManager] Handled unhandled Google OAuth 403 rejection.');
+          }
+        } catch (e) {}
+        if (window.AuthManager && typeof window.AuthManager.handleAuth403 === 'function') {
+          window.AuthManager.handleAuth403(reasonStr);
+        }
+      } else if (isOriginError) {
         if (typeof event.preventDefault === 'function') event.preventDefault();
         try {
           if (typeof _origConsoleWarn === 'function') {
