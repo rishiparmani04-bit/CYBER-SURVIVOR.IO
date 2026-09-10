@@ -1332,7 +1332,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
             _origConsoleWarn.call(console, '[AuthManager] Handled unhandled Google OAuth origin rejection.');
           }
         } catch (e) {}
-        if (window.AuthManager && !window.AuthManager.isOriginMismatch && typeof window.AuthManager.handleOriginMismatch === 'function') {
+        if (window.AuthManager && typeof window.AuthManager.handleOriginMismatch === 'function') {
           window.AuthManager.handleOriginMismatch(reasonStr);
         }
       } else if (isAuthRelated) {
