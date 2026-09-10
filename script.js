@@ -10095,7 +10095,14 @@ class Game {
     } catch (e) {}
 
     // 2. Background PeerJS Presence Peer with unique timestamp + random suffix and auto-retry
-    this.initPresencePeer();
+    // Defer PeerJS initialization by 1s so initial page load completes cleanly without WebSocket holding up the tab spinner
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        this.initPresencePeer();
+      }, 1000);
+    } else {
+      this.initPresencePeer();
+    }
 
     // Initial check
     this.checkFriendsPresence();

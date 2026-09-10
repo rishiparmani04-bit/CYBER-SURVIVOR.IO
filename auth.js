@@ -307,15 +307,6 @@ class AuthManager {
       this.showOriginMismatchUI();
       return;
     }
-    const modal = document.getElementById('authModal') || document.querySelector('.auth-modal');
-    if (modal) {
-      const isVisible = modal.style.display === 'flex' ||
-                        modal.style.display === 'block' ||
-                        (modal.classList.contains('active') && !modal.classList.contains('hidden') && !modal.classList.contains('modal-hidden'));
-      if (!isVisible) {
-        return; // Defer until modal is explicitly opened
-      }
-    }
     const container = document.getElementById('g_id_signin_container');
     if (!container || !window.google?.accounts?.id || typeof window.google.accounts.id.renderButton !== 'function') return;
 

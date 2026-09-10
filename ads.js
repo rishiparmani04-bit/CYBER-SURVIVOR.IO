@@ -36,7 +36,7 @@ class AdManager {
     if (typeof window.adConfig === 'function') {
       try {
         window.adConfig({
-          preloadAdBreaks: 'on',
+          preloadAdBreaks: 'off',
           sound: 'on',
           onReady: () => {
             this.isSdkReady = true;
